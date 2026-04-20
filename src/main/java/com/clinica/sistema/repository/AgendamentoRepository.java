@@ -32,4 +32,6 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataHoraFim,
             LocalDateTime dataHoraInicio
     );
+
+    void deleteByProfissionalIdIn(List<Long> profissionalIds);
 }

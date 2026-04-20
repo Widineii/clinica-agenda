@@ -2,6 +2,7 @@ package com.clinica.sistema.config;
 
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
+import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,11 +10,15 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class StartupDataInitializer implements CommandLineRunner {
+    private static final String SENHA_PROFISSIONAIS_PADRAO = "297b";
+
     private final SalaRepository salaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AgendamentoRepository agendamentoRepository;
 
     @Value("${app.seed-demo-data:false}")
     private boolean seedDemoData;
@@ -27,18 +32,24 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Value("${app.seed-admin-name:Administracao}")
     private String adminName;
 
-    public StartupDataInitializer(SalaRepository salaRepository, UsuarioRepository usuarioRepository) {
+    public StartupDataInitializer(
+            SalaRepository salaRepository,
+            UsuarioRepository usuarioRepository,
+            AgendamentoRepository agendamentoRepository
+    ) {
         this.salaRepository = salaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.agendamentoRepository = agendamentoRepository;
     }
 
     @Override
     public void run(String... args) {
         garantirSalas();
-        garantirAdmin();
 
         if (seedDemoData) {
-            garantirProfissionaisDemo();
+            sincronizarUsuariosPadrao();
+        } else {
+            garantirAdmin();
         }
     }
 
@@ -60,29 +71,69 @@ public class StartupDataInitializer implements CommandLineRunner {
             return;
         }
 
-        Usuario admin = usuarioRepository.findByLogin(adminLogin)
-                .orElseGet(Usuario::new);
-
-        admin.setNome(adminName);
-        admin.setLogin(adminLogin);
-        admin.setSenha(adminPassword);
-        admin.setCargo("ROLE_ADMIN");
-        usuarioRepository.save(admin);
+        salvarOuAtualizarUsuario(new UsuarioPadrao(
+                adminName,
+                adminLogin,
+                adminPassword,
+                "ROLE_ADMIN"
+        ));
     }
 
-    private void garantirProfissionaisDemo() {
-        criarProfissionalSeNaoExistir("Profissional 1", "prof1", "123456");
-        criarProfissionalSeNaoExistir("Profissional 2", "prof2", "123456");
-        criarProfissionalSeNaoExistir("Profissional 3", "prof3", "123456");
+    private void sincronizarUsuariosPadrao() {
+        List<UsuarioPadrao> usuariosPadrao = List.of(
+                new UsuarioPadrao("Administrador do Sistema", "admin", "Luquinha12@", "ROLE_ADMIN"),
+                new UsuarioPadrao("Polyana", "polyana", SENHA_PROFISSIONAIS_PADRAO, "ROLE_ADMIN"),
+                new UsuarioPadrao("Carol", "carol", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Itamara", "itamara", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Julia", "julia", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Juliano", "juliano", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Jessica Mota", "jessicamota", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Jessica Houri", "jessicahouri", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Rosi", "rosi", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Maria Paula", "mariapaula", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Breno", "breno", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Tathiane", "tathiane", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Luiza", "luiza", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Andreia", "andreia", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Cibele", "cibele", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Bruna", "bruna", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
+                new UsuarioPadrao("Claudia", "claudia", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL")
+        );
+
+        removerUsuariosObsoletos(usuariosPadrao);
+        usuariosPadrao.forEach(this::salvarOuAtualizarUsuario);
     }
 
-    private void criarProfissionalSeNaoExistir(String nome, String login, String senha) {
-        Usuario profissional = usuarioRepository.findByLogin(login)
+    private void removerUsuariosObsoletos(List<UsuarioPadrao> usuariosPadrao) {
+        Set<String> loginsPermitidos = usuariosPadrao.stream()
+                .map(UsuarioPadrao::login)
+                .collect(java.util.stream.Collectors.toSet());
+
+        List<Usuario> usuariosObsoletos = usuarioRepository.findAll().stream()
+                .filter(usuario -> !loginsPermitidos.contains(usuario.getLogin()))
+                .toList();
+
+        if (usuariosObsoletos.isEmpty()) {
+            return;
+        }
+
+        List<Long> idsObsoletos = usuariosObsoletos.stream()
+                .map(Usuario::getId)
+                .toList();
+        agendamentoRepository.deleteByProfissionalIdIn(idsObsoletos);
+        usuarioRepository.deleteAllById(idsObsoletos);
+    }
+
+    private void salvarOuAtualizarUsuario(UsuarioPadrao usuarioPadrao) {
+        Usuario profissional = usuarioRepository.findByLogin(usuarioPadrao.login())
                 .orElseGet(Usuario::new);
-        profissional.setNome(nome);
-        profissional.setLogin(login);
-        profissional.setSenha(senha);
-        profissional.setCargo("ROLE_PROFISSIONAL");
+        profissional.setNome(usuarioPadrao.nome());
+        profissional.setLogin(usuarioPadrao.login());
+        profissional.setSenha(usuarioPadrao.senha());
+        profissional.setCargo(usuarioPadrao.cargo());
         usuarioRepository.save(profissional);
+    }
+
+    private record UsuarioPadrao(String nome, String login, String senha, String cargo) {
     }
 }

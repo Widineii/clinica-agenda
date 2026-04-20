@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -59,7 +60,10 @@ public class AgendamentoService {
     }
 
     public List<Usuario> listarProfissionais() {
-        return usuarioRepository.findByCargoOrderByNomeAsc("ROLE_PROFISSIONAL");
+        return usuarioRepository.findAll().stream()
+                .filter(this::podeAtender)
+                .sorted(Comparator.comparing(Usuario::getNome, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     public List<LocalTime> listarHorariosDisponiveis() {
@@ -198,11 +202,16 @@ public class AgendamentoService {
         Usuario profissional = usuarioRepository.findById(profissionalId)
                 .orElseThrow(() -> new RuntimeException("Profissional nao encontrado."));
 
-        if (!"ROLE_PROFISSIONAL".equals(profissional.getCargo())) {
+        if (!podeAtender(profissional)) {
             throw new RuntimeException("O usuario selecionado nao e um profissional.");
         }
 
         return profissional;
+    }
+
+    private boolean podeAtender(Usuario usuario) {
+        return "ROLE_PROFISSIONAL".equals(usuario.getCargo())
+                || "ROLE_ADMIN".equals(usuario.getCargo());
     }
 
     private void validarHorario(LocalDateTime inicio, LocalDateTime fim) {
