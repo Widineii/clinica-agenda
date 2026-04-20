@@ -138,9 +138,14 @@
                     <span class="badge bg-light text-dark ms-2" th:text="${isAdmin ? 'Administracao' : 'Profissional'}">Perfil</span>
                 </p>
             </div>
-            <form th:action="@{/logout}" method="post">
-                <button type="submit" class="btn btn-light">Sair</button>
-            </form>
+            <div class="d-flex flex-wrap gap-2 justify-content-end">
+                <form th:if="${isAdmin}" th:action="@{/agendamentos/sincronizar-fixos}" method="post">
+                    <button type="submit" class="btn btn-warning">Carregar agenda fixa</button>
+                </form>
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit" class="btn btn-light">Sair</button>
+                </form>
+            </div>
         </div>
     </div>
 

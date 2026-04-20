@@ -1,5 +1,6 @@
 package com.clinica.sistema.controller;
 
+import com.clinica.sistema.config.StartupDataInitializer;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
@@ -23,10 +24,16 @@ import java.time.temporal.TemporalAdjusters;
 public class AgendamentoController {
     private final AgendamentoService service;
     private final AuthService authService;
+    private final StartupDataInitializer startupDataInitializer;
 
-    public AgendamentoController(AgendamentoService service, AuthService authService) {
+    public AgendamentoController(
+            AgendamentoService service,
+            AuthService authService,
+            StartupDataInitializer startupDataInitializer
+    ) {
         this.service = service;
         this.authService = authService;
+        this.startupDataInitializer = startupDataInitializer;
     }
 
     @GetMapping("/dashboard")
@@ -110,6 +117,25 @@ public class AgendamentoController {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio(session);
             service.encerrarSerieFixa(id, usuarioLogado);
             redirectAttributes.addFlashAttribute("sucesso", "Horario fixo encerrado com sucesso para as proximas ocorrencias.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/agendamentos/dashboard";
+    }
+
+    @PostMapping("/sincronizar-fixos")
+    public String sincronizarFixos(
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio(session);
+            if (!authService.isAdmin(usuarioLogado)) {
+                throw new RuntimeException("Somente a administracao pode carregar a agenda fixa.");
+            }
+
+            startupDataInitializer.sincronizarCargaInicialClinica();
+            redirectAttributes.addFlashAttribute("sucesso", "Agenda fixa da planilha carregada com sucesso.");
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
         }

@@ -60,11 +60,15 @@ public class StartupDataInitializer implements CommandLineRunner {
         garantirSalas();
 
         if (deveSincronizarCargaInicial()) {
-            sincronizarUsuariosPadrao();
-            sincronizarAgendamentosFixosPadrao();
+            sincronizarCargaInicialClinica();
         } else {
             garantirAdmin();
         }
+    }
+
+    public void sincronizarCargaInicialClinica() {
+        sincronizarUsuariosPadrao();
+        sincronizarAgendamentosFixosPadrao();
     }
 
     private boolean deveSincronizarCargaInicial() {
