@@ -164,7 +164,7 @@ public class StartupDataInitializer implements CommandLineRunner {
                 continue;
             }
 
-            String serieFixaId = PREFIXO_SERIE_FIXA_SEED + padrao.chave();
+            String serieFixaId = PREFIXO_SERIE_FIXA_SEED + padrao.recorrencia().toLowerCase(Locale.ROOT) + "-" + padrao.chave();
             LocalDate primeiraData = inicioBase.with(TemporalAdjusters.nextOrSame(padrao.diaSemana()));
 
             int repeticoes = obterRepeticoesSeed(padrao.recorrencia());
@@ -180,7 +180,6 @@ public class StartupDataInitializer implements CommandLineRunner {
                 agendamento.setDataHoraFim(inicio.plusHours(1));
                 agendamento.setFixo(!RECORRENCIA_AVULSO.equals(padrao.recorrencia()));
                 agendamento.setSerieFixaId(serieFixaId);
-                agendamento.setRecorrencia(padrao.recorrencia());
                 novosAgendamentos.add(agendamento);
             }
         }

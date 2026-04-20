@@ -138,7 +138,9 @@ public class AgendamentoService {
         String recorrencia = normalizarRecorrencia(form);
         int saltoSemanas = obterSaltoSemanas(recorrencia);
         int repeticoes = obterQuantidadeRepeticoes(recorrencia);
-        String serieFixaId = RECORRENCIA_AVULSO.equals(recorrencia) ? null : UUID.randomUUID().toString();
+        String serieFixaId = RECORRENCIA_AVULSO.equals(recorrencia)
+                ? null
+                : recorrencia.toLowerCase() + "-" + UUID.randomUUID();
 
         for (int semana = 0; semana < repeticoes; semana++) {
             LocalDateTime inicioSemana = inicio.plusWeeks((long) semana * saltoSemanas);

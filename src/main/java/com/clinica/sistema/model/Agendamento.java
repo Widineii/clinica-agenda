@@ -32,11 +32,12 @@ public class Agendamento {
 
     private String serieFixaId;
 
+    @Transient
     private String recorrencia;
 
     @Transient
     public String getRecorrenciaLabel() {
-        if ("QUINZENAL".equals(recorrencia)) {
+        if ("QUINZENAL".equals(recorrencia) || (serieFixaId != null && serieFixaId.contains("quinzenal"))) {
             return "Quinzenal";
         }
         if ("SEMANAL".equals(recorrencia) || Boolean.TRUE.equals(fixo)) {
