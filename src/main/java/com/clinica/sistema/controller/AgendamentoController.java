@@ -100,6 +100,22 @@ public class AgendamentoController {
         return "redirect:/agendamentos/dashboard";
     }
 
+    @PostMapping("/{id}/encerrar-fixo")
+    public String encerrarFixo(
+            @PathVariable Long id,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio(session);
+            service.encerrarSerieFixa(id, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Horario fixo encerrado com sucesso para as proximas ocorrencias.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/agendamentos/dashboard";
+    }
+
     private LocalDate agendaDataSugerida(LocalDate semana) {
         LocalDate base = semana != null ? semana : LocalDate.now();
         if (base.getDayOfWeek().getValue() > 6) {

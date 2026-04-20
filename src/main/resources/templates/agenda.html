@@ -117,6 +117,13 @@
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
+
+        .action-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
     </style>
 </head>
 <body>
@@ -233,9 +240,16 @@
                                 </td>
                                 <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
                                 <td class="text-end">
-                                    <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
-                                    </form>
+                                    <div class="action-stack">
+                                        <form th:if="${agendamento.fixo}"
+                                              th:action="@{/agendamentos/{id}/encerrar-fixo(id=${agendamento.id})}"
+                                              method="post">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Encerrar fixo</button>
+                                        </form>
+                                        <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             </tbody>

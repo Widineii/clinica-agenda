@@ -29,4 +29,6 @@ public class Agendamento {
     private LocalDateTime dataHoraFim;
 
     private Boolean fixo;
+
+    private String serieFixaId;
 }

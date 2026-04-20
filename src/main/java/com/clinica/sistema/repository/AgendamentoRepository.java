@@ -34,4 +34,9 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     );
 
     void deleteByProfissionalIdIn(List<Long> profissionalIds);
+
+    List<Agendamento> findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+            String serieFixaId,
+            LocalDateTime dataHoraInicio
+    );
 }

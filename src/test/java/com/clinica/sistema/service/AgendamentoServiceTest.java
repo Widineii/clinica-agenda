@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -176,6 +177,27 @@ class AgendamentoServiceTest {
         RuntimeException exception = assertThrows(RuntimeException.class, () -> agendamentoService.cancelar(1L, profissional));
 
         assertEquals("Bloqueado: somente a administracao cancela com menos de 24h.", exception.getMessage());
+    }
+
+    @Test
+    void deveEncerrarSerieFixaFutura() {
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(2L);
+        agendamento.setProfissional(profissional);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(7));
+        agendamento.setFixo(true);
+        agendamento.setSerieFixaId("serie-1");
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(agendamentoRepository.findById(2L)).thenReturn(Optional.of(agendamento));
+        when(agendamentoRepository.findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+                "serie-1",
+                agendamento.getDataHoraInicio()
+        )).thenReturn(Collections.singletonList(agendamento));
+
+        assertDoesNotThrow(() -> agendamentoService.encerrarSerieFixa(2L, profissional));
+
+        verify(agendamentoRepository).deleteAll(any());
     }
 
     private AgendamentoForm novoForm(LocalDateTime dataHoraInicio) {

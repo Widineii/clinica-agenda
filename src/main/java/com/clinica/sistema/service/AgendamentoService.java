@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -130,6 +131,7 @@ public class AgendamentoService {
 
         List<Agendamento> novosAgendamentos = new ArrayList<>();
         int repeticoes = form.isFixo() ? SEMANAS_FIXAS_PADRAO : 1;
+        String serieFixaId = form.isFixo() ? UUID.randomUUID().toString() : null;
 
         for (int semana = 0; semana < repeticoes; semana++) {
             LocalDateTime inicioSemana = inicio.plusWeeks(semana);
@@ -144,6 +146,7 @@ public class AgendamentoService {
             novo.setDataHoraInicio(inicioSemana);
             novo.setDataHoraFim(fimSemana);
             novo.setFixo(form.isFixo());
+            novo.setSerieFixaId(serieFixaId);
             novosAgendamentos.add(novo);
         }
 
@@ -154,21 +157,26 @@ public class AgendamentoService {
     public void cancelar(Long id, Usuario usuarioLogado) {
         Agendamento agendamento = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Agendamento nao encontrado."));
+        validarPermissaoSobreAgendamento(agendamento, usuarioLogado);
+        repository.deleteById(id);
+    }
 
-        if (!authService.isAdmin(usuarioLogado)) {
-            if (!agendamento.getProfissional().getId().equals(usuarioLogado.getId())) {
-                throw new RuntimeException("Voce so pode cancelar os seus proprios agendamentos.");
-            }
+    public void encerrarSerieFixa(Long id, Usuario usuarioLogado) {
+        Agendamento agendamento = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Agendamento nao encontrado."));
 
-            LocalDateTime agora = LocalDateTime.now();
-            LocalDateTime limiteParaCancelar = agendamento.getDataHoraInicio().minusHours(24);
-
-            if (agora.isAfter(limiteParaCancelar)) {
-                throw new RuntimeException("Bloqueado: somente a administracao cancela com menos de 24h.");
-            }
+        if (!Boolean.TRUE.equals(agendamento.getFixo()) || agendamento.getSerieFixaId() == null || agendamento.getSerieFixaId().isBlank()) {
+            throw new RuntimeException("Este agendamento nao pertence a uma serie fixa.");
         }
 
-        repository.deleteById(id);
+        validarPermissaoSobreAgendamento(agendamento, usuarioLogado);
+
+        List<Agendamento> futurosDaSerie = repository.findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
+                agendamento.getSerieFixaId(),
+                agendamento.getDataHoraInicio()
+        );
+
+        repository.deleteAll(futurosDaSerie);
     }
 
     private void validarFormulario(AgendamentoForm form) {
@@ -186,6 +194,22 @@ public class AgendamentoService {
         }
         if (form.getNomeCliente() == null || form.getNomeCliente().isBlank()) {
             throw new RuntimeException("Informe o nome do cliente.");
+        }
+    }
+
+    private void validarPermissaoSobreAgendamento(Agendamento agendamento, Usuario usuarioLogado) {
+        if (authService.isAdmin(usuarioLogado)) {
+            return;
+        }
+
+        if (!agendamento.getProfissional().getId().equals(usuarioLogado.getId())) {
+            throw new RuntimeException("Voce so pode alterar os seus proprios agendamentos.");
+        }
+
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime limiteParaCancelar = agendamento.getDataHoraInicio().minusHours(24);
+        if (agora.isAfter(limiteParaCancelar)) {
+            throw new RuntimeException("Bloqueado: somente a administracao cancela com menos de 24h.");
         }
     }
 
