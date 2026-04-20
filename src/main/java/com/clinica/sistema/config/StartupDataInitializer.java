@@ -222,6 +222,9 @@ public class StartupDataInitializer implements CommandLineRunner {
         padroes.add(new AgendamentoFixoPadrao("luiza", "Sala 2", DayOfWeek.WEDNESDAY, LocalTime.of(9, 0), "FIXO", "s2-luiza-qua-9"));
         padroes.add(new AgendamentoFixoPadrao("luiza", "Sala 2", DayOfWeek.WEDNESDAY, LocalTime.of(10, 0), "FIXO", "s2-luiza-qua-10"));
         padroes.add(new AgendamentoFixoPadrao("andreia", "Sala 2", DayOfWeek.WEDNESDAY, LocalTime.of(14, 0), "FIXO", "s2-andreia-qua-14"));
+        padroes.add(new AgendamentoFixoPadrao("luiza", "Sala 2", DayOfWeek.WEDNESDAY, LocalTime.of(17, 0), "FIXO", "s2-luiza-qua-17"));
+        padroes.add(new AgendamentoFixoPadrao("luiza", "Sala 2", DayOfWeek.WEDNESDAY, LocalTime.of(18, 0), "FIXO", "s2-luiza-qua-18"));
+        padroes.add(new AgendamentoFixoPadrao("luiza", "Sala 2", DayOfWeek.WEDNESDAY, LocalTime.of(19, 0), "FIXO", "s2-luiza-qua-19"));
         padroes.add(new AgendamentoFixoPadrao("luiza", "Sala 2", DayOfWeek.TUESDAY, LocalTime.of(18, 0), "FIXO", "s2-luiza-ter-18"));
         padroes.add(new AgendamentoFixoPadrao("luiza", "Sala 2", DayOfWeek.FRIDAY, LocalTime.of(10, 0), "FIXO", "s2-luiza-sex-10"));
         padroes.add(new AgendamentoFixoPadrao("julia", "Sala 2", DayOfWeek.SATURDAY, LocalTime.of(11, 0), "Lucas", "s2-julia-sab-11-lucas"));
