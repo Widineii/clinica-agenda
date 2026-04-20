@@ -49,6 +49,9 @@ public class AgendamentoController {
         }
 
         boolean isAdmin = authService.isAdmin(usuarioLogado);
+        if (isAdmin && service.listarProfissionais().isEmpty()) {
+            startupDataInitializer.sincronizarCargaInicialClinica();
+        }
 
         if (!model.containsAttribute("agendamentoForm")) {
             AgendamentoForm form = new AgendamentoForm();
