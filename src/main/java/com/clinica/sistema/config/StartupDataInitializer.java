@@ -59,12 +59,24 @@ public class StartupDataInitializer implements CommandLineRunner {
     public void run(String... args) {
         garantirSalas();
 
-        if (seedDemoData) {
+        if (deveSincronizarCargaInicial()) {
             sincronizarUsuariosPadrao();
             sincronizarAgendamentosFixosPadrao();
         } else {
             garantirAdmin();
         }
+    }
+
+    private boolean deveSincronizarCargaInicial() {
+        if (seedDemoData) {
+            return true;
+        }
+
+        long usuariosAtendentes = usuarioRepository.findAll().stream()
+                .filter(usuario -> !"admin".equalsIgnoreCase(usuario.getLogin()))
+                .count();
+
+        return usuariosAtendentes == 0;
     }
 
     private void garantirSalas() {
