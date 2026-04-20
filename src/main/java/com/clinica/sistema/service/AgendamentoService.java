@@ -10,6 +10,7 @@ import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -114,6 +115,7 @@ public class AgendamentoService {
         return view;
     }
 
+    @Transactional
     public Agendamento salvar(AgendamentoForm form, Usuario usuarioLogado) {
         validarFormulario(form);
 
@@ -154,6 +156,7 @@ public class AgendamentoService {
         return novosAgendamentos.get(0);
     }
 
+    @Transactional
     public void cancelar(Long id, Usuario usuarioLogado) {
         Agendamento agendamento = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Agendamento nao encontrado."));
@@ -161,6 +164,7 @@ public class AgendamentoService {
         repository.deleteById(id);
     }
 
+    @Transactional
     public void encerrarSerieFixa(Long id, Usuario usuarioLogado) {
         Agendamento agendamento = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Agendamento nao encontrado."));
