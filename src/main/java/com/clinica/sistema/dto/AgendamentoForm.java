@@ -12,4 +12,5 @@ public class AgendamentoForm {
     private String nomeCliente;
     private LocalDate dataAtendimento;
     private LocalTime horarioAtendimento;
+    private boolean fixo;
 }

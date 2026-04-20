@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -76,7 +78,7 @@ class AgendamentoServiceTest {
         when(agendamentoRepository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
         ).thenReturn(false);
-        when(agendamentoRepository.save(any(Agendamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
 
@@ -112,11 +114,36 @@ class AgendamentoServiceTest {
         when(agendamentoRepository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
         ).thenReturn(false);
-        when(agendamentoRepository.save(any(Agendamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
 
         assertEquals(LocalDateTime.of(form.getDataAtendimento(), LocalTime.of(22, 0)), agendamento.getDataHoraFim());
+    }
+
+    @Test
+    void deveCriarAgendamentoFixoParaAsProximasSemanas() {
+        AgendamentoForm form = novoForm(proximaDataUtil(LocalTime.of(9, 0)));
+        form.setFixo(true);
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
+        when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
+        when(agendamentoRepository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(false);
+        when(agendamentoRepository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(false);
+        when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
+
+        assertEquals(Boolean.TRUE, agendamento.getFixo());
+        verify(agendamentoRepository).saveAll(any());
+        verify(agendamentoRepository, times(12)).existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
+        );
     }
 
     @Test

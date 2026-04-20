@@ -75,9 +75,19 @@
             background: linear-gradient(135deg, #d9f99d 0%, #86efac 100%);
         }
 
+        .slot-booked.fixed-slot {
+            background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+        }
+
         .slot-booked .professional {
             font-weight: 700;
             color: #14532d;
+        }
+
+        .slot-booked.fixed-slot .professional,
+        .slot-booked.fixed-slot .client,
+        .slot-booked.fixed-slot .meta {
+            color: #1e3a8a;
         }
 
         .slot-booked .client {
@@ -93,6 +103,19 @@
         .history-table td,
         .history-table th {
             white-space: nowrap;
+        }
+
+        .fixed-badge {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(30, 64, 175, 0.12);
+            color: #1d4ed8;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
     </style>
 </head>
@@ -167,6 +190,14 @@
                             <div class="form-text">Atendimentos de segunda a sabado, com horarios fixos de 07:00 ate 21:00.</div>
                         </div>
 
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input th:field="*{fixo}" class="form-check-input" type="checkbox" id="fixo">
+                                <label class="form-check-label fw-semibold" for="fixo">Horario fixo semanal</label>
+                            </div>
+                            <div class="form-text">Quando marcado, o sistema repete esse mesmo agendamento nas proximas 12 semanas.</div>
+                        </div>
+
                         <div class="col-12 d-grid">
                             <button type="submit" class="btn btn-primary btn-lg">Salvar agendamento</button>
                         </div>
@@ -198,6 +229,7 @@
                                 <td>
                                     <div class="fw-semibold" th:text="${agendamento.profissional.nome}">Profissional</div>
                                     <div class="small text-muted" th:text="${agendamento.nomeCliente + ' - ' + agendamento.sala.nome}">Detalhes</div>
+                                    <span th:if="${agendamento.fixo}" class="fixed-badge">Fixo</span>
                                 </td>
                                 <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
                                 <td class="text-end">
@@ -262,11 +294,12 @@
                             <tr th:each="linha : ${agendaSala.linhas}">
                                 <th class="time-col" th:text="${#temporals.format(linha.horario, 'HH:mm')}">08:00</th>
                                 <td th:each="item : ${linha.agendamentos}"
-                                    th:class="${item != null ? 'slot-booked' : 'slot-empty'}">
+                                    th:class="${item != null ? (item.fixo ? 'slot-booked fixed-slot' : 'slot-booked') : 'slot-empty'}">
                                     <div th:if="${item != null}">
                                         <div class="professional" th:text="${item.profissional.nome}">Profissional</div>
                                         <div class="client" th:text="${item.nomeCliente}">Cliente</div>
                                         <div class="meta" th:text="${'Fim ' + #temporals.format(item.dataHoraFim, 'HH:mm')}">Fim 09:00</div>
+                                        <span th:if="${item.fixo}" class="fixed-badge">Fixo</span>
                                     </div>
                                     <div th:if="${item == null}" class="text-muted small">Disponivel</div>
                                 </td>
@@ -302,7 +335,10 @@
                                 <td th:text="${#temporals.format(registro.dataHoraInicio, 'dd/MM/yyyy')}">20/04/2026</td>
                                 <td th:text="${#temporals.format(registro.dataHoraInicio, 'HH:mm') + ' - ' + #temporals.format(registro.dataHoraFim, 'HH:mm')}">08:00 - 09:00</td>
                                 <td th:text="${registro.profissional.nome}">Profissional</td>
-                                <td th:text="${registro.nomeCliente}">Cliente</td>
+                                <td>
+                                    <span th:text="${registro.nomeCliente}">Cliente</span>
+                                    <span th:if="${registro.fixo}" class="fixed-badge ms-2">Fixo</span>
+                                </td>
                             </tr>
                             </tbody>
                         </table>

@@ -71,7 +71,12 @@ public class AgendamentoController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio(session);
             service.salvar(agendamentoForm, usuarioLogado);
-            redirectAttributes.addFlashAttribute("sucesso", "Agendamento cadastrado com sucesso.");
+            redirectAttributes.addFlashAttribute(
+                    "sucesso",
+                    agendamentoForm.isFixo()
+                            ? "Agendamento fixo cadastrado para as proximas 12 semanas."
+                            : "Agendamento cadastrado com sucesso."
+            );
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
             redirectAttributes.addFlashAttribute("agendamentoForm", agendamentoForm);

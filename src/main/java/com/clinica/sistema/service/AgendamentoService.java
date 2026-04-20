@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 public class AgendamentoService {
     private static final LocalTime HORA_ABERTURA = LocalTime.of(7, 0);
     private static final LocalTime HORA_FECHAMENTO = LocalTime.of(22, 0);
+    private static final int SEMANAS_FIXAS_PADRAO = 12;
 
     private final AgendamentoRepository repository;
     private final UsuarioRepository usuarioRepository;
@@ -127,33 +128,27 @@ public class AgendamentoService {
 
         validarHorario(inicio, fim);
 
-        boolean salaOcupada = repository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                sala.getId(),
-                fim,
-                inicio
-        );
-        if (salaOcupada) {
-            throw new RuntimeException("Esta sala ja esta ocupada nesse horario.");
+        List<Agendamento> novosAgendamentos = new ArrayList<>();
+        int repeticoes = form.isFixo() ? SEMANAS_FIXAS_PADRAO : 1;
+
+        for (int semana = 0; semana < repeticoes; semana++) {
+            LocalDateTime inicioSemana = inicio.plusWeeks(semana);
+            LocalDateTime fimSemana = fim.plusWeeks(semana);
+
+            validarConflitos(sala, profissional, inicioSemana, fimSemana, form.isFixo(), semana);
+
+            Agendamento novo = new Agendamento();
+            novo.setProfissional(profissional);
+            novo.setSala(sala);
+            novo.setNomeCliente(form.getNomeCliente().trim());
+            novo.setDataHoraInicio(inicioSemana);
+            novo.setDataHoraFim(fimSemana);
+            novo.setFixo(form.isFixo());
+            novosAgendamentos.add(novo);
         }
 
-        boolean profissionalOcupado =
-                repository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                        profissional.getId(),
-                        fim,
-                        inicio
-                );
-        if (profissionalOcupado) {
-            throw new RuntimeException("Este profissional ja possui atendimento nesse horario.");
-        }
-
-        Agendamento novo = new Agendamento();
-        novo.setProfissional(profissional);
-        novo.setSala(sala);
-        novo.setNomeCliente(form.getNomeCliente().trim());
-        novo.setDataHoraInicio(inicio);
-        novo.setDataHoraFim(fim);
-
-        return repository.save(novo);
+        repository.saveAll(novosAgendamentos);
+        return novosAgendamentos.get(0);
     }
 
     public void cancelar(Long id, Usuario usuarioLogado) {
@@ -192,6 +187,44 @@ public class AgendamentoService {
         if (form.getNomeCliente() == null || form.getNomeCliente().isBlank()) {
             throw new RuntimeException("Informe o nome do cliente.");
         }
+    }
+
+    private void validarConflitos(
+            Sala sala,
+            Usuario profissional,
+            LocalDateTime inicio,
+            LocalDateTime fim,
+            boolean fixo,
+            int indiceSemana
+    ) {
+        boolean salaOcupada = repository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                sala.getId(),
+                fim,
+                inicio
+        );
+        if (salaOcupada) {
+            throw conflitoMensagem("Esta sala ja esta ocupada nesse horario.", inicio, fixo, indiceSemana);
+        }
+
+        boolean profissionalOcupado =
+                repository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                        profissional.getId(),
+                        fim,
+                        inicio
+                );
+        if (profissionalOcupado) {
+            throw conflitoMensagem("Este profissional ja possui atendimento nesse horario.", inicio, fixo, indiceSemana);
+        }
+    }
+
+    private RuntimeException conflitoMensagem(String mensagemBase, LocalDateTime inicio, boolean fixo, int indiceSemana) {
+        if (!fixo || indiceSemana == 0) {
+            return new RuntimeException(mensagemBase);
+        }
+        return new RuntimeException(
+                mensagemBase + " Conflito encontrado na repeticao da semana de "
+                        + inicio.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + "."
+        );
     }
 
     private Usuario carregarProfissional(Long profissionalId, Usuario usuarioLogado) {

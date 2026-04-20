@@ -27,4 +27,6 @@ public class Agendamento {
     private LocalDateTime dataHoraInicio;
 
     private LocalDateTime dataHoraFim;
+
+    private Boolean fixo;
 }
