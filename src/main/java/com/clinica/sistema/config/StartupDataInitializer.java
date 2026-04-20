@@ -60,14 +60,14 @@ public class StartupDataInitializer implements CommandLineRunner {
             return;
         }
 
-        if (usuarioRepository.findByLogin(adminLogin).isEmpty()) {
-            Usuario admin = new Usuario();
-            admin.setNome(adminName);
-            admin.setLogin(adminLogin);
-            admin.setSenha(adminPassword);
-            admin.setCargo("ROLE_ADMIN");
-            usuarioRepository.save(admin);
-        }
+        Usuario admin = usuarioRepository.findByLogin(adminLogin)
+                .orElseGet(Usuario::new);
+
+        admin.setNome(adminName);
+        admin.setLogin(adminLogin);
+        admin.setSenha(adminPassword);
+        admin.setCargo("ROLE_ADMIN");
+        usuarioRepository.save(admin);
     }
 
     private void garantirProfissionaisDemo() {
@@ -77,11 +77,8 @@ public class StartupDataInitializer implements CommandLineRunner {
     }
 
     private void criarProfissionalSeNaoExistir(String nome, String login, String senha) {
-        if (usuarioRepository.findByLogin(login).isPresent()) {
-            return;
-        }
-
-        Usuario profissional = new Usuario();
+        Usuario profissional = usuarioRepository.findByLogin(login)
+                .orElseGet(Usuario::new);
         profissional.setNome(nome);
         profissional.setLogin(login);
         profissional.setSenha(senha);
