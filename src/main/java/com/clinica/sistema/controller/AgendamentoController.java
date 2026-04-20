@@ -49,7 +49,8 @@ public class AgendamentoController {
         }
 
         boolean isAdmin = authService.isAdmin(usuarioLogado);
-        if (isAdmin && service.listarProfissionais().isEmpty()) {
+        if (isAdmin && service.listarProfissionais().stream()
+                .noneMatch(profissional -> !"admin".equalsIgnoreCase(profissional.getLogin()))) {
             startupDataInitializer.sincronizarCargaInicialClinica();
         }
 
