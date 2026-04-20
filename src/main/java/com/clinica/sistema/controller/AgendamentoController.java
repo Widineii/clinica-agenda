@@ -92,9 +92,11 @@ public class AgendamentoController {
             service.salvar(agendamentoForm, usuarioLogado);
             redirectAttributes.addFlashAttribute(
                     "sucesso",
-                    agendamentoForm.isFixo()
-                            ? "Agendamento fixo cadastrado para as proximas 12 semanas."
-                            : "Agendamento cadastrado com sucesso."
+                    "QUINZENAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
+                            ? "Agendamento quinzenal cadastrado com sucesso."
+                            : "SEMANAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
+                                    ? "Agendamento fixo cadastrado para as proximas 12 semanas."
+                                    : "Agendamento cadastrado com sucesso."
             );
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());

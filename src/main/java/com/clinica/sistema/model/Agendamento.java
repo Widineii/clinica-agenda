@@ -31,4 +31,17 @@ public class Agendamento {
     private Boolean fixo;
 
     private String serieFixaId;
+
+    private String recorrencia;
+
+    @Transient
+    public String getRecorrenciaLabel() {
+        if ("QUINZENAL".equals(recorrencia)) {
+            return "Quinzenal";
+        }
+        if ("SEMANAL".equals(recorrencia) || Boolean.TRUE.equals(fixo)) {
+            return "Fixo";
+        }
+        return "Avulso";
+    }
 }

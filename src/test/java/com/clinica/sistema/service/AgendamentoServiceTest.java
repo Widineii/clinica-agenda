@@ -125,7 +125,7 @@ class AgendamentoServiceTest {
     @Test
     void deveCriarAgendamentoFixoParaAsProximasSemanas() {
         AgendamentoForm form = novoForm(proximaDataUtil(LocalTime.of(9, 0)));
-        form.setFixo(true);
+        form.setRecorrencia("SEMANAL");
 
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
@@ -143,6 +143,31 @@ class AgendamentoServiceTest {
         assertEquals(Boolean.TRUE, agendamento.getFixo());
         verify(agendamentoRepository).saveAll(any());
         verify(agendamentoRepository, times(12)).existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
+        );
+    }
+
+    @Test
+    void deveCriarAgendamentoQuinzenal() {
+        AgendamentoForm form = novoForm(proximaDataUtil(LocalTime.of(19, 0)));
+        form.setRecorrencia("QUINZENAL");
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
+        when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
+        when(agendamentoRepository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(false);
+        when(agendamentoRepository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(false);
+        when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
+
+        assertEquals("QUINZENAL", agendamento.getRecorrencia());
+        assertEquals(Boolean.TRUE, agendamento.getFixo());
+        verify(agendamentoRepository, times(6)).existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
         );
     }

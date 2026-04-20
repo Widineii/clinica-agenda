@@ -29,6 +29,9 @@ public class AgendamentoService {
     private static final LocalTime HORA_ABERTURA = LocalTime.of(7, 0);
     private static final LocalTime HORA_FECHAMENTO = LocalTime.of(22, 0);
     private static final int SEMANAS_FIXAS_PADRAO = 12;
+    private static final String RECORRENCIA_AVULSO = "AVULSO";
+    private static final String RECORRENCIA_SEMANAL = "SEMANAL";
+    private static final String RECORRENCIA_QUINZENAL = "QUINZENAL";
 
     private final AgendamentoRepository repository;
     private final UsuarioRepository usuarioRepository;
@@ -132,14 +135,16 @@ public class AgendamentoService {
         validarHorario(inicio, fim);
 
         List<Agendamento> novosAgendamentos = new ArrayList<>();
-        int repeticoes = form.isFixo() ? SEMANAS_FIXAS_PADRAO : 1;
-        String serieFixaId = form.isFixo() ? UUID.randomUUID().toString() : null;
+        String recorrencia = normalizarRecorrencia(form);
+        int saltoSemanas = obterSaltoSemanas(recorrencia);
+        int repeticoes = obterQuantidadeRepeticoes(recorrencia);
+        String serieFixaId = RECORRENCIA_AVULSO.equals(recorrencia) ? null : UUID.randomUUID().toString();
 
         for (int semana = 0; semana < repeticoes; semana++) {
-            LocalDateTime inicioSemana = inicio.plusWeeks(semana);
-            LocalDateTime fimSemana = fim.plusWeeks(semana);
+            LocalDateTime inicioSemana = inicio.plusWeeks((long) semana * saltoSemanas);
+            LocalDateTime fimSemana = fim.plusWeeks((long) semana * saltoSemanas);
 
-            validarConflitos(sala, profissional, inicioSemana, fimSemana, form.isFixo(), semana);
+            validarConflitos(sala, profissional, inicioSemana, fimSemana, !RECORRENCIA_AVULSO.equals(recorrencia), semana);
 
             Agendamento novo = new Agendamento();
             novo.setProfissional(profissional);
@@ -147,8 +152,9 @@ public class AgendamentoService {
             novo.setNomeCliente(form.getNomeCliente().trim());
             novo.setDataHoraInicio(inicioSemana);
             novo.setDataHoraFim(fimSemana);
-            novo.setFixo(form.isFixo());
+            novo.setFixo(!RECORRENCIA_AVULSO.equals(recorrencia));
             novo.setSerieFixaId(serieFixaId);
+            novo.setRecorrencia(recorrencia);
             novosAgendamentos.add(novo);
         }
 
@@ -196,9 +202,40 @@ public class AgendamentoService {
         if (form.getHorarioAtendimento() == null) {
             throw new RuntimeException("Selecione um horario fixo.");
         }
+        if (normalizarRecorrencia(form) == null) {
+            throw new RuntimeException("Selecione um tipo de recorrencia valido.");
+        }
         if (form.getNomeCliente() == null || form.getNomeCliente().isBlank()) {
             throw new RuntimeException("Informe o nome do cliente.");
         }
+    }
+
+    private String normalizarRecorrencia(AgendamentoForm form) {
+        if (form.getRecorrencia() != null && !form.getRecorrencia().isBlank()) {
+            return switch (form.getRecorrencia().toUpperCase()) {
+                case RECORRENCIA_AVULSO, RECORRENCIA_SEMANAL, RECORRENCIA_QUINZENAL -> form.getRecorrencia().toUpperCase();
+                default -> null;
+            };
+        }
+
+        return form.isFixo() ? RECORRENCIA_SEMANAL : RECORRENCIA_AVULSO;
+    }
+
+    private int obterSaltoSemanas(String recorrencia) {
+        if (RECORRENCIA_QUINZENAL.equals(recorrencia)) {
+            return 2;
+        }
+        return 1;
+    }
+
+    private int obterQuantidadeRepeticoes(String recorrencia) {
+        if (RECORRENCIA_AVULSO.equals(recorrencia)) {
+            return 1;
+        }
+        if (RECORRENCIA_QUINZENAL.equals(recorrencia)) {
+            return 6;
+        }
+        return SEMANAS_FIXAS_PADRAO;
     }
 
     private void validarPermissaoSobreAgendamento(Agendamento agendamento, Usuario usuarioLogado) {

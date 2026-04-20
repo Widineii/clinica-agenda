@@ -240,11 +240,13 @@
                         </div>
 
                         <div class="col-12">
-                            <div class="form-check">
-                                <input th:field="*{fixo}" class="form-check-input" type="checkbox" id="fixo">
-                                <label class="form-check-label fw-semibold" for="fixo">Horario fixo semanal</label>
-                            </div>
-                            <div class="form-text">Quando marcado, o sistema repete esse mesmo agendamento nas proximas 12 semanas.</div>
+                            <label class="form-label">Recorrencia</label>
+                            <select th:field="*{recorrencia}" class="form-select">
+                                <option value="AVULSO">Avulso</option>
+                                <option value="SEMANAL">Fixo semanal</option>
+                                <option value="QUINZENAL">Quinzenal</option>
+                            </select>
+                            <div class="form-text">Semanal repete por 12 semanas. Quinzenal repete a cada 15 dias.</div>
                         </div>
 
                         <div class="col-12 d-grid">
@@ -283,7 +285,7 @@
                                     <td>
                                         <div class="fw-semibold" th:text="${agendamento.profissional.nome}">Profissional</div>
                                         <div class="small text-muted" th:text="${agendamento.nomeCliente + ' - ' + agendamento.sala.nome}">Detalhes</div>
-                                        <span class="fixed-badge">Fixo</span>
+                                        <span class="fixed-badge" th:text="${agendamento.recorrenciaLabel}">Fixo</span>
                                     </td>
                                     <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
                                     <td class="text-end">
@@ -393,7 +395,7 @@
                                         <div class="professional" th:text="${item.profissional.nome}">Profissional</div>
                                         <div class="client" th:text="${item.nomeCliente}">Cliente</div>
                                         <div class="meta" th:text="${'Fim ' + #temporals.format(item.dataHoraFim, 'HH:mm')}">Fim 09:00</div>
-                                        <span th:if="${item.fixo}" class="fixed-badge">Fixo</span>
+                                        <span th:if="${item.fixo}" class="fixed-badge" th:text="${item.recorrenciaLabel}">Fixo</span>
                                     </div>
                                     <div th:if="${item == null}" class="text-muted small">Disponivel</div>
                                 </td>
@@ -431,7 +433,7 @@
                                 <td th:text="${registro.profissional.nome}">Profissional</td>
                                 <td>
                                     <span th:text="${registro.nomeCliente}">Cliente</span>
-                                    <span th:if="${registro.fixo}" class="fixed-badge ms-2">Fixo</span>
+                                    <span th:if="${registro.fixo}" class="fixed-badge ms-2" th:text="${registro.recorrenciaLabel}">Fixo</span>
                                 </td>
                             </tr>
                             </tbody>

@@ -13,4 +13,5 @@ public class AgendamentoForm {
     private LocalDate dataAtendimento;
     private LocalTime horarioAtendimento;
     private boolean fixo;
+    private String recorrencia = "AVULSO";
 }
