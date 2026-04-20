@@ -1,5 +1,6 @@
 package com.clinica.sistema.config;
 
+import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
@@ -9,12 +10,24 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 @Component
 public class StartupDataInitializer implements CommandLineRunner {
     private static final String SENHA_PROFISSIONAIS_PADRAO = "297b";
+    private static final int SEMANAS_FIXAS_PADRAO = 12;
+    private static final String PREFIXO_SERIE_FIXA_SEED = "seed-fixo-";
 
     private final SalaRepository salaRepository;
     private final UsuarioRepository usuarioRepository;
@@ -48,6 +61,7 @@ public class StartupDataInitializer implements CommandLineRunner {
 
         if (seedDemoData) {
             sincronizarUsuariosPadrao();
+            sincronizarAgendamentosFixosPadrao();
         } else {
             garantirAdmin();
         }
@@ -104,6 +118,50 @@ public class StartupDataInitializer implements CommandLineRunner {
         usuariosPadrao.forEach(this::salvarOuAtualizarUsuario);
     }
 
+    private void sincronizarAgendamentosFixosPadrao() {
+        Map<String, Usuario> usuariosPorLogin = usuarioRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        usuario -> usuario.getLogin().toLowerCase(Locale.ROOT),
+                        Function.identity()
+                ));
+        Map<String, Sala> salasPorNome = salaRepository.findAllByOrderByNomeAsc().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        sala -> sala.getNome().toLowerCase(Locale.ROOT),
+                        Function.identity()
+                ));
+
+        List<AgendamentoFixoPadrao> padroes = listarAgendamentosFixosPadrao();
+        List<Agendamento> novosAgendamentos = new ArrayList<>();
+        LocalDate inicioBase = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        for (AgendamentoFixoPadrao padrao : padroes) {
+            Usuario profissional = usuariosPorLogin.get(padrao.loginProfissional().toLowerCase(Locale.ROOT));
+            Sala sala = salasPorNome.get(padrao.nomeSala().toLowerCase(Locale.ROOT));
+            if (profissional == null || sala == null) {
+                continue;
+            }
+
+            String serieFixaId = PREFIXO_SERIE_FIXA_SEED + padrao.chave();
+            LocalDate primeiraData = inicioBase.with(TemporalAdjusters.nextOrSame(padrao.diaSemana()));
+
+            for (int semana = 0; semana < SEMANAS_FIXAS_PADRAO; semana++) {
+                LocalDateTime inicio = primeiraData.plusWeeks(semana).atTime(padrao.horario());
+                Agendamento agendamento = new Agendamento();
+                agendamento.setProfissional(profissional);
+                agendamento.setSala(sala);
+                agendamento.setNomeCliente(padrao.nomeCliente());
+                agendamento.setDataHoraInicio(inicio);
+                agendamento.setDataHoraFim(inicio.plusHours(1));
+                agendamento.setFixo(true);
+                agendamento.setSerieFixaId(serieFixaId);
+                novosAgendamentos.add(agendamento);
+            }
+        }
+
+        agendamentoRepository.deleteBySerieFixaIdStartingWith(PREFIXO_SERIE_FIXA_SEED);
+        agendamentoRepository.saveAll(novosAgendamentos);
+    }
+
     private void removerUsuariosObsoletos(List<UsuarioPadrao> usuariosPadrao) {
         Set<String> loginsPermitidos = usuariosPadrao.stream()
                 .map(UsuarioPadrao::login)
@@ -134,6 +192,88 @@ public class StartupDataInitializer implements CommandLineRunner {
         usuarioRepository.save(profissional);
     }
 
+    private List<AgendamentoFixoPadrao> listarAgendamentosFixosPadrao() {
+        List<AgendamentoFixoPadrao> padroes = new ArrayList<>();
+
+        adicionarHorariosSequenciais(padroes, "polyana", "Sala 1", DayOfWeek.MONDAY, List.of(8, 9, 10, 11, 18), "Horario fixo");
+        adicionarHorariosSequenciais(padroes, "polyana", "Sala 1", DayOfWeek.TUESDAY, List.of(8, 9, 10, 11, 18, 19), "Horario fixo");
+        adicionarHorariosSequenciais(padroes, "polyana", "Sala 1", DayOfWeek.WEDNESDAY, List.of(14, 15, 18, 19), "Horario fixo");
+        adicionarHorariosSequenciais(padroes, "polyana", "Sala 1", DayOfWeek.THURSDAY, List.of(15, 16, 17, 18), "Horario fixo");
+        adicionarHorariosSequenciais(padroes, "polyana", "Sala 1", DayOfWeek.FRIDAY, List.of(17), "Horario fixo");
+        adicionarHorariosSequenciais(padroes, "polyana", "Sala 1", DayOfWeek.SATURDAY, List.of(8, 9, 10, 11), "Horario fixo");
+        adicionarHorariosSequenciais(padroes, "juliano", "Sala 1", DayOfWeek.FRIDAY, List.of(9, 10, 11, 12), "Horario fixo");
+        adicionarHorariosSequenciais(padroes, "jessicamota", "Sala 1", DayOfWeek.THURSDAY, List.of(10, 13, 14), "Horario fixo");
+        padroes.add(new AgendamentoFixoPadrao("itamara", "Sala 1", DayOfWeek.MONDAY, LocalTime.of(13, 0), "Horario fixo", "s1-itamara-seg-13"));
+        padroes.add(new AgendamentoFixoPadrao("breno", "Sala 1", DayOfWeek.TUESDAY, LocalTime.of(14, 0), "Horario fixo", "s1-breno-ter-14"));
+        padroes.add(new AgendamentoFixoPadrao("itamara", "Sala 1", DayOfWeek.FRIDAY, LocalTime.of(15, 0), "Horario fixo", "s1-itamara-sex-15"));
+        padroes.add(new AgendamentoFixoPadrao("mariapaula", "Sala 1", DayOfWeek.TUESDAY, LocalTime.of(20, 0), "Horario fixo", "s1-mariapaula-ter-20"));
+
+        padroes.add(new AgendamentoFixoPadrao("andreia", "Sala 2", DayOfWeek.WEDNESDAY, LocalTime.of(8, 0), "Horario fixo", "s2-andreia-qua-8"));
+        padroes.add(new AgendamentoFixoPadrao("andreia", "Sala 2", DayOfWeek.WEDNESDAY, LocalTime.of(14, 0), "Horario fixo", "s2-andreia-qua-14"));
+        adicionarHorariosSequenciais(padroes, "luiza", "Sala 2", DayOfWeek.WEDNESDAY, List.of(9, 10, 17, 18, 19), "Horario fixo");
+        padroes.add(new AgendamentoFixoPadrao("carol", "Sala 2", DayOfWeek.TUESDAY, LocalTime.of(9, 0), "Horario fixo", "s2-carol-ter-9"));
+        padroes.add(new AgendamentoFixoPadrao("julia", "Sala 2", DayOfWeek.MONDAY, LocalTime.of(10, 0), "Bernardo", "s2-julia-seg-10-bernardo"));
+        padroes.add(new AgendamentoFixoPadrao("luiza", "Sala 2", DayOfWeek.TUESDAY, LocalTime.of(18, 0), "Horario fixo", "s2-luiza-ter-18"));
+        padroes.add(new AgendamentoFixoPadrao("luiza", "Sala 2", DayOfWeek.FRIDAY, LocalTime.of(10, 0), "Horario fixo", "s2-luiza-sex-10"));
+        padroes.add(new AgendamentoFixoPadrao("julia", "Sala 2", DayOfWeek.SATURDAY, LocalTime.of(11, 0), "Lucas", "s2-julia-sab-11-lucas"));
+        padroes.add(new AgendamentoFixoPadrao("jessicamota", "Sala 2", DayOfWeek.THURSDAY, LocalTime.of(8, 0), "Lucas", "s2-jmota-qui-8-lucas"));
+        padroes.add(new AgendamentoFixoPadrao("jessicamota", "Sala 2", DayOfWeek.THURSDAY, LocalTime.of(9, 0), "Davi", "s2-jmota-qui-9-davi"));
+        padroes.add(new AgendamentoFixoPadrao("jessicamota", "Sala 2", DayOfWeek.THURSDAY, LocalTime.of(11, 0), "Heitor", "s2-jmota-qui-11-heitor"));
+        padroes.add(new AgendamentoFixoPadrao("jessicamota", "Sala 2", DayOfWeek.THURSDAY, LocalTime.of(15, 0), "Flavia", "s2-jmota-qui-15-flavia"));
+
+        padroes.add(new AgendamentoFixoPadrao("andreia", "Sala 3", DayOfWeek.WEDNESDAY, LocalTime.of(10, 0), "Horario fixo", "s3-andreia-qua-10"));
+        padroes.add(new AgendamentoFixoPadrao("jessicahouri", "Sala 3", DayOfWeek.TUESDAY, LocalTime.of(16, 0), "Horario fixo", "s3-jhouri-ter-16"));
+        padroes.add(new AgendamentoFixoPadrao("jessicahouri", "Sala 3", DayOfWeek.TUESDAY, LocalTime.of(17, 0), "Horario fixo", "s3-jhouri-ter-17"));
+        padroes.add(new AgendamentoFixoPadrao("jessicahouri", "Sala 3", DayOfWeek.WEDNESDAY, LocalTime.of(17, 0), "Horario fixo", "s3-jhouri-qua-17"));
+        padroes.add(new AgendamentoFixoPadrao("itamara", "Sala 3", DayOfWeek.WEDNESDAY, LocalTime.of(16, 0), "Horario fixo", "s3-itamara-qua-16"));
+        padroes.add(new AgendamentoFixoPadrao("bruna", "Sala 3", DayOfWeek.SATURDAY, LocalTime.of(8, 0), "Horario fixo", "s3-bruna-sab-8"));
+        padroes.add(new AgendamentoFixoPadrao("bruna", "Sala 3", DayOfWeek.SATURDAY, LocalTime.of(10, 0), "Horario fixo", "s3-bruna-sab-10"));
+
+        padroes.add(new AgendamentoFixoPadrao("andreia", "Sala 4", DayOfWeek.MONDAY, LocalTime.of(16, 0), "Horario fixo", "s4-andreia-seg-16"));
+        padroes.add(new AgendamentoFixoPadrao("andreia", "Sala 4", DayOfWeek.TUESDAY, LocalTime.of(8, 0), "Horario fixo", "s4-andreia-ter-8"));
+        padroes.add(new AgendamentoFixoPadrao("andreia", "Sala 4", DayOfWeek.WEDNESDAY, LocalTime.of(16, 0), "Horario fixo", "s4-andreia-qua-16"));
+        padroes.add(new AgendamentoFixoPadrao("andreia", "Sala 4", DayOfWeek.THURSDAY, LocalTime.of(8, 0), "Horario fixo", "s4-andreia-qui-8"));
+
+        return padroes.stream()
+                .sorted(Comparator.comparing(AgendamentoFixoPadrao::nomeSala)
+                        .thenComparing(AgendamentoFixoPadrao::diaSemana)
+                        .thenComparing(AgendamentoFixoPadrao::horario))
+                .toList();
+    }
+
+    private void adicionarHorariosSequenciais(
+            List<AgendamentoFixoPadrao> padroes,
+            String loginProfissional,
+            String nomeSala,
+            DayOfWeek diaSemana,
+            List<Integer> horas,
+            String nomeCliente
+    ) {
+        for (Integer hora : horas) {
+            String chave = (nomeSala + "-" + loginProfissional + "-" + diaSemana + "-" + hora)
+                    .toLowerCase(Locale.ROOT)
+                    .replace(" ", "-");
+            padroes.add(new AgendamentoFixoPadrao(
+                    loginProfissional,
+                    nomeSala,
+                    diaSemana,
+                    LocalTime.of(hora, 0),
+                    nomeCliente,
+                    chave
+            ));
+        }
+    }
+
     private record UsuarioPadrao(String nome, String login, String senha, String cargo) {
+    }
+
+    private record AgendamentoFixoPadrao(
+            String loginProfissional,
+            String nomeSala,
+            DayOfWeek diaSemana,
+            LocalTime horario,
+            String nomeCliente,
+            String chave
+    ) {
     }
 }

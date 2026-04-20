@@ -39,4 +39,6 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             String serieFixaId,
             LocalDateTime dataHoraInicio
     );
+
+    void deleteBySerieFixaIdStartingWith(String prefix);
 }
