@@ -1,0 +1,17 @@
+package com.clinica.sistema.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+@Entity
+@Table(name = "usuarios")
+@Data
+public class Usuario {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String nome;
+    private String login;
+    private String senha;
+    private String cargo; // ROLE_ADMIN ou ROLE_PROFISSIONAL
+}
