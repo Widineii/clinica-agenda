@@ -1,8 +1,3 @@
-databases:
-  - name: clinica-agenda-db
-    databaseName: clinica_agenda
-    user: clinica_agenda
-
 services:
   - type: web
     name: clinica-agenda
@@ -39,3 +34,6 @@ services:
         value: Dona da Clinica
       - key: ADMIN_PASSWORD
         sync: false
+
+databases:
+  - name: clinica-agenda-db
