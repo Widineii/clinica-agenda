@@ -2,7 +2,9 @@ package com.clinica.sistema.repository;
 
 import com.clinica.sistema.model.Agendamento;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,6 +35,8 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataHoraInicio
     );
 
+    @Transactional
+    @Modifying
     void deleteByProfissionalIdIn(List<Long> profissionalIds);
 
     List<Agendamento> findBySerieFixaIdAndDataHoraInicioGreaterThanEqualOrderByDataHoraInicioAsc(
@@ -40,5 +44,7 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataHoraInicio
     );
 
+    @Transactional
+    @Modifying
     void deleteBySerieFixaIdStartingWith(String prefix);
 }
