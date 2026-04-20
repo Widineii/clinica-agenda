@@ -124,6 +124,43 @@
             gap: 8px;
             align-items: flex-end;
         }
+
+        .agenda-section + .agenda-section {
+            margin-top: 16px;
+        }
+
+        .agenda-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            cursor: pointer;
+            list-style: none;
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: #f8fafc;
+            border: 1px solid #dbe7f0;
+            font-weight: 700;
+        }
+
+        .agenda-toggle::-webkit-details-marker {
+            display: none;
+        }
+
+        .agenda-count {
+            border-radius: 999px;
+            padding: 4px 10px;
+            background: #e2e8f0;
+            color: #0f172a;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .agenda-panel {
+            margin-top: 12px;
+            max-height: 340px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -224,42 +261,80 @@
             <div class="card shell-card mt-4">
                 <div class="card-body p-4">
                     <h2 class="h5 mb-3" th:text="${isAdmin ? 'Agenda completa da clinica' : 'Meus agendamentos'}">Agenda</h2>
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                            <tr>
-                                <th>Profissional</th>
-                                <th>Inicio</th>
-                                <th class="text-end">Acao</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:if="${#lists.isEmpty(agendamentos)}">
-                                <td colspan="3" class="text-center text-muted py-4">Nenhum agendamento encontrado.</td>
-                            </tr>
-                            <tr th:each="agendamento : ${agendamentos}">
-                                <td>
-                                    <div class="fw-semibold" th:text="${agendamento.profissional.nome}">Profissional</div>
-                                    <div class="small text-muted" th:text="${agendamento.nomeCliente + ' - ' + agendamento.sala.nome}">Detalhes</div>
-                                    <span th:if="${agendamento.fixo}" class="fixed-badge">Fixo</span>
-                                </td>
-                                <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
-                                <td class="text-end">
-                                    <div class="action-stack">
-                                        <form th:if="${agendamento.fixo}"
-                                              th:action="@{/agendamentos/{id}/encerrar-fixo(id=${agendamento.id})}"
-                                              method="post">
-                                            <button type="submit" class="btn btn-sm btn-outline-primary">Encerrar fixo</button>
-                                        </form>
-                                        <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                    <div th:if="${#lists.isEmpty(agendamentos)}" class="text-center text-muted py-4">
+                        Nenhum agendamento encontrado.
                     </div>
+                    <details th:if="${!#lists.isEmpty(agendamentosFixos)}" class="agenda-section" open>
+                        <summary class="agenda-toggle">
+                            <span>Fixos</span>
+                            <span class="agenda-count" th:text="${#lists.size(agendamentosFixos)}">0</span>
+                        </summary>
+                        <div class="agenda-panel table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Profissional</th>
+                                    <th>Inicio</th>
+                                    <th class="text-end">Acao</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="agendamento : ${agendamentosFixos}">
+                                    <td>
+                                        <div class="fw-semibold" th:text="${agendamento.profissional.nome}">Profissional</div>
+                                        <div class="small text-muted" th:text="${agendamento.nomeCliente + ' - ' + agendamento.sala.nome}">Detalhes</div>
+                                        <span class="fixed-badge">Fixo</span>
+                                    </td>
+                                    <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
+                                    <td class="text-end">
+                                        <div class="action-stack">
+                                            <form th:action="@{/agendamentos/{id}/encerrar-fixo(id=${agendamento.id})}"
+                                                  method="post">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">Encerrar fixo</button>
+                                            </form>
+                                            <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                    <details th:if="${!#lists.isEmpty(agendamentosAvulsos)}" class="agenda-section">
+                        <summary class="agenda-toggle">
+                            <span th:text="${isAdmin ? 'Demais Agendamentos' : 'Avulsos'}">Demais agendamentos</span>
+                            <span class="agenda-count" th:text="${#lists.size(agendamentosAvulsos)}">0</span>
+                        </summary>
+                        <div class="agenda-panel table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Profissional</th>
+                                    <th>Inicio</th>
+                                    <th class="text-end">Acao</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="agendamento : ${agendamentosAvulsos}">
+                                    <td>
+                                        <div class="fw-semibold" th:text="${agendamento.profissional.nome}">Profissional</div>
+                                        <div class="small text-muted" th:text="${agendamento.nomeCliente + ' - ' + agendamento.sala.nome}">Detalhes</div>
+                                    </td>
+                                    <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
+                                    <td class="text-end">
+                                        <div class="action-stack">
+                                            <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
                 </div>
             </div>
         </div>

@@ -18,6 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.List;
 
 @Controller
 @RequestMapping("/agendamentos")
@@ -63,9 +64,16 @@ public class AgendamentoController {
             model.addAttribute("agendamentoForm", form);
         }
 
+        List<com.clinica.sistema.model.Agendamento> agendamentos = service.buscarParaUsuario(usuarioLogado);
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", isAdmin);
-        model.addAttribute("agendamentos", service.buscarParaUsuario(usuarioLogado));
+        model.addAttribute("agendamentos", agendamentos);
+        model.addAttribute("agendamentosFixos", agendamentos.stream()
+                .filter(agendamento -> Boolean.TRUE.equals(agendamento.getFixo()))
+                .toList());
+        model.addAttribute("agendamentosAvulsos", agendamentos.stream()
+                .filter(agendamento -> !Boolean.TRUE.equals(agendamento.getFixo()))
+                .toList());
         model.addAttribute("salas", service.listarSalas());
         model.addAttribute("profissionais", isAdmin ? service.listarProfissionais() : java.util.List.of(usuarioLogado));
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
