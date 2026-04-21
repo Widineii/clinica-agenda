@@ -63,11 +63,17 @@ public class StartupDataInitializer implements CommandLineRunner {
     public void run(String... args) {
         garantirSalas();
 
+        if (seedDemoData) {
+            resetarBaseDemonstracao();
+            return;
+        }
+
         if (deveSincronizarCargaInicial()) {
             sincronizarCargaInicialClinica();
-        } else {
-            garantirAdmin();
+            return;
         }
+
+        garantirAdmin();
     }
 
     public void sincronizarCargaInicialClinica() {
