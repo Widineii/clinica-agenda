@@ -5,6 +5,7 @@ import com.clinica.sistema.repository.UsuarioRepository;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -18,7 +19,9 @@ public class AuthService {
     }
 
     public Usuario autenticar(String login, String senha) {
-        Usuario usuario = usuarioRepository.findByLogin(login)
+        String loginNormalizado = login != null ? login.trim().toLowerCase(Locale.ROOT) : "";
+
+        Usuario usuario = usuarioRepository.findByLogin(loginNormalizado)
                 .orElseThrow(() -> new RuntimeException("Login ou senha invalidos."));
 
         if (!usuario.getSenha().equals(senha)) {
