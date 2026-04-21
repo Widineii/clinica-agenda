@@ -211,6 +211,13 @@
                 </p>
             </div>
             <div class="top-actions">
+                <form th:if="${isAdmin}" th:action="@{/agendamentos/sincronizar-fixos}" method="post">
+                    <button type="submit"
+                            class="btn btn-outline-light"
+                            onclick="return confirm('Isso vai atualizar a agenda da planilha e substituir somente os agendamentos de demonstracao. Deseja continuar?');">
+                        Atualizar agenda da planilha
+                    </button>
+                </form>
                 <button th:if="${isAdmin}" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cadastroProfissionalModal">
                     Cadastrar profissional
                 </button>

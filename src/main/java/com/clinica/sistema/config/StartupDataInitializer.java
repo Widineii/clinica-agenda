@@ -21,7 +21,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 @Component
@@ -77,8 +76,10 @@ public class StartupDataInitializer implements CommandLineRunner {
         garantirAdmin();
     }
 
+    @Transactional
     public void sincronizarCargaInicialClinica() {
         sincronizarUsuariosPadrao();
+        garantirAdmin();
         sincronizarAgendamentosFixosPadrao();
     }
 
@@ -161,7 +162,6 @@ public class StartupDataInitializer implements CommandLineRunner {
                 new UsuarioPadrao("Larissa", "larissa", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL")
         );
 
-        removerUsuariosObsoletos(usuariosPadrao);
         usuariosPadrao.forEach(this::salvarOuAtualizarUsuario);
     }
 
@@ -212,26 +212,6 @@ public class StartupDataInitializer implements CommandLineRunner {
 
         agendamentoRepository.deleteBySerieFixaIdStartingWith(PREFIXO_SERIE_FIXA_SEED);
         agendamentoRepository.saveAll(novosAgendamentos);
-    }
-
-    private void removerUsuariosObsoletos(List<UsuarioPadrao> usuariosPadrao) {
-        Set<String> loginsPermitidos = usuariosPadrao.stream()
-                .map(UsuarioPadrao::login)
-                .collect(java.util.stream.Collectors.toSet());
-
-        List<Usuario> usuariosObsoletos = usuarioRepository.findAll().stream()
-                .filter(usuario -> !loginsPermitidos.contains(usuario.getLogin()))
-                .toList();
-
-        if (usuariosObsoletos.isEmpty()) {
-            return;
-        }
-
-        List<Long> idsObsoletos = usuariosObsoletos.stream()
-                .map(Usuario::getId)
-                .toList();
-        agendamentoRepository.deleteByProfissionalIdIn(idsObsoletos);
-        usuarioRepository.deleteAllById(idsObsoletos);
     }
 
     private void salvarOuAtualizarUsuario(UsuarioPadrao usuarioPadrao) {
