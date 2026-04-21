@@ -105,6 +105,18 @@
             white-space: nowrap;
         }
 
+        .history-panel {
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding-top: 0.6rem;
+            padding-bottom: 0.6rem;
+            font-size: 0.95rem;
+        }
+
         .fixed-badge {
             display: inline-block;
             margin-top: 6px;
@@ -161,6 +173,29 @@
             max-height: 340px;
             overflow-y: auto;
         }
+
+        .top-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .admin-modal .modal-content {
+            border: 0;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+        }
+
+        .admin-modal .modal-header {
+            border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(135deg, #f8fafc 0%, #eef4f7 100%);
+        }
+
+        .admin-modal .modal-title {
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
@@ -175,10 +210,10 @@
                     <span class="badge bg-light text-dark ms-2" th:text="${isAdmin ? 'Administracao' : 'Profissional'}">Perfil</span>
                 </p>
             </div>
-            <div class="d-flex flex-wrap gap-2 justify-content-end">
-                <form th:if="${isAdmin}" th:action="@{/agendamentos/sincronizar-fixos}" method="post">
-                    <button type="submit" class="btn btn-warning">Carregar agenda fixa</button>
-                </form>
+            <div class="top-actions">
+                <button th:if="${isAdmin}" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cadastroProfissionalModal">
+                    Cadastrar profissional
+                </button>
                 <form th:action="@{/logout}" method="post">
                     <button type="submit" class="btn btn-light">Sair</button>
                 </form>
@@ -201,13 +236,11 @@
                     <form th:action="@{/agendamentos}" th:object="${agendamentoForm}" method="post" class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Profissional</label>
-                            <select th:field="*{profissionalId}" class="form-select" th:disabled="${!isAdmin}">
-                                <option value="">Selecione</option>
-                                <option th:each="profissional : ${profissionais}"
-                                        th:value="${profissional.id}"
-                                        th:text="${profissional.nome}">Profissional</option>
-                            </select>
-                            <input th:if="${!isAdmin}" type="hidden" th:field="*{profissionalId}">
+                            <div>
+                                <input type="text" class="form-control" th:value="${usuarioLogado.nome}" readonly>
+                                <input type="hidden" th:field="*{profissionalId}">
+                                <div class="form-text">Agendamento vinculado automaticamente ao usuario conectado.</div>
+                            </div>
                         </div>
 
                         <div class="col-12">
@@ -266,11 +299,12 @@
                     <div th:if="${#lists.isEmpty(agendamentos)}" class="text-center text-muted py-4">
                         Nenhum agendamento encontrado.
                     </div>
-                    <details th:if="${!#lists.isEmpty(agendamentosFixos)}" class="agenda-section" open>
+                    <details th:if="${!#lists.isEmpty(agendamentosFixos)}" class="agenda-section">
                         <summary class="agenda-toggle">
                             <span>Fixos</span>
-                            <span class="agenda-count" th:text="${#lists.size(agendamentosFixos)}">0</span>
+                            <span class="agenda-count" th:text="${totalAgendamentosFixos}">0</span>
                         </summary>
+                        <div class="small text-muted mt-2">Mostrando os proximos 24 fixos para deixar a tela mais leve.</div>
                         <div class="agenda-panel table-responsive">
                             <table class="table align-middle mb-0">
                                 <thead>
@@ -292,10 +326,20 @@
                                         <div class="action-stack">
                                             <form th:action="@{/agendamentos/{id}/encerrar-fixo(id=${agendamento.id})}"
                                                   method="post">
-                                                <button type="submit" class="btn btn-sm btn-outline-primary">Encerrar fixo</button>
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-primary"
+                                                        title="Remove este horario fixo desta data em diante"
+                                                        onclick="return confirm('Isso vai encerrar esta serie fixa desta data em diante. Os horarios passados continuam no historico. Deseja continuar?');">
+                                                    Encerrar serie fixa
+                                                </button>
                                             </form>
                                             <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        title="Cancela somente este agendamento"
+                                                        onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
+                                                    Cancelar somente este
+                                                </button>
                                             </form>
                                         </div>
                                     </td>
@@ -307,8 +351,9 @@
                     <details th:if="${!#lists.isEmpty(agendamentosAvulsos)}" class="agenda-section">
                         <summary class="agenda-toggle">
                             <span th:text="${isAdmin ? 'Demais Agendamentos' : 'Avulsos'}">Demais agendamentos</span>
-                            <span class="agenda-count" th:text="${#lists.size(agendamentosAvulsos)}">0</span>
+                            <span class="agenda-count" th:text="${totalAgendamentosAvulsos}">0</span>
                         </summary>
+                        <div class="small text-muted mt-2">Mostrando os ultimos e proximos 24 avulsos.</div>
                         <div class="agenda-panel table-responsive">
                             <table class="table align-middle mb-0">
                                 <thead>
@@ -328,7 +373,12 @@
                                     <td class="text-end">
                                         <div class="action-stack">
                                             <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        title="Cancela somente este agendamento"
+                                                        onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
+                                                    Cancelar somente este
+                                                </button>
                                             </form>
                                         </div>
                                     </td>
@@ -413,7 +463,7 @@
                         <span class="text-muted small">Ultimos 20 registros da sala selecionada</span>
                     </div>
 
-                    <div class="table-responsive">
+                    <div class="table-responsive history-panel">
                         <table class="table history-table align-middle mb-0">
                             <thead>
                             <tr>
@@ -444,5 +494,38 @@
         </div>
     </div>
 </div>
+<div th:if="${isAdmin}" class="modal fade admin-modal" id="cadastroProfissionalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1">Cadastrar profissional</h2>
+                    <p class="text-muted small mb-0">Somente a administracao pode criar novos acessos para a equipe.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form th:action="@{/agendamentos/profissionais}" th:object="${cadastroProfissionalForm}" method="post" class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Nome completo</label>
+                        <input th:field="*{nome}" type="text" class="form-control" maxlength="120" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Login</label>
+                        <input th:field="*{login}" type="text" class="form-control" maxlength="60" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Senha inicial</label>
+                        <input th:field="*{senha}" type="text" class="form-control" maxlength="60" required>
+                    </div>
+                    <div class="col-12 d-grid pt-2">
+                        <button type="submit" class="btn btn-dark">Criar acesso do profissional</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

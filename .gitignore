@@ -35,4 +35,7 @@ build/
 ### Runtime ###
 run.log
 run.err.log
+cookies.txt
+local-run.log
+local-run.err.log
 data/

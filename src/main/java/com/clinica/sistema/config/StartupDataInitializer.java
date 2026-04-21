@@ -165,7 +165,9 @@ public class StartupDataInitializer implements CommandLineRunner {
             }
 
             String serieFixaId = PREFIXO_SERIE_FIXA_SEED + padrao.recorrencia().toLowerCase(Locale.ROOT) + "-" + padrao.chave();
-            LocalDate primeiraData = inicioBase.with(TemporalAdjusters.nextOrSame(padrao.diaSemana()));
+            LocalDate primeiraData = padrao.dataInicial() != null
+                    ? padrao.dataInicial()
+                    : inicioBase.with(TemporalAdjusters.nextOrSame(padrao.diaSemana()));
 
             int repeticoes = obterRepeticoesSeed(padrao.recorrencia());
             int saltoSemanas = obterSaltoSeed(padrao.recorrencia());
@@ -241,10 +243,12 @@ public class StartupDataInitializer implements CommandLineRunner {
         adicionar(padroes, "polyana", "Sala 1", DayOfWeek.TUESDAY, 12, "Horario da semana", RECORRENCIA_AVULSO, "s1-ter-12-polyana");
         adicionar(padroes, "juliano", "Sala 1", DayOfWeek.FRIDAY, 12, "Horario da semana", RECORRENCIA_AVULSO, "s1-sex-12-juliano");
         adicionar(padroes, "itamara", "Sala 1", DayOfWeek.MONDAY, 13, "FIXO novo", RECORRENCIA_SEMANAL, "s1-seg-13-itamara");
-        adicionar(padroes, "jessicamota", "Sala 1", DayOfWeek.THURSDAY, 13, "Horario da semana", RECORRENCIA_AVULSO, "s1-qui-13-jmota");
+        adicionar(padroes, "jessicamota", "Sala 1", DayOfWeek.THURSDAY, 13, "Jessica Mota", RECORRENCIA_AVULSO, "s1-qui-13-jmota");
+        adicionar(padroes, "polyana", "Sala 1", DayOfWeek.FRIDAY, 13, "Ana Paula", RECORRENCIA_AVULSO, "s1-sex-13-polyana-anapaula");
         adicionar(padroes, "breno", "Sala 1", DayOfWeek.TUESDAY, 14, "FIXO", RECORRENCIA_SEMANAL, "s1-ter-14-breno");
         adicionar(padroes, "polyana", "Sala 1", DayOfWeek.WEDNESDAY, 14, "Horario da semana", RECORRENCIA_AVULSO, "s1-qua-14-polyana");
         adicionar(padroes, "jessicamota", "Sala 1", DayOfWeek.THURSDAY, 14, "Horario da semana", RECORRENCIA_AVULSO, "s1-qui-14-jmota");
+        adicionar(padroes, "anapaula", "Sala 1", DayOfWeek.FRIDAY, 14, "10/04", RECORRENCIA_AVULSO, "s1-sex-14-anapaula");
         adicionar(padroes, "leticia", "Sala 1", DayOfWeek.TUESDAY, 15, "Horario da semana", RECORRENCIA_AVULSO, "s1-ter-15-leticia");
         adicionar(padroes, "polyana", "Sala 1", DayOfWeek.WEDNESDAY, 15, "Horario da semana", RECORRENCIA_AVULSO, "s1-qua-15-polyana");
         adicionar(padroes, "polyana", "Sala 1", DayOfWeek.THURSDAY, 15, "Horario da semana", RECORRENCIA_AVULSO, "s1-qui-15-polyana");
@@ -289,9 +293,9 @@ public class StartupDataInitializer implements CommandLineRunner {
         adicionar(padroes, "luiza", "Sala 2", DayOfWeek.WEDNESDAY, 18, "FIXO", RECORRENCIA_SEMANAL, "s2-qua-18-luiza");
         adicionar(padroes, "luiza", "Sala 2", DayOfWeek.THURSDAY, 18, "Somente 16/04", RECORRENCIA_AVULSO, "s2-qui-18-luiza");
         adicionar(padroes, "julia", "Sala 2", DayOfWeek.FRIDAY, 18, "Joao", RECORRENCIA_AVULSO, "s2-sex-18-julia");
-        adicionar(padroes, "luiza", "Sala 2", DayOfWeek.TUESDAY, 19, "Arthur Azevedo", RECORRENCIA_AVULSO, "s2-ter-19-luiza");
+        adicionar(padroes, "luiza", "Sala 2", DayOfWeek.TUESDAY, 19, "Arthur Azevedo - 1o C", RECORRENCIA_AVULSO, "s2-ter-19-luiza");
         adicionar(padroes, "luiza", "Sala 2", DayOfWeek.WEDNESDAY, 19, "FIXO", RECORRENCIA_SEMANAL, "s2-qua-19-luiza");
-        adicionar(padroes, "julia", "Sala 2", DayOfWeek.THURSDAY, 19, "Giovanna", RECORRENCIA_QUINZENAL, "s2-qui-19-julia-giovanna");
+        adicionar(padroes, "julia", "Sala 2", DayOfWeek.THURSDAY, 19, "Giovanna - uso 30/04", RECORRENCIA_AVULSO, "s2-qui-19-julia-giovanna-3004", LocalDate.of(2026, 4, 30));
 
         adicionar(padroes, "bruna", "Sala 3", DayOfWeek.SATURDAY, 8, "Horario da semana", RECORRENCIA_AVULSO, "s3-sab-8-bruna");
         adicionar(padroes, "andreia", "Sala 3", DayOfWeek.TUESDAY, 9, "Maria Helena", RECORRENCIA_AVULSO, "s3-ter-9-andreia");
@@ -321,7 +325,7 @@ public class StartupDataInitializer implements CommandLineRunner {
         adicionar(padroes, "andreia", "Sala 4", DayOfWeek.TUESDAY, 8, "FIXO", RECORRENCIA_SEMANAL, "s4-ter-8-andreia");
         adicionar(padroes, "andreia", "Sala 4", DayOfWeek.THURSDAY, 8, "FIXO", RECORRENCIA_SEMANAL, "s4-qui-8-andreia");
         adicionar(padroes, "andreia", "Sala 4", DayOfWeek.THURSDAY, 9, "Horario da semana", RECORRENCIA_AVULSO, "s4-qui-9-andreia");
-        adicionar(padroes, "julia", "Sala 4", DayOfWeek.SATURDAY, 11, "Sublocacao Lucas", RECORRENCIA_AVULSO, "s4-sab-11-julia");
+        adicionar(padroes, "julia", "Sala 4", DayOfWeek.SATURDAY, 11, "Sublocacao - Lucas", RECORRENCIA_AVULSO, "s4-sab-11-julia");
         adicionar(padroes, "larissa", "Sala 4", DayOfWeek.THURSDAY, 13, "Horario da semana", RECORRENCIA_AVULSO, "s4-qui-13-larissa");
         adicionar(padroes, "larissa", "Sala 4", DayOfWeek.THURSDAY, 15, "Horario da semana", RECORRENCIA_AVULSO, "s4-qui-15-larissa");
         adicionar(padroes, "andreia", "Sala 4", DayOfWeek.MONDAY, 16, "FIXO", RECORRENCIA_SEMANAL, "s4-seg-16-andreia");
@@ -360,6 +364,20 @@ public class StartupDataInitializer implements CommandLineRunner {
             String recorrencia,
             String chave
     ) {
+        adicionar(padroes, loginProfissional, nomeSala, diaSemana, hora, nomeCliente, recorrencia, chave, null);
+    }
+
+    private void adicionar(
+            List<AgendamentoFixoPadrao> padroes,
+            String loginProfissional,
+            String nomeSala,
+            DayOfWeek diaSemana,
+            int hora,
+            String nomeCliente,
+            String recorrencia,
+            String chave,
+            LocalDate dataInicial
+    ) {
         padroes.add(new AgendamentoFixoPadrao(
                 loginProfissional,
                 nomeSala,
@@ -367,7 +385,8 @@ public class StartupDataInitializer implements CommandLineRunner {
                 LocalTime.of(hora, 0),
                 nomeCliente,
                 recorrencia,
-                chave
+                chave,
+                dataInicial
         ));
     }
 
@@ -381,7 +400,8 @@ public class StartupDataInitializer implements CommandLineRunner {
             LocalTime horario,
             String nomeCliente,
             String recorrencia,
-            String chave
+            String chave,
+            LocalDate dataInicial
     ) {
     }
 }

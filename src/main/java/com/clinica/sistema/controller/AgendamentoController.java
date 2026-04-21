@@ -2,9 +2,11 @@ package com.clinica.sistema.controller;
 
 import com.clinica.sistema.config.StartupDataInitializer;
 import com.clinica.sistema.dto.AgendamentoForm;
+import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
@@ -26,15 +29,18 @@ public class AgendamentoController {
     private final AgendamentoService service;
     private final AuthService authService;
     private final StartupDataInitializer startupDataInitializer;
+    private final UsuarioService usuarioService;
 
     public AgendamentoController(
             AgendamentoService service,
             AuthService authService,
-            StartupDataInitializer startupDataInitializer
+            StartupDataInitializer startupDataInitializer,
+            UsuarioService usuarioService
     ) {
         this.service = service;
         this.authService = authService;
         this.startupDataInitializer = startupDataInitializer;
+        this.usuarioService = usuarioService;
     }
 
     @GetMapping("/dashboard")
@@ -63,17 +69,33 @@ public class AgendamentoController {
             form.setHorarioAtendimento(service.listarHorariosDisponiveis().get(0));
             model.addAttribute("agendamentoForm", form);
         }
+        if (!model.containsAttribute("cadastroProfissionalForm")) {
+            model.addAttribute("cadastroProfissionalForm", new CadastroProfissionalForm());
+        }
 
         List<com.clinica.sistema.model.Agendamento> agendamentos = service.buscarParaUsuario(usuarioLogado);
+        List<com.clinica.sistema.model.Agendamento> agendamentosFixos = agendamentos.stream()
+                .filter(agendamento -> Boolean.TRUE.equals(agendamento.getFixo()))
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(LocalDateTime.now().minusDays(1)))
+                .limit(24)
+                .toList();
+        List<com.clinica.sistema.model.Agendamento> agendamentosAvulsos = agendamentos.stream()
+                .filter(agendamento -> !Boolean.TRUE.equals(agendamento.getFixo()))
+                .filter(agendamento -> !agendamento.getDataHoraInicio().isBefore(LocalDateTime.now().minusDays(30)))
+                .limit(24)
+                .toList();
+
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("agendamentos", agendamentos);
-        model.addAttribute("agendamentosFixos", agendamentos.stream()
+        model.addAttribute("agendamentosFixos", agendamentosFixos);
+        model.addAttribute("agendamentosAvulsos", agendamentosAvulsos);
+        model.addAttribute("totalAgendamentosFixos", agendamentos.stream()
                 .filter(agendamento -> Boolean.TRUE.equals(agendamento.getFixo()))
-                .toList());
-        model.addAttribute("agendamentosAvulsos", agendamentos.stream()
+                .count());
+        model.addAttribute("totalAgendamentosAvulsos", agendamentos.stream()
                 .filter(agendamento -> !Boolean.TRUE.equals(agendamento.getFixo()))
-                .toList());
+                .count());
         model.addAttribute("salas", service.listarSalas());
         model.addAttribute("profissionais", isAdmin ? service.listarProfissionais() : java.util.List.of(usuarioLogado));
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
@@ -101,6 +123,23 @@ public class AgendamentoController {
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
             redirectAttributes.addFlashAttribute("agendamentoForm", agendamentoForm);
+        }
+        return "redirect:/agendamentos/dashboard";
+    }
+
+    @PostMapping("/profissionais")
+    public String cadastrarProfissional(
+            @ModelAttribute CadastroProfissionalForm cadastroProfissionalForm,
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio(session);
+            Usuario novoProfissional = usuarioService.cadastrarProfissional(cadastroProfissionalForm, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Profissional cadastrado com sucesso: " + novoProfissional.getNome() + ".");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("cadastroProfissionalForm", cadastroProfissionalForm);
         }
         return "redirect:/agendamentos/dashboard";
     }
