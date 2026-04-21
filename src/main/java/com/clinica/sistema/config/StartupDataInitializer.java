@@ -29,6 +29,7 @@ public class StartupDataInitializer implements CommandLineRunner {
     private static final String SENHA_PROFISSIONAIS_PADRAO = "297b";
     private static final int SEMANAS_FIXAS_PADRAO = 12;
     private static final String PREFIXO_SERIE_FIXA_SEED = "seed-fixo-";
+    private static final LocalDate DATA_BASE_DEMONSTRACAO = LocalDate.of(2026, 4, 20);
     private static final String RECORRENCIA_AVULSO = "AVULSO";
     private static final String RECORRENCIA_SEMANAL = "SEMANAL";
     private static final String RECORRENCIA_QUINZENAL = "QUINZENAL";
@@ -178,7 +179,7 @@ public class StartupDataInitializer implements CommandLineRunner {
 
         List<AgendamentoFixoPadrao> padroes = listarAgendamentosFixosPadrao();
         List<Agendamento> novosAgendamentos = new ArrayList<>();
-        LocalDate inicioBase = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate inicioBase = DATA_BASE_DEMONSTRACAO;
 
         for (AgendamentoFixoPadrao padrao : padroes) {
             Usuario profissional = usuariosPorLogin.get(padrao.loginProfissional().toLowerCase(Locale.ROOT));
@@ -315,7 +316,7 @@ public class StartupDataInitializer implements CommandLineRunner {
         adicionar(padroes, "luiza", "Sala 2", DayOfWeek.TUESDAY, 18, "FIXO", RECORRENCIA_SEMANAL, "s2-ter-18-luiza");
         adicionar(padroes, "luiza", "Sala 2", DayOfWeek.WEDNESDAY, 18, "FIXO", RECORRENCIA_SEMANAL, "s2-qua-18-luiza");
         adicionar(padroes, "luiza", "Sala 2", DayOfWeek.THURSDAY, 18, "Somente 16/04", RECORRENCIA_AVULSO, "s2-qui-18-luiza");
-        adicionar(padroes, "julia", "Sala 2", DayOfWeek.FRIDAY, 18, "Joao", RECORRENCIA_AVULSO, "s2-sex-18-julia");
+        adicionar(padroes, "julia", "Sala 2", DayOfWeek.FRIDAY, 18, "Joao", RECORRENCIA_SEMANAL, "s2-sex-18-julia");
         adicionar(padroes, "luiza", "Sala 2", DayOfWeek.TUESDAY, 19, "Arthur Azevedo - 1o C", RECORRENCIA_AVULSO, "s2-ter-19-luiza");
         adicionar(padroes, "luiza", "Sala 2", DayOfWeek.WEDNESDAY, 19, "FIXO", RECORRENCIA_SEMANAL, "s2-qua-19-luiza");
         adicionar(padroes, "julia", "Sala 2", DayOfWeek.THURSDAY, 19, "Giovanna - uso 30/04", RECORRENCIA_AVULSO, "s2-qui-19-julia-giovanna-3004", LocalDate.of(2026, 4, 30));
@@ -332,10 +333,10 @@ public class StartupDataInitializer implements CommandLineRunner {
         adicionar(padroes, "cibele", "Sala 3", DayOfWeek.TUESDAY, 12, "Horario da semana", RECORRENCIA_AVULSO, "s3-ter-12-cibele");
         adicionar(padroes, "cibele", "Sala 3", DayOfWeek.FRIDAY, 12, "Horario da semana", RECORRENCIA_AVULSO, "s3-sex-12-cibele");
         adicionar(padroes, "rosi", "Sala 3", DayOfWeek.THURSDAY, 14, "Horario da semana", RECORRENCIA_AVULSO, "s3-qui-14-rosi");
-        adicionar(padroes, "jessicahouri", "Sala 3", DayOfWeek.TUESDAY, 15, "Horario da semana", RECORRENCIA_AVULSO, "s3-ter-15-jhouri");
+        adicionar(padroes, "jessicamota", "Sala 3", DayOfWeek.TUESDAY, 15, "Horario da semana", RECORRENCIA_AVULSO, "s3-ter-15-jmota");
         adicionar(padroes, "jessicahouri", "Sala 3", DayOfWeek.WEDNESDAY, 15, "Brenner", RECORRENCIA_AVULSO, "s3-qua-15-jhouri");
         adicionar(padroes, "rosi", "Sala 3", DayOfWeek.THURSDAY, 15, "Horario da semana", RECORRENCIA_AVULSO, "s3-qui-15-rosi");
-        adicionar(padroes, "jessicahouri", "Sala 3", DayOfWeek.FRIDAY, 15, "Regina", RECORRENCIA_AVULSO, "s3-sex-15-jhouri");
+        adicionar(padroes, "jessicamota", "Sala 3", DayOfWeek.FRIDAY, 15, "Regina", RECORRENCIA_AVULSO, "s3-sex-15-jmota");
         adicionar(padroes, "jessicahouri", "Sala 3", DayOfWeek.TUESDAY, 16, "FIXO", RECORRENCIA_SEMANAL, "s3-ter-16-jhouri");
         adicionar(padroes, "itamara", "Sala 3", DayOfWeek.WEDNESDAY, 16, "FIXO", RECORRENCIA_SEMANAL, "s3-qua-16-itamara");
         adicionar(padroes, "jessicamota", "Sala 3", DayOfWeek.THURSDAY, 16, "Flavia", RECORRENCIA_AVULSO, "s3-qui-16-jmota");
