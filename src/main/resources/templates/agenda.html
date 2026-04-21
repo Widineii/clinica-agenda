@@ -236,7 +236,16 @@
                     <form th:action="@{/agendamentos}" th:object="${agendamentoForm}" method="post" class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Profissional</label>
-                            <div>
+                            <div th:if="${isAdmin}">
+                                <select th:field="*{profissionalId}" class="form-select" required>
+                                    <option value="">Selecione</option>
+                                    <option th:each="profissional : ${profissionais}"
+                                            th:value="${profissional.id}"
+                                            th:text="${profissional.nome}">Profissional</option>
+                                </select>
+                                <div class="form-text">A administracao pode escolher qual profissional sera vinculado ao agendamento.</div>
+                            </div>
+                            <div th:unless="${isAdmin}">
                                 <input type="text" class="form-control" th:value="${usuarioLogado.nome}" readonly>
                                 <input type="hidden" th:field="*{profissionalId}">
                                 <div class="form-text">Agendamento vinculado automaticamente ao usuario conectado.</div>
