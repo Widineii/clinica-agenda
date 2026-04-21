@@ -76,20 +76,19 @@ public class StartupDataInitializer implements CommandLineRunner {
     }
 
     @Transactional
-    public void resetarBaseDemonstracao() {
+    public Usuario resetarBaseDemonstracao() {
         agendamentoRepository.deleteAllInBatch();
         salaRepository.deleteAllInBatch();
-
-        List<Usuario> usuariosNaoAdmin = usuarioRepository.findAll().stream()
-                .filter(usuario -> !"ROLE_ADMIN".equals(usuario.getCargo()))
-                .toList();
-        if (!usuariosNaoAdmin.isEmpty()) {
-            usuarioRepository.deleteAllInBatch(usuariosNaoAdmin);
-        }
+        usuarioRepository.deleteAllInBatch();
 
         garantirSalas();
         sincronizarUsuariosPadrao();
+        garantirAdmin();
         sincronizarAgendamentosFixosPadrao();
+
+        String loginAdmin = (adminLogin != null && !adminLogin.isBlank()) ? adminLogin : "admin";
+        return usuarioRepository.findByLogin(loginAdmin)
+                .orElseThrow(() -> new RuntimeException("Nao foi possivel recriar o admin da demonstracao."));
     }
 
     private boolean deveSincronizarCargaInicial() {
