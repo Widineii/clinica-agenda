@@ -62,6 +62,8 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         garantirSalas();
+        sincronizarUsuariosPadrao();
+        garantirAdmin();
 
         if (seedDemoData) {
             resetarBaseDemonstracao();
@@ -73,7 +75,6 @@ public class StartupDataInitializer implements CommandLineRunner {
             return;
         }
 
-        garantirAdmin();
     }
 
     @Transactional
