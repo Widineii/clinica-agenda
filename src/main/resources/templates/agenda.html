@@ -214,6 +214,14 @@
                 <button th:if="${isAdmin}" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cadastroProfissionalModal">
                     Cadastrar profissional
                 </button>
+                <form th:if="${isAdmin}" th:action="@{/agendamentos/resetar-demo}" method="post">
+                    <button type="submit"
+                            class="btn btn-outline-light"
+                            title="Limpa os dados atuais e recarrega a base da demonstracao"
+                            onclick="return confirm('Isso vai limpar a agenda atual da demonstracao e recarregar os dados padrao. Deseja continuar?');">
+                        Restaurar demonstracao
+                    </button>
+                </form>
                 <form th:action="@{/logout}" method="post">
                     <button type="submit" class="btn btn-light">Sair</button>
                 </form>

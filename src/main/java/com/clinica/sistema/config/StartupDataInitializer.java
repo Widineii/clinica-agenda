@@ -9,6 +9,7 @@ import com.clinica.sistema.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -70,6 +71,23 @@ public class StartupDataInitializer implements CommandLineRunner {
     }
 
     public void sincronizarCargaInicialClinica() {
+        sincronizarUsuariosPadrao();
+        sincronizarAgendamentosFixosPadrao();
+    }
+
+    @Transactional
+    public void resetarBaseDemonstracao() {
+        agendamentoRepository.deleteAllInBatch();
+        salaRepository.deleteAllInBatch();
+
+        List<Usuario> usuariosNaoAdmin = usuarioRepository.findAll().stream()
+                .filter(usuario -> !"ROLE_ADMIN".equals(usuario.getCargo()))
+                .toList();
+        if (!usuariosNaoAdmin.isEmpty()) {
+            usuarioRepository.deleteAllInBatch(usuariosNaoAdmin);
+        }
+
+        garantirSalas();
         sincronizarUsuariosPadrao();
         sincronizarAgendamentosFixosPadrao();
     }

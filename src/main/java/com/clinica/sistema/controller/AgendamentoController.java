@@ -195,6 +195,25 @@ public class AgendamentoController {
         return "redirect:/agendamentos/dashboard";
     }
 
+    @PostMapping("/resetar-demo")
+    public String resetarDemonstracao(
+            HttpSession session,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio(session);
+            if (!authService.isAdmin(usuarioLogado)) {
+                throw new RuntimeException("Somente a administracao pode restaurar a demonstracao.");
+            }
+
+            startupDataInitializer.resetarBaseDemonstracao();
+            redirectAttributes.addFlashAttribute("sucesso", "Demonstracao restaurada com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/agendamentos/dashboard";
+    }
+
     private LocalDate agendaDataSugerida(LocalDate semana) {
         LocalDate base = semana != null ? semana : LocalDate.now();
         if (base.getDayOfWeek().getValue() > 6) {
