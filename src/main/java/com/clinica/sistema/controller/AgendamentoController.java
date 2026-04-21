@@ -206,7 +206,7 @@ public class AgendamentoController {
                 throw new RuntimeException("Somente a administracao pode restaurar a demonstracao.");
             }
 
-            Usuario adminRestaurado = startupDataInitializer.resetarBaseDemonstracao();
+            Usuario adminRestaurado = startupDataInitializer.resetarBaseDemonstracao(usuarioLogado);
             authService.registrarSessao(session, adminRestaurado);
             redirectAttributes.addFlashAttribute("sucesso", "Demonstracao restaurada com sucesso.");
         } catch (RuntimeException e) {

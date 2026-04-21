@@ -85,16 +85,37 @@ public class StartupDataInitializer implements CommandLineRunner {
 
     @Transactional
     public Usuario resetarBaseDemonstracao() {
+        String loginAdmin = (adminLogin != null && !adminLogin.isBlank()) ? adminLogin : "admin";
+        Usuario adminExistente = usuarioRepository.findByLogin(loginAdmin).orElse(null);
+        return resetarBaseDemonstracao(adminExistente);
+    }
+
+    @Transactional
+    public Usuario resetarBaseDemonstracao(Usuario adminPreservado) {
         agendamentoRepository.deleteAllInBatch();
         salaRepository.deleteAllInBatch();
-        usuarioRepository.deleteAllInBatch();
+
+        if (adminPreservado == null) {
+            usuarioRepository.deleteAllInBatch();
+        } else {
+            List<Long> idsParaRemover = usuarioRepository.findAll().stream()
+                    .filter(usuario -> !usuario.getId().equals(adminPreservado.getId()))
+                    .map(Usuario::getId)
+                    .toList();
+            if (!idsParaRemover.isEmpty()) {
+                usuarioRepository.deleteAllByIdInBatch(idsParaRemover);
+            }
+        }
 
         garantirSalas();
+        if (adminPreservado != null) {
+            usuarioRepository.save(adminPreservado);
+        }
         sincronizarUsuariosPadrao();
         garantirAdmin();
         sincronizarAgendamentosFixosPadrao();
 
-        String loginAdmin = (adminLogin != null && !adminLogin.isBlank()) ? adminLogin : "admin";
+        String loginAdmin = adminPreservado != null ? adminPreservado.getLogin() : (adminLogin != null && !adminLogin.isBlank() ? adminLogin : "admin");
         return usuarioRepository.findByLogin(loginAdmin)
                 .orElseThrow(() -> new RuntimeException("Nao foi possivel recriar o admin da demonstracao."));
     }
@@ -139,7 +160,6 @@ public class StartupDataInitializer implements CommandLineRunner {
 
     private void sincronizarUsuariosPadrao() {
         List<UsuarioPadrao> usuariosPadrao = List.of(
-                new UsuarioPadrao("Administrador do Sistema", "admin", "Luquinha12@", "ROLE_ADMIN"),
                 new UsuarioPadrao("Polyana", "polyana", SENHA_PROFISSIONAIS_PADRAO, "ROLE_ADMIN"),
                 new UsuarioPadrao("Carol", "carol", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),
                 new UsuarioPadrao("Itamara", "itamara", SENHA_PROFISSIONAIS_PADRAO, "ROLE_PROFISSIONAL"),

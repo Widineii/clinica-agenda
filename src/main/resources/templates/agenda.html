@@ -218,6 +218,13 @@
                         Atualizar agenda da planilha
                     </button>
                 </form>
+                <form th:if="${isAdmin}" th:action="@{/agendamentos/resetar-demo}" method="post">
+                    <button type="submit"
+                            class="btn btn-outline-warning"
+                            onclick="return confirm('Isso vai limpar a demonstracao web atual, preservar seu admin e recarregar a base padrao da clinica. Deseja continuar?');">
+                        Restaurar demonstracao
+                    </button>
+                </form>
                 <button th:if="${isAdmin}" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cadastroProfissionalModal">
                     Cadastrar profissional
                 </button>
