@@ -9,22 +9,25 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.clinica</groupId>
-    <artifactId>sistema</artifactId>
+    <artifactId>agenda-affetto</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Name</name>
-    <description>Name</description>
-    <url/>
+    <name>Agenda Affetto</name>
+    <description>Sistema web de agenda para clinica com controle por profissional, sala e cliente.</description>
+    <url>https://github.com/Widineii/clinica-agenda</url>
     <licenses>
         <license/>
     </licenses>
     <developers>
-        <developer/>
+        <developer>
+            <name>Widineii</name>
+            <url>https://github.com/Widineii</url>
+        </developer>
     </developers>
     <scm>
-        <connection/>
-        <developerConnection/>
+        <connection>scm:git:https://github.com/Widineii/clinica-agenda.git</connection>
+        <developerConnection>scm:git:https://github.com/Widineii/clinica-agenda.git</developerConnection>
         <tag/>
-        <url/>
+        <url>https://github.com/Widineii/clinica-agenda</url>
     </scm>
     <properties>
         <java.version>17</java.version>
