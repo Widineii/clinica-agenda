@@ -31,6 +31,20 @@ Este projeto foi desenvolvido como item de portfólio para substituir o uso de p
 - App online: [https://clinica-agenda-production.up.railway.app](https://clinica-agenda-production.up.railway.app)
 - Repositorio: [https://github.com/Widineii/clinica-agenda](https://github.com/Widineii/clinica-agenda)
 
+## Screenshots
+
+### Tela de login
+
+![Tela de login](docs/images/login.png)
+
+### Dashboard e grade semanal
+
+![Dashboard principal](docs/images/dashboard-overview.png)
+
+### Detalhe da agenda da clinica
+
+![Detalhe da agenda](docs/images/dashboard-details.png)
+
 ## Rodando localmente
 
 Requisitos:
@@ -51,17 +65,10 @@ Acesso local:
 
 ## Acesso de demonstracao
 
-- Admin: `admin`
-- Senha do admin: `Luquinha12@`
-- Profissionais seed: senha `297b`
+As credenciais da demonstracao nao ficam expostas neste repositorio publico.
 
-Exemplos de login:
-
-- `polyana`
-- `carol`
-- `itamara`
-- `julia`
-- `juliano`
+Se voce quiser apresentar a versao online em entrevista, curriculo ou portfolio,
+o acesso pode ser disponibilizado separadamente.
 
 ## Estrutura do projeto
 
