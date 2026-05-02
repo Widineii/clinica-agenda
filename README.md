@@ -1,35 +1,20 @@
 # Agenda Affetto
 
-Sistema web de agenda para clinica com controle por profissional, sala e cliente.
+![Status](https://img.shields.io/badge/status-online%20demo-16a34a)
+![CI](https://github.com/Widineii/clinica-agenda/actions/workflows/ci.yml/badge.svg)
+![Java](https://img.shields.io/badge/Java-17+-f97316)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-22c55e)
+![Database](https://img.shields.io/badge/database-H2%20%7C%20PostgreSQL%20%7C%20MySQL-2563eb)
+![Deploy](https://img.shields.io/badge/deploy-Railway-9333ea)
 
-Este projeto foi desenvolvido como item de portfólio para substituir o uso de planilhas abertas por um fluxo mais seguro, organizado e visual para a rotina da clinica.
+Sistema web de agenda para clinica com controle por profissional, sala, cliente, data e horario.
 
-## O que o sistema faz
-
-- login por usuario
-- separacao entre administracao e profissionais
-- agendamento por sala, data, horario e cliente
-- grade semanal inspirada na planilha da clinica
-- suporte a atendimentos avulsos, fixos e quinzenais
-- bloqueio de cancelamento com menos de 24 horas para profissionais
-- cadastro de novos profissionais pela administracao
-
-## Tecnologias
-
-- Java 17
-- Spring Boot
-- Spring MVC
-- Spring Data JPA
-- Thymeleaf
-- H2
-- PostgreSQL
-- Bootstrap 5
-- Maven
+Este projeto foi desenvolvido como item de portfolio para substituir o uso de planilhas abertas por um fluxo mais seguro, organizado e visual para a rotina de uma clinica.
 
 ## Demo hospedada
 
-- App online: [https://clinica-agenda-production.up.railway.app](https://clinica-agenda-production.up.railway.app)
-- Repositorio: [https://github.com/Widineii/clinica-agenda](https://github.com/Widineii/clinica-agenda)
+- App online: [clinica-agenda-production.up.railway.app](https://clinica-agenda-production.up.railway.app)
+- Repositorio: [github.com/Widineii/clinica-agenda](https://github.com/Widineii/clinica-agenda)
 
 ## Screenshots
 
@@ -45,17 +30,49 @@ Este projeto foi desenvolvido como item de portfólio para substituir o uso de p
 
 ![Detalhe da agenda](docs/images/dashboard-details.png)
 
-## Rodando localmente
+## Funcionalidades
+
+- Login por usuario
+- Separacao entre administracao e profissionais
+- Agendamento por sala, data, horario e cliente
+- Grade semanal inspirada na rotina real da clinica
+- Suporte a atendimentos avulsos, fixos e quinzenais
+- Bloqueio de cancelamento com menos de 24 horas para profissionais
+- Cadastro de novos profissionais pela administracao
+- Profiles separados para ambiente local e producao
+
+## Tecnologias
+
+- Java 17
+- Spring Boot
+- Spring MVC
+- Spring Data JPA
+- Thymeleaf
+- H2 Database
+- PostgreSQL
+- MySQL
+- Bootstrap 5
+- Maven
+- Docker
+- Railway
+
+## Como rodar localmente
 
 Requisitos:
 
 - Java 17+
 - Maven Wrapper do projeto
 
-Comandos:
+No Windows:
 
 ```powershell
-./mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run
+```
+
+Em Linux/macOS:
+
+```bash
+./mvnw spring-boot:run
 ```
 
 Acesso local:
@@ -67,33 +84,48 @@ Acesso local:
 
 As credenciais da demonstracao nao ficam expostas neste repositorio publico.
 
-Se voce quiser apresentar a versao online em entrevista, curriculo ou portfolio,
-o acesso pode ser disponibilizado separadamente.
+Para apresentar a versao online em entrevista, curriculo ou portfolio, o acesso pode ser disponibilizado separadamente.
 
 ## Estrutura do projeto
 
 ```text
 src/main/java/com/clinica/sistema
-  controller/
-  service/
-  repository/
-  model/
-  config/
+|-- config
+|-- controller
+|-- dto
+|-- model
+|-- repository
+`-- service
 
 src/main/resources
-  templates/
-  application-local.properties
-  application-prod.properties
+|-- templates
+|-- application-local.properties
+|-- application-prod.properties
+`-- application.properties
 ```
 
-## Diferenciais para portfólio
+## Diferenciais para portfolio
 
-- projeto baseado em caso real de uso
-- migracao de planilha para sistema web
-- interface ajustada para exibicao de grade semanal
-- regras de negocio da clinica implementadas no backend
-- versao online preparada para apresentacao
+- Projeto baseado em caso real de uso
+- Migracao de planilha para sistema web
+- Interface ajustada para exibicao de grade semanal
+- Regras de negocio da clinica implementadas no backend
+- Versao online preparada para apresentacao
+- Testes automatizados em services
+- Deploy preparado com Docker e Railway
 
-## Observacao
+## Como apresentar em entrevista
 
-Esta versao hospedada foi configurada como demonstracao de portfólio, com base de dados de demo para facilitar apresentacao e testes.
+1. Mostre o problema: agenda em planilha e risco de desorganizacao.
+2. Abra o login e explique os perfis.
+3. Mostre a grade semanal por sala e profissional.
+4. Explique as regras de atendimento fixo, avulso e quinzenal.
+5. Finalize mostrando que o projeto tem deploy online, testes e estrutura de producao.
+
+## Autor
+
+Desenvolvido por **Widinei Martins**.
+
+- GitHub: [github.com/Widineii](https://github.com/Widineii)
+- LinkedIn: [linkedin.com/in/widineimartinsdev](https://www.linkedin.com/in/widineimartinsdev)
+- WhatsApp: [w.app/widineii](https://w.app/widineii)
