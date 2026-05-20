@@ -24,6 +24,9 @@ import java.util.Optional;
 @RequestMapping("/agendamentos/relatorio")
 public class RelatorioController {
 
+    private static final String MSG_RELATORIO_DISPONIVEL_APOS_DIA_3 =
+            "O relatorio so fica disponivel a partir do dia 3 do mes seguinte.";
+
     private static final Logger log = LoggerFactory.getLogger(RelatorioController.class);
 
     private final RelatorioMensalService relatorioMensalService;
@@ -50,6 +53,12 @@ public class RelatorioController {
             return "redirect:/agendamentos/dashboard";
         }
 
+        if (!relatorioMensalService.podeExecutarFechamentoAutomatico()) {
+            redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
+            redirectAttributes.addFlashAttribute("erro", MSG_RELATORIO_DISPONIVEL_APOS_DIA_3);
+            return "redirect:/agendamentos/dashboard";
+        }
+
         YearMonth mesPassado = relatorioMensalService.mesPassadoReferencia();
         Optional<RelatorioMensalArquivado> arquivado = Optional.empty();
         RelatorioMensalUsoSalasView relatorio;
@@ -60,10 +69,8 @@ public class RelatorioController {
             relatorio = relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
         } catch (RuntimeException e) {
             log.error("Falha ao carregar relatorio mensal", e);
-            redirectAttributes.addFlashAttribute(
-                    "erro",
-                    "Nao foi possivel carregar o relatorio agora. Tente novamente em alguns minutos."
-            );
+            redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
+            redirectAttributes.addFlashAttribute("erro", MSG_RELATORIO_DISPONIVEL_APOS_DIA_3);
             return "redirect:/agendamentos/dashboard";
         }
 

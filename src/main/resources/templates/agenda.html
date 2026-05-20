@@ -926,12 +926,12 @@
 </div>
 <div id="agendamentoErroAviso" class="agendamento-erro-aviso" hidden
      role="alertdialog" aria-modal="true" aria-labelledby="agendamentoErroTitulo"
-     th:attr="data-erro-msg=${erro}">
+     th:attr="data-erro-msg=${erro},data-erro-contexto=${erroContexto}">
     <div class="agendamento-erro-aviso__painel">
         <div class="agendamento-erro-aviso__cabecalho d-flex justify-content-between align-items-start gap-3">
             <div>
                 <h2 class="h5 mb-1 text-danger" id="agendamentoErroTitulo">Horario indisponivel</h2>
-                <p class="text-muted small mb-0">Nao foi possivel salvar este agendamento.</p>
+                <p class="text-muted small mb-0" id="agendamentoErroSubtitulo">Nao foi possivel salvar este agendamento.</p>
             </div>
             <button type="button" class="btn-close" id="agendamentoErroFechar" aria-label="Fechar"></button>
         </div>
@@ -1047,6 +1047,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
     var mensagemErroAgendamento = /*[[${erro}]]*/ null;
+    var contextoErroAgendamento = /*[[${erroContexto}]]*/ null;
 
     document.addEventListener('DOMContentLoaded', function () {
         function fecharAvisoErroAgendamento() {
@@ -1069,6 +1070,23 @@
             }
             if (!mensagem) {
                 return;
+            }
+
+            var contexto = contextoErroAgendamento;
+            if (!contexto && avisoEl && avisoEl.dataset.erroContexto) {
+                contexto = avisoEl.dataset.erroContexto.trim();
+            }
+
+            var titulo = document.getElementById('agendamentoErroTitulo');
+            var subtitulo = document.getElementById('agendamentoErroSubtitulo');
+            if (titulo && subtitulo) {
+                if (contexto === 'relatorio') {
+                    titulo.textContent = 'Relatorio mensal';
+                    subtitulo.textContent = 'Consulta de uso das salas por profissional.';
+                } else {
+                    titulo.textContent = 'Horario indisponivel';
+                    subtitulo.textContent = 'Nao foi possivel salvar este agendamento.';
+                }
             }
 
             var texto = document.getElementById('agendamentoErroMensagem');
