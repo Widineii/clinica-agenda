@@ -4,6 +4,8 @@ import com.clinica.sistema.model.Agendamento;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,4 +76,37 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     @Transactional
     @Modifying
     void deleteBySerieFixaIdStartingWith(String prefix);
+
+    @Query("""
+            SELECT a.profissional.nome, a.sala.nome, COUNT(a)
+            FROM Agendamento a
+            WHERE a.dataHoraInicio >= :inicio
+              AND a.dataHoraInicio < :fim
+              AND a.profissional.cargo = 'ROLE_PROFISSIONAL'
+            GROUP BY a.profissional.id, a.profissional.nome, a.sala.id, a.sala.nome
+            ORDER BY a.profissional.nome ASC, a.sala.nome ASC
+            """)
+    List<Object[]> contarUsoSalasPorProfissionalNoPeriodo(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim
+    );
+
+    long countByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(
+            LocalDateTime inicio,
+            LocalDateTime fim
+    );
+
+    @Transactional
+    @Modifying
+    @Query("""
+            DELETE FROM Agendamento a
+            WHERE a.dataHoraInicio >= :inicio
+              AND a.dataHoraInicio < :fim
+              AND COALESCE(a.fixo, false) = false
+              AND UPPER(COALESCE(a.tipoRecorrencia, 'AVULSO')) NOT IN ('SEMANAL', 'QUINZENAL')
+            """)
+    int deleteAvulsosByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim
+    );
 }

@@ -3,6 +3,9 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.AgendaSalaLinha;
 import com.clinica.sistema.dto.AgendaSalaView;
+import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
+import com.clinica.sistema.dto.RelatorioUsoSalaItem;
+import com.clinica.sistema.dto.RelatorioUsoSalaProfissional;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
@@ -16,7 +19,9 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -154,6 +159,71 @@ public class AgendamentoService {
         view.setDiasSemana(diasSemana);
         view.setLinhas(linhas);
         return view;
+    }
+
+    @Transactional
+    public long limparAgendamentosDoMesPassado() {
+        YearMonth mesPassado = YearMonth.now().minusMonths(1);
+        LocalDateTime inicio = mesPassado.atDay(1).atStartOfDay();
+        LocalDateTime fim = YearMonth.now().atDay(1).atStartOfDay();
+        return limparAgendamentosNoPeriodo(inicio, fim);
+    }
+
+    public long contarAgendamentosDoMesPassado() {
+        YearMonth mesPassado = YearMonth.now().minusMonths(1);
+        LocalDateTime inicio = mesPassado.atDay(1).atStartOfDay();
+        LocalDateTime fim = YearMonth.now().atDay(1).atStartOfDay();
+        return repository.countByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(inicio, fim);
+    }
+
+    /**
+     * Remove somente agendamentos avulsos do periodo.
+     * Semanal e quinzenal permanecem ate cancelamento ou encerramento da serie.
+     */
+    @Transactional
+    public long limparAgendamentosNoPeriodo(LocalDateTime inicio, LocalDateTime fim) {
+        if (!inicio.isBefore(fim)) {
+            throw new RuntimeException("Periodo invalido para limpeza.");
+        }
+        return repository.deleteAvulsosByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(inicio, fim);
+    }
+
+    public RelatorioMensalUsoSalasView montarRelatorioMensalUsoSalas(YearMonth mesReferencia) {
+        LocalDateTime inicio = mesReferencia.atDay(1).atStartOfDay();
+        LocalDateTime fim = mesReferencia.plusMonths(1).atDay(1).atStartOfDay();
+
+        List<Object[]> linhas = repository.contarUsoSalasPorProfissionalNoPeriodo(inicio, fim);
+        Map<String, RelatorioUsoSalaProfissional> porProfissional = new LinkedHashMap<>();
+        long totalGeral = 0;
+
+        for (Object[] linha : linhas) {
+            String profissionalNome = (String) linha[0];
+            String salaNome = (String) linha[1];
+            long quantidade = linha[2] instanceof Number numero ? numero.longValue() : 0L;
+
+            RelatorioUsoSalaProfissional bloco = porProfissional.computeIfAbsent(
+                    profissionalNome,
+                    nome -> {
+                        RelatorioUsoSalaProfissional novo = new RelatorioUsoSalaProfissional();
+                        novo.setProfissionalNome(nome);
+                        return novo;
+                    }
+            );
+
+            RelatorioUsoSalaItem item = new RelatorioUsoSalaItem();
+            item.setSalaNome(salaNome);
+            item.setQuantidade(quantidade);
+            bloco.getSalas().add(item);
+            bloco.setTotalHorarios(bloco.getTotalHorarios() + quantidade);
+            totalGeral += quantidade;
+        }
+
+        RelatorioMensalUsoSalasView relatorio = new RelatorioMensalUsoSalasView();
+        relatorio.setMesReferencia(mesReferencia);
+        relatorio.setMesReferenciaLabel(formatarMesReferencia(mesReferencia));
+        relatorio.setProfissionais(new ArrayList<>(porProfissional.values()));
+        relatorio.setTotalGeral(totalGeral);
+        return relatorio;
     }
 
     public List<Agendamento> listarAgendamentosDoDia(Usuario usuarioLogado, boolean isAdmin) {
@@ -467,6 +537,15 @@ public class AgendamentoService {
     private boolean podeAtender(Usuario usuario) {
         return "ROLE_PROFISSIONAL".equals(usuario.getCargo())
                 || "ROLE_ADMIN".equals(usuario.getCargo());
+    }
+
+    private String formatarMesReferencia(YearMonth mesReferencia) {
+        String mes = mesReferencia.getMonth()
+                .getDisplayName(TextStyle.FULL_STANDALONE, new Locale("pt", "BR"));
+        if (mes != null && !mes.isBlank()) {
+            mes = Character.toUpperCase(mes.charAt(0)) + mes.substring(1);
+        }
+        return mes + " de " + mesReferencia.getYear();
     }
 
     private void validarHorario(LocalDateTime inicio, LocalDateTime fim) {

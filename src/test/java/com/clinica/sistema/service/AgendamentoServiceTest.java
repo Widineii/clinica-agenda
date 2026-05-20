@@ -3,6 +3,7 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.dto.AgendaSalaLinha;
 import com.clinica.sistema.dto.AgendaSalaView;
 import com.clinica.sistema.dto.AgendamentoForm;
+import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
@@ -20,6 +21,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
 import java.util.List;
@@ -446,6 +448,45 @@ class AgendamentoServiceTest {
         agendamento.setDataHoraInicio(inicio);
         agendamento.setDataHoraFim(inicio.plusHours(1));
         return agendamento;
+    }
+
+    @Test
+    void deveLimparAgendamentosSomenteDoMesPassado() {
+        YearMonth mesPassado = YearMonth.now().minusMonths(1);
+        LocalDateTime inicio = mesPassado.atDay(1).atStartOfDay();
+        LocalDateTime fim = YearMonth.now().atDay(1).atStartOfDay();
+
+        when(agendamentoRepository.deleteAvulsosByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(inicio, fim))
+                .thenReturn(42);
+
+        long removidos = agendamentoService.limparAgendamentosDoMesPassado();
+
+        assertEquals(42L, removidos);
+        verify(agendamentoRepository).deleteAvulsosByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(inicio, fim);
+    }
+
+    @Test
+    void deveMontarRelatorioMensalUsoSalasPorProfissional() {
+        YearMonth maio = YearMonth.of(2026, 5);
+        LocalDateTime inicio = maio.atDay(1).atStartOfDay();
+        LocalDateTime fim = maio.plusMonths(1).atDay(1).atStartOfDay();
+
+        when(agendamentoRepository.contarUsoSalasPorProfissionalNoPeriodo(inicio, fim))
+                .thenReturn(List.of(
+                        new Object[]{"Carol", "Sala 1", 10L},
+                        new Object[]{"Julia", "Sala 1", 7L},
+                        new Object[]{"Julia", "Sala 2", 9L}
+                ));
+
+        RelatorioMensalUsoSalasView relatorio = agendamentoService.montarRelatorioMensalUsoSalas(maio);
+
+        assertEquals(26L, relatorio.getTotalGeral());
+        assertEquals(2, relatorio.getProfissionais().size());
+        assertEquals("Carol", relatorio.getProfissionais().get(0).getProfissionalNome());
+        assertEquals(10L, relatorio.getProfissionais().get(0).getSalas().get(0).getQuantidade());
+        assertEquals("Julia", relatorio.getProfissionais().get(1).getProfissionalNome());
+        assertEquals(16L, relatorio.getProfissionais().get(1).getTotalHorarios());
+        assertEquals(2, relatorio.getProfissionais().get(1).getSalas().size());
     }
 
     @Test

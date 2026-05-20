@@ -1,0 +1,112 @@
+package com.clinica.sistema.service;
+
+import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
+import com.clinica.sistema.dto.RelatorioUsoSalaItem;
+import com.clinica.sistema.dto.RelatorioUsoSalaProfissional;
+import com.clinica.sistema.model.RelatorioMensalArquivado;
+import com.clinica.sistema.repository.RelatorioMensalArquivadoRepository;
+import tools.jackson.databind.json.JsonMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.YearMonth;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class RelatorioMensalServiceTest {
+
+    @Mock
+    private AgendamentoService agendamentoService;
+
+    @Mock
+    private RelatorioMensalPdfService relatorioMensalPdfService;
+
+    @Mock
+    private RelatorioMensalArquivadoRepository relatorioMensalArquivadoRepository;
+
+    private RelatorioMensalService relatorioMensalService;
+
+    @BeforeEach
+    void setUp() {
+        relatorioMensalService = new RelatorioMensalService(
+                agendamentoService,
+                relatorioMensalPdfService,
+                relatorioMensalArquivadoRepository,
+                JsonMapper.builder().build()
+        );
+    }
+
+    @Test
+    void deveArquivarMesGerarPdfELimparAgendamentos() {
+        YearMonth maio = YearMonth.of(2026, 5);
+        RelatorioMensalUsoSalasView relatorio = relatorioExemplo(maio);
+
+        when(relatorioMensalArquivadoRepository.existsByAnoAndMes(2026, 5)).thenReturn(false);
+        when(agendamentoService.montarRelatorioMensalUsoSalas(maio)).thenReturn(relatorio);
+        when(relatorioMensalPdfService.gerarPdf(relatorio)).thenReturn(new byte[] {1, 2, 3});
+        when(agendamentoService.limparAgendamentosNoPeriodo(
+                maio.atDay(1).atStartOfDay(),
+                maio.plusMonths(1).atDay(1).atStartOfDay()
+        )).thenReturn(15L);
+        when(relatorioMensalArquivadoRepository.save(any(RelatorioMensalArquivado.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Optional<RelatorioMensalArquivado> resultado = relatorioMensalService.arquivarMesSeNecessario(maio);
+
+        assertTrue(resultado.isPresent());
+        assertEquals(7L, resultado.get().getTotalGeral());
+        assertEquals(15L, resultado.get().getAgendamentosRemovidos());
+        assertEquals(3, resultado.get().getPdf().length);
+
+        ArgumentCaptor<RelatorioMensalArquivado> captor = ArgumentCaptor.forClass(RelatorioMensalArquivado.class);
+        verify(relatorioMensalArquivadoRepository).save(captor.capture());
+        assertEquals(2026, captor.getValue().getAno());
+        assertEquals(5, captor.getValue().getMes());
+        assertTrue(captor.getValue().getDadosJson().contains("Julia"));
+    }
+
+    @Test
+    void naoDeveArquivarMesDuasVezes() {
+        YearMonth maio = YearMonth.of(2026, 5);
+        RelatorioMensalArquivado existente = new RelatorioMensalArquivado();
+        existente.setAno(2026);
+        existente.setMes(5);
+
+        when(relatorioMensalArquivadoRepository.existsByAnoAndMes(2026, 5)).thenReturn(true);
+        when(relatorioMensalArquivadoRepository.findByAnoAndMes(2026, 5)).thenReturn(Optional.of(existente));
+
+        relatorioMensalService.arquivarMesSeNecessario(maio);
+
+        verify(agendamentoService, never()).montarRelatorioMensalUsoSalas(any());
+        verify(agendamentoService, never()).limparAgendamentosNoPeriodo(any(), any());
+    }
+
+    private RelatorioMensalUsoSalasView relatorioExemplo(YearMonth mes) {
+        RelatorioUsoSalaItem sala1 = new RelatorioUsoSalaItem();
+        sala1.setSalaNome("Sala 1");
+        sala1.setQuantidade(7);
+
+        RelatorioUsoSalaProfissional julia = new RelatorioUsoSalaProfissional();
+        julia.setProfissionalNome("Julia");
+        julia.getSalas().add(sala1);
+        julia.setTotalHorarios(7);
+
+        RelatorioMensalUsoSalasView relatorio = new RelatorioMensalUsoSalasView();
+        relatorio.setMesReferencia(mes);
+        relatorio.setMesReferenciaLabel("Maio de 2026");
+        relatorio.getProfissionais().add(julia);
+        relatorio.setTotalGeral(7);
+        return relatorio;
+    }
+}

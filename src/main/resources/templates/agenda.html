@@ -524,6 +524,9 @@
                 <button th:if="${isAdmin}" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cadastroProfissionalModal">
                     Cadastrar profissional
                 </button>
+                <a th:if="${isAdmin or isDonaClinica}"
+                   th:href="@{/agendamentos/relatorio}"
+                   class="btn btn-light">Relatorio</a>
                 <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#trocarSenhaModal">
                     Trocar senha
                 </button>
