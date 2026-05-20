@@ -107,7 +107,12 @@ public class AgendamentoController {
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
         var agendaSala = service.montarAgendaSala(salaId, semana);
         Map<Long, String> gradeAcoesPorId = service.montarAcoesGradePorId(agendaSala, usuarioLogado);
+        List<com.clinica.sistema.model.Agendamento> agendamentosDoDia =
+                service.listarAgendamentosDoDia(usuarioLogado, isAdmin);
         model.addAttribute("agendaSala", agendaSala);
+        model.addAttribute("agendamentosDoDia", agendamentosDoDia);
+        model.addAttribute("dataAgendaDia", LocalDate.now());
+        model.addAttribute("totalAgendamentosDoDia", agendamentosDoDia.size());
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
         return "agenda";
     }

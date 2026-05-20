@@ -13,5 +13,4 @@ public class AgendaSalaView {
     private LocalDate inicioSemana;
     private List<LocalDate> diasSemana;
     private List<AgendaSalaLinha> linhas;
-    private List<Agendamento> historicoRecente;
 }

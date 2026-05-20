@@ -18,6 +18,19 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     List<Agendamento> findByProfissionalIdOrderByDataHoraInicioAsc(Long profissionalId);
 
     @EntityGraph(attributePaths = {"profissional", "sala"})
+    List<Agendamento> findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+            LocalDateTime inicio,
+            LocalDateTime fim
+    );
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    List<Agendamento> findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+            Long profissionalId,
+            LocalDateTime inicio,
+            LocalDateTime fim
+    );
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
     List<Agendamento> findBySalaIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
             Long salaId,
             LocalDateTime inicio,

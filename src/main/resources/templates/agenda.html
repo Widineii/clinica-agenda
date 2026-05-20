@@ -290,6 +290,7 @@
         <a href="#grade-semanal" class="btn btn-sm btn-primary">Grade semanal</a>
         <a href="#novo-agendamento" class="btn btn-sm btn-outline-secondary">Novo agendamento</a>
         <a href="#meus-agendamentos" class="btn btn-sm btn-outline-secondary">Meus agendamentos</a>
+        <a href="#agenda-do-dia" class="btn btn-sm btn-outline-secondary">Agenda do dia</a>
     </nav>
 
     <div class="row g-4 align-items-start agenda-main">
@@ -561,7 +562,15 @@
                         </div>
                     </div>
 
-                    <p class="small text-muted mb-3">De dois cliques no <strong>seu</strong> horario na grade para cancelar ou encerrar serie (sem rolar ate Meus agendamentos).</p>
+                    <p class="small text-muted mb-3" th:if="${isAdmin}">
+                        De dois cliques em um horario na grade para cancelar ou encerrar serie de qualquer profissional.
+                    </p>
+                    <p class="small text-muted mb-3" th:if="${!isAdmin and isDonaClinica}">
+                        De dois cliques em qualquer horario na grade para cancelar ou encerrar serie (perfil dona da clinica).
+                    </p>
+                    <p class="small text-muted mb-3" th:if="${!isAdmin and !isDonaClinica}">
+                        De dois cliques no <strong>seu</strong> horario na grade para cancelar ou encerrar serie (sem rolar ate Meus agendamentos).
+                    </p>
 
                     <div class="d-flex flex-wrap gap-2 mb-4">
                         <a th:each="sala : ${salas}"
@@ -608,11 +617,20 @@
                 </div>
             </div>
 
-            <div class="card shell-card mt-4">
+            <div class="card shell-card mt-4" id="agenda-do-dia">
                 <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2 class="h5 mb-0" th:text="${'Historico recente - ' + agendaSala.sala.nome}">Historico</h2>
-                        <span class="text-muted small">Somente consultas ja realizadas (ate 20 registros)</span>
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                        <div>
+                            <h2 class="h5 mb-1">Agenda do dia</h2>
+                            <p class="text-muted small mb-0">
+                                <span th:text="${#temporals.format(dataAgendaDia, 'dd/MM/yyyy')}">20/05/2026</span>
+                                —
+                                <span th:text="${totalAgendamentosDoDia}">0</span>
+                                <span th:text="${totalAgendamentosDoDia == 1 ? 'atendimento' : 'atendimentos'}">atendimentos</span>
+                            </p>
+                        </div>
+                        <span class="text-muted small" th:if="${isAdmin}">Todos os profissionais e salas</span>
+                        <span class="text-muted small" th:unless="${isAdmin}">Seus horarios de hoje em todas as salas</span>
                     </div>
 
                     <div class="table-responsive history-panel">
@@ -621,21 +639,26 @@
                             <tr>
                                 <th>Data</th>
                                 <th>Horario</th>
-                                <th>Profissional</th>
+                                <th>Sala</th>
+                                <th th:if="${isAdmin}">Profissional</th>
                                 <th>Cliente</th>
                             </tr>
                             </thead>
                             <tbody>
-                            <tr th:if="${#lists.isEmpty(agendaSala.historicoRecente)}">
-                                <td colspan="4" class="text-center text-muted py-4">Ainda nao ha consultas passadas nesta sala. Agendamentos futuros aparecem na grade e em Meus agendamentos.</td>
+                            <tr th:if="${#lists.isEmpty(agendamentosDoDia)}">
+                                <td th:colspan="${isAdmin ? 5 : 4}" class="text-center text-muted py-4"
+                                    th:text="${isAdmin ? 'Nenhum agendamento cadastrado para hoje.' : 'Voce nao tem atendimentos hoje.'}">
+                                    Nenhum atendimento hoje.
+                                </td>
                             </tr>
-                            <tr th:each="registro : ${agendaSala.historicoRecente}">
-                                <td th:text="${#temporals.format(registro.dataHoraInicio, 'dd/MM/yyyy')}">20/04/2026</td>
+                            <tr th:each="registro : ${agendamentosDoDia}">
+                                <td th:text="${#temporals.format(registro.dataHoraInicio, 'dd/MM/yyyy')}">20/05/2026</td>
                                 <td th:text="${#temporals.format(registro.dataHoraInicio, 'HH:mm') + ' - ' + #temporals.format(registro.dataHoraFim, 'HH:mm')}">08:00 - 09:00</td>
-                                <td th:text="${registro.profissional.nome}">Profissional</td>
+                                <td th:text="${registro.sala != null ? registro.sala.nome : '-'}">Sala 2</td>
+                                <td th:if="${isAdmin}" th:text="${registro.profissional != null ? registro.profissional.nome : '-'}">Julia</td>
                                 <td>
                                     <span th:text="${registro.nomeCliente}">Cliente</span>
-                                    <span th:if="${registro.fixo}" class="fixed-badge ms-2" th:text="${registro.recorrenciaLabel}">Fixo</span>
+                                    <span th:if="${registro.fixo == true}" class="fixed-badge ms-2" th:text="${registro.recorrenciaLabel}">Fixo</span>
                                 </td>
                             </tr>
                             </tbody>

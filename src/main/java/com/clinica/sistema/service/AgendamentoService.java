@@ -152,13 +152,26 @@ public class AgendamentoService {
         view.setInicioSemana(inicioSemana);
         view.setDiasSemana(diasSemana);
         view.setLinhas(linhas);
-        view.setHistoricoRecente(
-                repository.findTop20BySalaIdAndDataHoraInicioBeforeOrderByDataHoraInicioDesc(
-                        sala.getId(),
-                        LocalDateTime.now()
-                )
-        );
         return view;
+    }
+
+    public List<Agendamento> listarAgendamentosDoDia(Usuario usuarioLogado, boolean isAdmin) {
+        LocalDate hoje = LocalDate.now();
+        LocalDateTime inicio = hoje.atStartOfDay();
+        LocalDateTime fim = hoje.plusDays(1).atStartOfDay();
+
+        if (isAdmin) {
+            return repository.findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                    inicio,
+                    fim
+            );
+        }
+
+        return repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                usuarioLogado.getId(),
+                inicio,
+                fim
+        );
     }
 
     @Transactional
@@ -216,11 +229,17 @@ public class AgendamentoService {
     }
 
     public boolean podeCancelarAgendamento(Agendamento agendamento, Usuario usuarioLogado) {
-        if (!isAgendamentoDoUsuario(agendamento, usuarioLogado)) {
+        if (agendamento == null || usuarioLogado == null) {
             return false;
         }
         if (agendamento.getDataHoraInicio() == null
                 || !agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())) {
+            return false;
+        }
+        if (podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
+            return agendamento.getProfissional() != null;
+        }
+        if (!isAgendamentoDoUsuario(agendamento, usuarioLogado)) {
             return false;
         }
         try {
@@ -339,17 +358,17 @@ public class AgendamentoService {
         return SEMANAS_FIXAS_PADRAO;
     }
 
+    private boolean podeGerenciarAgendamentoDeOutros(Usuario usuarioLogado) {
+        return authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado);
+    }
+
     private void validarPermissaoSobreAgendamento(Agendamento agendamento, Usuario usuarioLogado) {
-        if (authService.isAdmin(usuarioLogado)) {
+        if (podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
             return;
         }
 
         if (!agendamento.getProfissional().getId().equals(usuarioLogado.getId())) {
             throw new RuntimeException("Voce so pode alterar os seus proprios agendamentos.");
-        }
-
-        if (authService.isDonaClinica(usuarioLogado)) {
-            return;
         }
 
         LocalDateTime agora = LocalDateTime.now();

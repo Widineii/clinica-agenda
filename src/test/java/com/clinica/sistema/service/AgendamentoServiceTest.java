@@ -1,5 +1,7 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.AgendaSalaLinha;
+import com.clinica.sistema.dto.AgendaSalaView;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.Sala;
@@ -21,10 +23,13 @@ import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -245,6 +250,138 @@ class AgendamentoServiceTest {
         assertEquals(primeiro, lista.get(0).getDataHoraInicio());
         assertEquals(terceiro, lista.get(2).getDataHoraInicio());
         assertEquals(3, agendamentoService.contarOcorrencias(List.of(ocorrencia1, ocorrencia2, ocorrencia3), Agendamento::isFixoSemanal));
+    }
+
+    @Test
+    void deveListarAgendamentosDoDiaDoProfissional() {
+        LocalDateTime hoje = LocalDate.now().atTime(10, 0);
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(70L);
+        agendamento.setProfissional(profissional);
+        agendamento.setSala(sala);
+        agendamento.setNomeCliente("Cliente do dia");
+        agendamento.setDataHoraInicio(hoje);
+
+        when(agendamentoRepository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                eq(profissional.getId()),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(agendamento));
+
+        List<Agendamento> lista = agendamentoService.listarAgendamentosDoDia(profissional, false);
+
+        assertEquals(1, lista.size());
+        assertEquals("Cliente do dia", lista.get(0).getNomeCliente());
+    }
+
+    @Test
+    void adminPodeAbrirAcaoNaGradeDeAgendamentoDeOutroProfissional() {
+        Usuario admin = new Usuario();
+        admin.setId(1L);
+        admin.setLogin("admin");
+        admin.setCargo("ROLE_ADMIN");
+
+        Usuario outro = new Usuario();
+        outro.setId(20L);
+        outro.setNome("Julia");
+        outro.setCargo("ROLE_PROFISSIONAL");
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(50L);
+        agendamento.setProfissional(outro);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(3));
+        agendamento.setFixo(false);
+
+        AgendaSalaView agenda = new AgendaSalaView();
+        agenda.setLinhas(List.of(new AgendaSalaLinha(LocalTime.of(9, 0), List.of(agendamento))));
+
+        when(authService.isAdmin(admin)).thenReturn(true);
+
+        Map<Long, String> acoes = agendamentoService.montarAcoesGradePorId(agenda, admin);
+
+        assertTrue(acoes.containsKey(50L));
+        assertEquals("AVULSO", acoes.get(50L));
+    }
+
+    @Test
+    void profissionalNaoPodeAbrirAcaoNaGradeDeOutroProfissional() {
+        Usuario julia = new Usuario();
+        julia.setId(20L);
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        Usuario maria = new Usuario();
+        maria.setId(10L);
+        maria.setNome("Maria");
+        maria.setCargo("ROLE_PROFISSIONAL");
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(51L);
+        agendamento.setProfissional(maria);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(3));
+
+        AgendaSalaView agenda = new AgendaSalaView();
+        agenda.setLinhas(List.of(new AgendaSalaLinha(LocalTime.of(10, 0), List.of(agendamento))));
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+
+        Map<Long, String> acoes = agendamentoService.montarAcoesGradePorId(agenda, julia);
+
+        assertFalse(acoes.containsKey(51L));
+    }
+
+    @Test
+    void donaClinicaPodeAbrirAcaoNaGradeDeOutroProfissional() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        Usuario julia = new Usuario();
+        julia.setId(20L);
+        julia.setNome("Julia");
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(52L);
+        agendamento.setProfissional(julia);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(2));
+
+        AgendaSalaView agenda = new AgendaSalaView();
+        agenda.setLinhas(List.of(new AgendaSalaLinha(LocalTime.of(11, 0), List.of(agendamento))));
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+
+        Map<Long, String> acoes = agendamentoService.montarAcoesGradePorId(agenda, polyana);
+
+        assertTrue(acoes.containsKey(52L));
+    }
+
+    @Test
+    void donaClinicaPodeCancelarAgendamentoDeOutroProfissional() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setLogin("polyana");
+        polyana.setCargo("ROLE_PROFISSIONAL");
+        polyana.setDonaClinica(true);
+
+        Usuario julia = new Usuario();
+        julia.setId(20L);
+        julia.setCargo("ROLE_PROFISSIONAL");
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(53L);
+        agendamento.setProfissional(julia);
+        agendamento.setDataHoraInicio(LocalDateTime.now().plusDays(2));
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+        when(agendamentoRepository.findById(53L)).thenReturn(Optional.of(agendamento));
+
+        assertDoesNotThrow(() -> agendamentoService.cancelar(53L, polyana));
+        verify(agendamentoRepository).deleteById(53L);
     }
 
     @Test
