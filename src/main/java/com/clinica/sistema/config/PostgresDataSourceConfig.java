@@ -26,7 +26,20 @@ public class PostgresDataSourceConfig {
             @Value("${PGPASSWORD:}") String pgPassword,
             @Value("${PGSSLMODE:}") String pgSslMode
     ) {
-        String urlBanco = primeiroNaoVazio(databaseUrl, databasePublicUrl);
+        String urlBanco = trim(primeiroNaoVazio(databaseUrl, databasePublicUrl));
+        pgHost = trim(pgHost);
+        pgUser = trim(pgUser);
+        pgPassword = trim(pgPassword);
+        pgDatabase = trim(pgDatabase);
+        pgSslMode = trim(pgSslMode);
+
+        if (urlBanco != null && urlBanco.contains("****")) {
+            throw new IllegalStateException(
+                    "DATABASE_URL contem asteriscos (senha mascarada). "
+                            + "Use variaveis PGHOST, PGUSER, PGPASSWORD separadas no Render."
+            );
+        }
+
         String modoSsl = (pgSslMode == null || pgSslMode.isBlank()) ? PostgresUrlParser.sslModePadrao(urlBanco) : pgSslMode;
 
         HikariConfig config = new HikariConfig();
@@ -43,7 +56,7 @@ public class PostgresDataSourceConfig {
             config.setUsername(parsed.username());
             config.setPassword(parsed.password());
         } else if (pgHost != null && !pgHost.isBlank()) {
-            String banco = (pgDatabase == null || pgDatabase.isBlank()) ? "railway" : pgDatabase;
+            String banco = (pgDatabase == null || pgDatabase.isBlank()) ? "neondb" : pgDatabase;
             config.setJdbcUrl("jdbc:postgresql://" + pgHost + ":" + pgPort + "/" + banco + "?sslmode=" + modoSsl);
             config.setUsername(pgUser);
             config.setPassword(pgPassword);
@@ -64,5 +77,9 @@ public class PostgresDataSourceConfig {
             }
         }
         return null;
+    }
+
+    private static String trim(String valor) {
+        return valor == null ? null : valor.trim();
     }
 }

@@ -31,7 +31,9 @@ Agendamentos ficam no Neon — reiniciar o site no Render **nao apaga** nada.
 2. Repo: **Widineii / clinica-agenda**, branch **main**, **Docker**
 3. Name: `clinica-agenda`
 4. Region: **Virginia (US East)** (mesma regiao do Neon US East)
-5. **Environment Variables:**
+5. **Environment Variables** (metodo A — recomendado se "Mostrar senha" do Neon falhar):
+
+**Apague** `DATABASE_URL` se existir. Use estas:
 
 | NAME | VALUE |
 |------|--------|
@@ -39,7 +41,25 @@ Agendamentos ficam no Neon — reiniciar o site no Render **nao apaga** nada.
 | `ADMIN_LOGIN` | `admin` |
 | `ADMIN_PASSWORD` | senha forte do admin (voce escolhe) |
 | `ADMIN_NAME` | `Administracao` |
-| `DATABASE_URL` | cole a connection string **inteira** do Neon |
+| `PGHOST` | host do Neon (ex. `ep-plain-band-ap9a4yvm.c-7.us-east-1.aws.neon.tech`) |
+| `PGPORT` | `5432` |
+| `PGDATABASE` | `neondb` |
+| `PGUSER` | `neondb_owner` |
+| `PGPASSWORD` | senha que voce definir no passo "Senha manual" abaixo |
+| `PGSSLMODE` | `require` |
+
+### Senha manual no Neon (quando o painel da erro)
+
+1. Neon → menu **SQL Editor**
+2. Cole e execute (troque a senha se quiser):
+
+```sql
+ALTER ROLE neondb_owner WITH PASSWORD 'AffettoClinica2026';
+```
+
+3. No Render, `PGPASSWORD` = `AffettoClinica2026` (a mesma senha, sem espacos)
+
+Metodo B: uma variavel `DATABASE_URL` com a string completa do Neon (so se **Copiar** trouxer senha real, nao `****`).
 
 6. **Deploy Web Service**
 

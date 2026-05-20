@@ -46,6 +46,7 @@ final class PostgresUrlParser {
         String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database;
         String query = uri.getQuery();
         if (query != null && !query.isBlank()) {
+            query = query.replace("sslmode=exigir", "sslmode=require");
             jdbcUrl += "?" + query;
         } else {
             String modoSsl = (sslMode == null || sslMode.isBlank()) ? sslModePadrao(databaseUrl) : sslMode;
