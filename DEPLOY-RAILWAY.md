@@ -24,12 +24,15 @@ git remote add origin https://github.com/Widineii/clinica-agenda.git
 git push -u origin main
 ```
 
-### 2. No Railway
+### 2. No Railway (obrigatório — sem isso o deploy falha)
 
 1. Acesse [railway.app](https://railway.app)
-2. **New Project** → **Deploy from GitHub** → escolha `clinica-agenda`
-3. No projeto, clique **+ New** → **Database** → **PostgreSQL**
-4. Clique no serviço do **app** (não no banco) → **Variables**
+2. Abra o projeto **clinica-agenda**
+3. **+ New** → **Database** → **PostgreSQL** (se ainda nao existir)
+4. Clique no servico do **app web** (nao no banco) → **Variables** → **+ New Variable** → **Add Reference**
+5. Escolha o servico PostgreSQL e a variavel **`DATABASE_URL`** → salvar  
+   (o Railway copia `PGHOST`, `PGPORT`, etc. automaticamente)
+6. Confira tambem na aba **Variables** do app:
 5. Adicione ou confira:
 
 | Variável | Valor |
@@ -39,10 +42,7 @@ git push -u origin main
 | `ADMIN_PASSWORD` | senha forte (anote em lugar seguro) |
 | `ADMIN_NAME` | `Administracao` |
 
-6. **Conectar o banco ao app:** no serviço PostgreSQL → **Connect** → **Add to service** (selecione o app web)  
-   O Railway preenche automaticamente: `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`
-
-7. **Deploy** → aguarde ficar **Active**
+7. **Redeploy** o app (Deployments → tres pontinhos → Redeploy) e aguarde **Active**
 8. Abra o domínio público (ex.: `clinica-agenda-production.up.railway.app`)
 
 ### 3. Primeiro acesso
@@ -73,12 +73,15 @@ Acesse http://localhost:8081
 
 ---
 
-## Se o deploy falhar
+## Se o deploy falhar (status 1)
 
-1. **Logs** do serviço no Railway (últimas linhas)
-2. Confirme que o **PostgreSQL está ligado** ao app (variáveis `PGHOST` ou `DATABASE_URL` aparecem)
-3. Confirme `SPRING_PROFILES_ACTIVE=prod`
-4. Health: abra `https://SEU-DOMINIO/actuator/health` — deve retornar `{"status":"UP"}`
+Erro comum: **PostgreSQL nao ligado ao app** — o log mostra `Connection to localhost:5432 refused` ou `PostgreSQL nao configurado`.
+
+1. **Logs** do servico web (ultimas linhas)
+2. No app, variavel **`DATABASE_URL`** deve existir (referencia ao Postgres)
+3. `SPRING_PROFILES_ACTIVE=prod`
+4. `ADMIN_PASSWORD` definida
+5. Health: `https://clinica-agenda-production.up.railway.app/actuator/health` → `UP`
 
 ---
 

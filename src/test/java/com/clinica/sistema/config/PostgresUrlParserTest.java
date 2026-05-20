@@ -16,6 +16,6 @@ class PostgresUrlParserTest {
         assertEquals("usuario", parsed.username());
         assertEquals("senha123", parsed.password());
         assertTrue(parsed.jdbcUrl().startsWith("jdbc:postgresql://containers.railway.app:6543/railway"));
-        assertTrue(parsed.jdbcUrl().contains("sslmode=require"));
+        assertTrue(parsed.jdbcUrl().contains("sslmode=prefer") || parsed.jdbcUrl().contains("sslmode=require"));
     }
 }

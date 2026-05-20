@@ -5,8 +5,7 @@ import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 /**
- * Ativa o perfil {@code prod} automaticamente quando o Railway (ou outro host)
- * injeta variáveis do PostgreSQL, para os agendamentos não ficarem em H2 em memória.
+ * Ativa o perfil {@code prod} quando o host injeta variaveis de PostgreSQL ou e Railway/Render.
  */
 public class ProdProfileEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
@@ -16,15 +15,22 @@ public class ProdProfileEnvironmentPostProcessor implements EnvironmentPostProce
             return;
         }
 
-        String databaseUrl = environment.getProperty("DATABASE_URL");
-        if (databaseUrl != null && !databaseUrl.isBlank()) {
+        if (temVariavel(environment, "DATABASE_URL")
+                || temVariavel(environment, "DATABASE_PUBLIC_URL")
+                || temPgHostRemoto(environment)
+                || temVariavel(environment, "RAILWAY_ENVIRONMENT")
+                || temVariavel(environment, "RENDER")) {
             environment.setActiveProfiles("prod");
-            return;
         }
+    }
 
+    private static boolean temVariavel(ConfigurableEnvironment environment, String nome) {
+        String valor = environment.getProperty(nome);
+        return valor != null && !valor.isBlank();
+    }
+
+    private static boolean temPgHostRemoto(ConfigurableEnvironment environment) {
         String pgHost = environment.getProperty("PGHOST");
-        if (pgHost != null && !pgHost.isBlank() && !"localhost".equalsIgnoreCase(pgHost)) {
-            environment.setActiveProfiles("prod");
-        }
+        return pgHost != null && !pgHost.isBlank() && !"localhost".equalsIgnoreCase(pgHost);
     }
 }
