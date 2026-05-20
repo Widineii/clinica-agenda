@@ -4,9 +4,9 @@ import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
 import com.clinica.sistema.model.RelatorioMensalArquivado;
 import com.clinica.sistema.repository.RelatorioMensalArquivadoRepository;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,7 +55,12 @@ public class RelatorioMensalService {
         if (!podeExecutarFechamentoAutomatico()) {
             return false;
         }
-        return arquivarMesSeNecessario(mesPassadoReferencia()).isPresent();
+        try {
+            return arquivarMesSeNecessario(mesPassadoReferencia()).isPresent();
+        } catch (RuntimeException e) {
+            log.error("Fechamento automatico do relatorio mensal falhou", e);
+            return false;
+        }
     }
 
     @Transactional

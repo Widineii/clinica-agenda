@@ -5,6 +5,8 @@ import com.clinica.sistema.model.RelatorioMensalArquivado;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.RelatorioMensalService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,8 @@ import java.util.Optional;
 @Controller
 @RequestMapping("/agendamentos/relatorio")
 public class RelatorioController {
+
+    private static final Logger log = LoggerFactory.getLogger(RelatorioController.class);
 
     private final RelatorioMensalService relatorioMensalService;
     private final AuthService authService;
@@ -46,12 +50,22 @@ public class RelatorioController {
             return "redirect:/agendamentos/dashboard";
         }
 
-        // Reserva: se o Render estava dormindo no dia 3, arquiva na primeira visita (sem botao de gerar).
-        relatorioMensalService.executarFechamentoAutomaticoSeDevido();
-
         YearMonth mesPassado = relatorioMensalService.mesPassadoReferencia();
-        Optional<RelatorioMensalArquivado> arquivado = relatorioMensalService.buscarArquivado(mesPassado);
-        RelatorioMensalUsoSalasView relatorio = relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
+        Optional<RelatorioMensalArquivado> arquivado = Optional.empty();
+        RelatorioMensalUsoSalasView relatorio;
+
+        try {
+            relatorioMensalService.executarFechamentoAutomaticoSeDevido();
+            arquivado = relatorioMensalService.buscarArquivado(mesPassado);
+            relatorio = relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
+        } catch (RuntimeException e) {
+            log.error("Falha ao carregar relatorio mensal", e);
+            redirectAttributes.addFlashAttribute(
+                    "erro",
+                    "Nao foi possivel carregar o relatorio agora. Tente novamente em alguns minutos."
+            );
+            return "redirect:/agendamentos/dashboard";
+        }
 
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));

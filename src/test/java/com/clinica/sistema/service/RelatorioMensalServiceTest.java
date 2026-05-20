@@ -103,7 +103,8 @@ class RelatorioMensalServiceTest {
         julia.setTotalHorarios(7);
 
         RelatorioMensalUsoSalasView relatorio = new RelatorioMensalUsoSalasView();
-        relatorio.setMesReferencia(mes);
+        relatorio.setAnoReferencia(mes.getYear());
+        relatorio.setMesReferencia(mes.getMonthValue());
         relatorio.setMesReferenciaLabel("Maio de 2026");
         relatorio.getProfissionais().add(julia);
         relatorio.setTotalGeral(7);

@@ -76,9 +76,9 @@ public class RelatorioMensalPdfService {
 
     public String nomeArquivo(RelatorioMensalUsoSalasView relatorio) {
         return "relatorio-salas-"
-                + relatorio.getMesReferencia().getYear()
+                + relatorio.getAnoReferencia()
                 + "-"
-                + String.format("%02d", relatorio.getMesReferencia().getMonthValue())
+                + String.format("%02d", relatorio.getMesReferencia())
                 + ".pdf";
     }
 }

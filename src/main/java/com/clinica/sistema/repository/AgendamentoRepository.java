@@ -97,13 +97,13 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     );
 
     @Transactional
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             DELETE FROM Agendamento a
             WHERE a.dataHoraInicio >= :inicio
               AND a.dataHoraInicio < :fim
-              AND COALESCE(a.fixo, false) = false
-              AND UPPER(COALESCE(a.tipoRecorrencia, 'AVULSO')) NOT IN ('SEMANAL', 'QUINZENAL')
+              AND (a.fixo IS NULL OR a.fixo = false)
+              AND (a.tipoRecorrencia IS NULL OR UPPER(a.tipoRecorrencia) NOT IN ('SEMANAL', 'QUINZENAL'))
             """)
     int deleteAvulsosByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(
             @Param("inicio") LocalDateTime inicio,

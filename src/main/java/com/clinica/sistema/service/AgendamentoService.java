@@ -219,7 +219,8 @@ public class AgendamentoService {
         }
 
         RelatorioMensalUsoSalasView relatorio = new RelatorioMensalUsoSalasView();
-        relatorio.setMesReferencia(mesReferencia);
+        relatorio.setAnoReferencia(mesReferencia.getYear());
+        relatorio.setMesReferencia(mesReferencia.getMonthValue());
         relatorio.setMesReferenciaLabel(formatarMesReferencia(mesReferencia));
         relatorio.setProfissionais(new ArrayList<>(porProfissional.values()));
         relatorio.setTotalGeral(totalGeral);
