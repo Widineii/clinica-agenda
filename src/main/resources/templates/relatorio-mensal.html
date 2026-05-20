@@ -37,7 +37,10 @@
             <div>
                 <p class="text-uppercase small mb-2 opacity-75">Relatorio da clinica</p>
                 <h1 class="h3 mb-1">Uso de salas por profissional</h1>
-                <p class="mb-0 opacity-75" th:text="${mesPassadoLabel}">Mes passado</p>
+                <p class="mb-0 opacity-75">
+                    Periodo: <strong th:text="${mesPassadoLabel}">Mes passado</strong>
+                    <span class="opacity-75"> (sempre o mes passado, nunca <span th:text="${mesAtualLabel}">mes atual</span>)</span>
+                </p>
             </div>
             <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar para agenda</a>
         </div>
@@ -48,17 +51,20 @@
 
     <div class="card shell-card mb-4">
         <div class="card-body p-4">
-            <p class="mb-3" th:if="${aguardandoDia3}">
-                A partir do <strong>dia <span th:text="${diaFechamento}">3</span></strong> o sistema faz tudo sozinho:
-                gera o relatorio do mes passado, salva o PDF e apaga somente agendamentos avulsos antigos.
-                Horarios semanais e quinzenais continuam ate serem cancelados.
+            <p class="mb-3 alert alert-warning py-2" th:if="${aguardandoDia3}">
+                Voce esta vendo uma <strong>previa</strong> do mes passado (<span th:text="${mesPassadoLabel}">mes</span>).
+                A partir do <strong>dia <span th:text="${diaFechamento}">3</span></strong> de
+                <span th:text="${mesAtualLabel}">mes atual</span> o sistema fecha esse periodo:
+                gera o PDF definitivo de <span th:text="${mesPassadoLabel}">mes passado</span> e apaga somente
+                agendamentos avulsos daquele mes. Semanal e quinzenal continuam na agenda.
             </p>
             <p class="mb-3 alert alert-warning py-2" th:if="${aguardandoProcessamentoAutomatico}">
                 O processamento automatico do dia 3 ainda nao rodou (o site pode ter estado parado).
                 Abra esta pagina de novo em alguns minutos ou apos o horario programado (03:00).
             </p>
-            <p class="mb-3" th:if="${relatorioArquivado}">
-                <strong>Relatorio pronto.</strong> Gerado automaticamente em
+            <p class="mb-3" th:if="${relatorioArquivado and !aguardandoDia3}">
+                <strong>Relatorio de <span th:text="${mesPassadoLabel}">mes passado</span> pronto.</strong>
+                Gerado automaticamente em
                 <strong th:text="${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')}">data</strong>.
                 <span th:if="${agendamentosRemovidos > 0}">
                     <span th:text="${agendamentosRemovidos}">0</span> agendamento(s) avulso(s) do mes passado ja foram removidos do banco.

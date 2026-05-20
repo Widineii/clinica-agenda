@@ -14,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.format.TextStyle;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -42,8 +44,26 @@ public class RelatorioMensalService {
         this.jsonMapper = jsonMapper;
     }
 
+    /** Sempre o mes anterior ao calendario de hoje (nunca o mes atual). */
     public YearMonth mesPassadoReferencia() {
         return YearMonth.now().minusMonths(1);
+    }
+
+    public String formatarMesReferencia(YearMonth mesReferencia) {
+        String mes = mesReferencia.getMonth()
+                .getDisplayName(TextStyle.FULL_STANDALONE, new Locale("pt", "BR"));
+        if (mes != null && !mes.isBlank()) {
+            mes = Character.toUpperCase(mes.charAt(0)) + mes.substring(1);
+        }
+        return mes + " de " + mesReferencia.getYear();
+    }
+
+    public String mensagemRelatorioDisponivelAposDia3() {
+        return "O relatorio de "
+                + formatarMesReferencia(mesPassadoReferencia())
+                + " (mes passado) so fica disponivel a partir do dia "
+                + diaFechamento
+                + " deste mes. Nesse dia o sistema gera o PDF e remove agendamentos avulsos daquele mes.";
     }
 
     public boolean podeExecutarFechamentoAutomatico() {
@@ -63,6 +83,10 @@ public class RelatorioMensalService {
         }
     }
 
+    /**
+     * Fechamento do mes passado: monta relatorio com dados do periodo, salva PDF e so depois
+     * apaga agendamentos avulsos daquele mes (semanal/quinzenal permanecem).
+     */
     @Transactional
     public Optional<RelatorioMensalArquivado> arquivarMesSeNecessario(YearMonth mesReferencia) {
         if (relatorioMensalArquivadoRepository.existsByAnoAndMes(

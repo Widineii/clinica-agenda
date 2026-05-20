@@ -18,14 +18,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.YearMonth;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @Controller
 @RequestMapping("/agendamentos/relatorio")
 public class RelatorioController {
-
-    private static final String MSG_RELATORIO_DISPONIVEL_APOS_DIA_3 =
-            "O relatorio so fica disponivel a partir do dia 3 do mes seguinte.";
 
     private static final Logger log = LoggerFactory.getLogger(RelatorioController.class);
 
@@ -53,38 +52,49 @@ public class RelatorioController {
             return "redirect:/agendamentos/dashboard";
         }
 
-        if (!relatorioMensalService.podeExecutarFechamentoAutomatico()) {
-            redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
-            redirectAttributes.addFlashAttribute("erro", MSG_RELATORIO_DISPONIVEL_APOS_DIA_3);
-            return "redirect:/agendamentos/dashboard";
-        }
-
         YearMonth mesPassado = relatorioMensalService.mesPassadoReferencia();
         Optional<RelatorioMensalArquivado> arquivado = Optional.empty();
         RelatorioMensalUsoSalasView relatorio;
+        List<RelatorioMensalArquivado> historico = Collections.emptyList();
 
         try {
             relatorioMensalService.executarFechamentoAutomaticoSeDevido();
             arquivado = relatorioMensalService.buscarArquivado(mesPassado);
             relatorio = relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
+            historico = relatorioMensalService.listarArquivados();
         } catch (RuntimeException e) {
-            log.error("Falha ao carregar relatorio mensal", e);
+            log.error("Falha ao carregar relatorio mensal de {}", mesPassado, e);
             redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
-            redirectAttributes.addFlashAttribute("erro", MSG_RELATORIO_DISPONIVEL_APOS_DIA_3);
+            if (!relatorioMensalService.podeExecutarFechamentoAutomatico()) {
+                redirectAttributes.addFlashAttribute(
+                        "erro",
+                        relatorioMensalService.mensagemRelatorioDisponivelAposDia3()
+                );
+            } else {
+                redirectAttributes.addFlashAttribute(
+                        "erro",
+                        "Nao foi possivel abrir o relatorio de "
+                                + relatorioMensalService.formatarMesReferencia(mesPassado)
+                                + ". Tente novamente em alguns minutos."
+                );
+            }
             return "redirect:/agendamentos/dashboard";
         }
+
+        boolean aguardandoDia3 = !relatorioMensalService.podeExecutarFechamentoAutomatico();
 
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
         model.addAttribute("relatorio", relatorio);
         model.addAttribute("mesPassadoLabel", relatorio.getMesReferenciaLabel());
         model.addAttribute("relatorioArquivado", arquivado.isPresent());
-        model.addAttribute("podeBaixarPdf", arquivado.isPresent());
-        model.addAttribute("aguardandoDia3", !relatorioMensalService.podeExecutarFechamentoAutomatico());
+        model.addAttribute("podeBaixarPdf", arquivado.isPresent() && !aguardandoDia3);
+        model.addAttribute("aguardandoDia3", aguardandoDia3);
         model.addAttribute("aguardandoProcessamentoAutomatico",
                 relatorioMensalService.podeExecutarFechamentoAutomatico() && arquivado.isEmpty());
         model.addAttribute("diaFechamento", 3);
-        model.addAttribute("historico", relatorioMensalService.listarArquivados());
+        model.addAttribute("historico", historico);
+        model.addAttribute("mesAtualLabel", relatorioMensalService.formatarMesReferencia(YearMonth.now()));
         if (arquivado.isPresent()) {
             model.addAttribute("geradoEm", arquivado.get().getGeradoEm());
             model.addAttribute("agendamentosRemovidos", arquivado.get().getAgendamentosRemovidos());
