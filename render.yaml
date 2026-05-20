@@ -1,0 +1,50 @@
+# Blueprint Render: app + PostgreSQL (agendamentos persistem apos reinicio)
+# No dashboard: defina ADMIN_PASSWORD (Environment -> sync: false) antes do primeiro deploy.
+
+services:
+  - type: web
+    name: clinica-agenda
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: PGHOST
+        fromDatabase:
+          name: clinica-agenda-db
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: clinica-agenda-db
+          property: port
+      - key: PGDATABASE
+        fromDatabase:
+          name: clinica-agenda-db
+          property: database
+      - key: PGUSER
+        fromDatabase:
+          name: clinica-agenda-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: clinica-agenda-db
+          property: password
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clinica-agenda-db
+          property: connectionString
+      - key: ADMIN_LOGIN
+        value: admin
+      - key: ADMIN_NAME
+        value: Administracao
+      - key: ADMIN_PASSWORD
+        sync: false
+
+databases:
+  - name: clinica-agenda-db
+    plan: free
+    databaseName: clinica_agenda
+    ipAllowList: []
