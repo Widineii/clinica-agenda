@@ -40,7 +40,7 @@ public class PersistenciaDatabaseVerifier implements ApplicationRunner {
                 }
 
                 log.warn("H2 em memoria no PC: agendamentos somem ao reiniciar o servidor. "
-                        + "Em producao use PostgreSQL (perfil prod no Railway).");
+                        + "Em producao use PostgreSQL no Render (Blueprint render.yaml).");
                 return;
             }
 

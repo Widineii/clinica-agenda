@@ -24,23 +24,17 @@
 - `ADMIN_LOGIN=admin`
 - `ADMIN_PASSWORD=troque-essa-senha`
 
-## Render
+## Render (recomendado — producao do cliente)
 
-1. Suba este projeto para um repositorio GitHub.
-2. Crie um banco PostgreSQL no Render.
-3. Crie um Web Service apontando para este repositorio.
-4. Use Docker ou build nativo Maven.
-5. Configure as variaveis acima.
-6. Gere o dominio publico.
+Guia completo: **[DEPLOY-RENDER.md](DEPLOY-RENDER.md)**
 
-## Railway
+Resumo: **New → Blueprint** → repo `clinica-agenda` → defina `ADMIN_PASSWORD` → **Apply**.
 
-1. Suba este projeto para um repositorio GitHub.
-2. Crie um projeto no Railway.
-3. Adicione um PostgreSQL ao projeto.
-4. Publique este repositorio no mesmo projeto.
-5. Configure `SPRING_PROFILES_ACTIVE=prod`, `ADMIN_LOGIN` e `ADMIN_PASSWORD`.
-6. Gere o dominio publico.
+O `render.yaml` cria Web Service + PostgreSQL e liga as variaveis automaticamente.
+
+## Railway (alternativo)
+
+Guia: **[DEPLOY-RAILWAY.md](DEPLOY-RAILWAY.md)**
 
 ## Observacoes
 

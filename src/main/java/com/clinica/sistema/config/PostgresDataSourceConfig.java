@@ -49,9 +49,8 @@ public class PostgresDataSourceConfig {
             config.setPassword(pgPassword);
         } else {
             throw new IllegalStateException(
-                    "PostgreSQL nao configurado. No Railway: + New -> Database -> PostgreSQL, "
-                            + "depois no servico do app Variables -> Add Reference -> DATABASE_URL do Postgres. "
-                            + "No Render: use Blueprint (render.yaml) ou vincule PGHOST/PGDATABASE ao app."
+                    "PostgreSQL nao configurado. No Render: New -> Blueprint -> repo clinica-agenda "
+                            + "(render.yaml liga o banco). Ou vincule DATABASE_URL do Postgres ao Web Service."
             );
         }
 
