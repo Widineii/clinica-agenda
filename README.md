@@ -11,9 +11,9 @@ Sistema web de agenda para clinica com controle por profissional, sala, cliente,
 
 Este projeto foi desenvolvido como item de portfolio para substituir o uso de planilhas abertas por um fluxo mais seguro, organizado e visual para a rotina de uma clinica.
 
-## Producao (Render)
+## Producao (Neon + Render)
 
-- Deploy: veja **[DEPLOY-RENDER.md](DEPLOY-RENDER.md)** (Blueprint + PostgreSQL)
+- Deploy: **[DEPLOY-NEON-RENDER.md](DEPLOY-NEON-RENDER.md)** (banco Neon + site Render)
 - Repositorio: [github.com/Widineii/clinica-agenda](https://github.com/Widineii/clinica-agenda)
 - Apos o deploy: `https://SEU-SERVICO.onrender.com`
 

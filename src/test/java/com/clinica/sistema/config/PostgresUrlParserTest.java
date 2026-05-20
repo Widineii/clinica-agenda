@@ -18,4 +18,14 @@ class PostgresUrlParserTest {
         assertTrue(parsed.jdbcUrl().startsWith("jdbc:postgresql://containers.railway.app:6543/railway"));
         assertTrue(parsed.jdbcUrl().contains("sslmode=prefer") || parsed.jdbcUrl().contains("sslmode=require"));
     }
+
+    @Test
+    void devePreservarParametrosDaUrlDoNeon() {
+        PostgresUrlParser.ParsedDatasource parsed = PostgresUrlParser.parse(
+                "postgresql://user:pass@ep-test.us-east-1.aws.neon.tech/neondb?sslmode=require"
+        );
+
+        assertTrue(parsed.jdbcUrl().contains("neon.tech"));
+        assertTrue(parsed.jdbcUrl().contains("sslmode=require"));
+    }
 }

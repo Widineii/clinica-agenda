@@ -24,13 +24,12 @@
 - `ADMIN_LOGIN=admin`
 - `ADMIN_PASSWORD=troque-essa-senha`
 
-## Render (recomendado — producao do cliente)
+## Render + Neon (recomendado — producao do cliente)
 
-Guia completo: **[DEPLOY-RENDER.md](DEPLOY-RENDER.md)**
+Guia completo: **[DEPLOY-NEON-RENDER.md](DEPLOY-NEON-RENDER.md)**
 
-Resumo: **New → Blueprint** → repo `clinica-agenda` → defina `ADMIN_PASSWORD` → **Apply**.
-
-O `render.yaml` cria Web Service + PostgreSQL e liga as variaveis automaticamente.
+- **Neon:** PostgreSQL (free tier com mais duracao que Render DB free)
+- **Render:** Web Service Docker + variaveis `DATABASE_URL` e `ADMIN_PASSWORD`
 
 ## Railway (alternativo)
 

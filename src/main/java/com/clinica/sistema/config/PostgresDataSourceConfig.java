@@ -27,7 +27,7 @@ public class PostgresDataSourceConfig {
             @Value("${PGSSLMODE:}") String pgSslMode
     ) {
         String urlBanco = primeiroNaoVazio(databaseUrl, databasePublicUrl);
-        String modoSsl = (pgSslMode == null || pgSslMode.isBlank()) ? PostgresUrlParser.sslModePadrao() : pgSslMode;
+        String modoSsl = (pgSslMode == null || pgSslMode.isBlank()) ? PostgresUrlParser.sslModePadrao(urlBanco) : pgSslMode;
 
         HikariConfig config = new HikariConfig();
         config.setMaximumPoolSize(20);
@@ -49,8 +49,8 @@ public class PostgresDataSourceConfig {
             config.setPassword(pgPassword);
         } else {
             throw new IllegalStateException(
-                    "PostgreSQL nao configurado. No Render: New -> Blueprint -> repo clinica-agenda "
-                            + "(render.yaml liga o banco). Ou vincule DATABASE_URL do Postgres ao Web Service."
+                    "PostgreSQL nao configurado. Crie o banco no Neon, copie a connection string "
+                            + "e defina DATABASE_URL no Web Service do Render."
             );
         }
 
