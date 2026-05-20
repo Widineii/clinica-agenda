@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.mockito.ArgumentMatchers;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -63,7 +65,7 @@ class AgendamentoServiceTest {
     void setUp() {
         profissional = new Usuario();
         profissional.setId(10L);
-        profissional.setNome("Maria");
+        profissional.setNome("Julia");
         profissional.setCargo("ROLE_PROFISSIONAL");
 
         sala = new Sala();
@@ -78,11 +80,11 @@ class AgendamentoServiceTest {
         when(authService.isAdmin(profissional)).thenReturn(false);
         when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
         when(salaRepository.findById(sala.getId())).thenReturn(Optional.of(sala));
+        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(Optional.empty());
         when(agendamentoRepository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(false);
-        when(agendamentoRepository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
         ).thenReturn(false);
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -117,9 +119,9 @@ class AgendamentoServiceTest {
         when(agendamentoRepository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
         ).thenReturn(false);
-        when(agendamentoRepository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(false);
+        ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
@@ -138,9 +140,9 @@ class AgendamentoServiceTest {
         when(agendamentoRepository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
         ).thenReturn(false);
-        when(agendamentoRepository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(false);
+        ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
@@ -163,9 +165,9 @@ class AgendamentoServiceTest {
         when(agendamentoRepository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
         ).thenReturn(false);
-        when(agendamentoRepository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
-        ).thenReturn(false);
+        ).thenReturn(Optional.empty());
         when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
@@ -174,6 +176,37 @@ class AgendamentoServiceTest {
         assertEquals(Boolean.TRUE, agendamento.getFixo());
         verify(agendamentoRepository, times(6)).existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
+        );
+    }
+
+    @Test
+    void naoDevePermitirProfissionalEmDuasSalasNoMesmoHorario() {
+        AgendamentoForm form = novoForm(proximaDataUtil(LocalTime.of(7, 0)));
+        form.setSalaId(2L);
+
+        Sala sala1 = new Sala();
+        sala1.setId(1L);
+        sala1.setNome("Sala 1");
+
+        Agendamento existente = new Agendamento();
+        existente.setProfissional(profissional);
+        existente.setSala(sala1);
+        existente.setDataHoraInicio(LocalDateTime.of(form.getDataAtendimento(), LocalTime.of(7, 0)));
+        existente.setDataHoraFim(existente.getDataHoraInicio().plusHours(1));
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(usuarioRepository.findById(profissional.getId())).thenReturn(Optional.of(profissional));
+        when(salaRepository.findById(2L)).thenReturn(Optional.of(sala));
+        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(Optional.of(existente));
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> agendamentoService.salvar(form, profissional));
+
+        assertEquals("Voce ja tem um agendamento nesse horario na Sala 1.", exception.getMessage());
+        verify(agendamentoRepository, never()).save(any(Agendamento.class));
+        verify(agendamentoRepository, never()).existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                ArgumentMatchers.anyLong(), any(LocalDateTime.class), any(LocalDateTime.class)
         );
     }
 

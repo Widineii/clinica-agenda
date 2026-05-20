@@ -4,8 +4,14 @@ import com.clinica.sistema.dto.LoginForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.UsuarioService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,9 +34,19 @@ public class AuthController {
     public String login(
             Model model,
             Authentication authentication,
+            HttpServletRequest request,
+            HttpServletResponse response,
             @RequestParam(required = false) String erro,
-            @RequestParam(required = false) String logout
+            @RequestParam(required = false) String logout,
+            @RequestParam(required = false) String senhaAlterada
     ) {
+        if (senhaAlterada != null) {
+            encerrarSessaoDoUsuario(request, response);
+            model.addAttribute("sucesso", "Senha alterada com sucesso. Entre com a nova senha.");
+            model.addAttribute("loginForm", new LoginForm());
+            return "login";
+        }
+
         if (authentication != null
                 && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken)) {
@@ -52,15 +68,44 @@ public class AuthController {
     @PostMapping("/conta/trocar-senha")
     public String trocarSenha(
             @ModelAttribute TrocarSenhaForm trocarSenhaForm,
+            HttpServletRequest request,
+            HttpServletResponse response,
             RedirectAttributes redirectAttributes
     ) {
         try {
             usuarioService.trocarSenha(trocarSenhaForm, authService.buscarUsuarioLogadoObrigatorio());
-            redirectAttributes.addFlashAttribute("sucesso", "Senha alterada com sucesso.");
+            encerrarSessaoDoUsuario(request, response);
+            return "redirect:/login?senhaAlterada=1";
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
             redirectAttributes.addFlashAttribute("abrirModalTrocarSenha", true);
+            return "redirect:/agendamentos/dashboard";
         }
-        return "redirect:/agendamentos/dashboard";
+    }
+
+    private void encerrarSessaoDoUsuario(HttpServletRequest request, HttpServletResponse response) {
+        Authentication autenticacao = SecurityContextHolder.getContext().getAuthentication();
+        SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
+        logoutHandler.setInvalidateHttpSession(true);
+        logoutHandler.setClearAuthentication(true);
+        logoutHandler.logout(request, response, autenticacao);
+        SecurityContextHolder.clearContext();
+
+        HttpSession sessao = request.getSession(false);
+        if (sessao != null) {
+            sessao.invalidate();
+        }
+
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("JSESSIONID".equals(cookie.getName())) {
+                    Cookie invalida = new Cookie("JSESSIONID", "");
+                    invalida.setPath(cookie.getPath() != null && !cookie.getPath().isBlank() ? cookie.getPath() : "/");
+                    invalida.setMaxAge(0);
+                    invalida.setHttpOnly(true);
+                    response.addCookie(invalida);
+                }
+            }
+        }
     }
 }

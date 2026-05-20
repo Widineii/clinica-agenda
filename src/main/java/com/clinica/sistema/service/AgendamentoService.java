@@ -16,6 +16,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -202,7 +203,15 @@ public class AgendamentoService {
             LocalDateTime inicioSemana = inicio.plusWeeks((long) semana * saltoSemanas);
             LocalDateTime fimSemana = fim.plusWeeks((long) semana * saltoSemanas);
 
-            validarConflitos(sala, profissional, inicioSemana, fimSemana, !RECORRENCIA_AVULSO.equals(recorrencia), semana);
+            validarConflitos(
+                    sala,
+                    profissional,
+                    usuarioLogado,
+                    inicioSemana,
+                    fimSemana,
+                    !RECORRENCIA_AVULSO.equals(recorrencia),
+                    semana
+            );
 
             Agendamento novo = new Agendamento();
             novo.setProfissional(profissional);
@@ -381,11 +390,26 @@ public class AgendamentoService {
     private void validarConflitos(
             Sala sala,
             Usuario profissional,
+            Usuario usuarioLogado,
             LocalDateTime inicio,
             LocalDateTime fim,
             boolean fixo,
             int indiceSemana
     ) {
+        repository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                        profissional.getId(),
+                        fim,
+                        inicio
+                )
+                .ifPresent(conflito -> {
+                    throw conflitoMensagem(
+                            mensagemConflitoProfissional(profissional, conflito, usuarioLogado),
+                            inicio,
+                            fixo,
+                            indiceSemana
+                    );
+                });
+
         boolean salaOcupada = repository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 sala.getId(),
                 fim,
@@ -394,16 +418,25 @@ public class AgendamentoService {
         if (salaOcupada) {
             throw conflitoMensagem("Esta sala ja esta ocupada nesse horario.", inicio, fixo, indiceSemana);
         }
+    }
 
-        boolean profissionalOcupado =
-                repository.existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
-                        profissional.getId(),
-                        fim,
-                        inicio
-                );
-        if (profissionalOcupado) {
-            throw conflitoMensagem("Este profissional ja possui atendimento nesse horario.", inicio, fixo, indiceSemana);
+    private String mensagemConflitoProfissional(Usuario profissional, Agendamento conflito, Usuario usuarioLogado) {
+        String salaConflito = conflito.getSala() != null && conflito.getSala().getNome() != null
+                ? conflito.getSala().getNome()
+                : "outra sala";
+
+        boolean agendandoParaSiMesmo = usuarioLogado != null
+                && profissional.getId() != null
+                && profissional.getId().equals(usuarioLogado.getId());
+
+        if (agendandoParaSiMesmo) {
+            return "Voce ja tem um agendamento nesse horario na " + salaConflito + ".";
         }
+
+        String nomeProfissional = profissional.getNome() != null && !profissional.getNome().isBlank()
+                ? profissional.getNome()
+                : "Este profissional";
+        return nomeProfissional + " ja tem um agendamento nesse horario na " + salaConflito + ".";
     }
 
     private RuntimeException conflitoMensagem(String mensagemBase, LocalDateTime inicio, boolean fixo, int indiceSemana) {

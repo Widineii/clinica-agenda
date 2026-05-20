@@ -135,6 +135,7 @@ public class AgendamentoController {
             );
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("abrirModalErroAgendamento", true);
             redirectAttributes.addFlashAttribute("agendamentoForm", agendamentoForm);
         }
         return "redirect:/agendamentos/dashboard";

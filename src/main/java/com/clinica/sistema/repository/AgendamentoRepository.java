@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> {
@@ -49,6 +50,13 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     );
 
     boolean existsByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+            Long profissionalId,
+            LocalDateTime dataHoraFim,
+            LocalDateTime dataHoraInicio
+    );
+
+    @EntityGraph(attributePaths = {"sala"})
+    Optional<Agendamento> findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
             Long profissionalId,
             LocalDateTime dataHoraFim,
             LocalDateTime dataHoraInicio
