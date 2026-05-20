@@ -208,6 +208,61 @@ public class AgendamentoService {
         return novosAgendamentos.get(0);
     }
 
+    public boolean isAgendamentoDoUsuario(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null || usuarioLogado == null || agendamento.getProfissional() == null) {
+            return false;
+        }
+        return agendamento.getProfissional().getId().equals(usuarioLogado.getId());
+    }
+
+    public boolean podeCancelarAgendamento(Agendamento agendamento, Usuario usuarioLogado) {
+        if (!isAgendamentoDoUsuario(agendamento, usuarioLogado)) {
+            return false;
+        }
+        if (agendamento.getDataHoraInicio() == null
+                || !agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())) {
+            return false;
+        }
+        try {
+            validarPermissaoSobreAgendamento(agendamento, usuarioLogado);
+            return true;
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    public String tipoAcaoGrade(Agendamento agendamento) {
+        if (agendamento.isQuinzenal()) {
+            return "QUINZENAL";
+        }
+        if (agendamento.isFixoSemanal()) {
+            return "SEMANAL";
+        }
+        return "AVULSO";
+    }
+
+    /**
+     * IDs dos agendamentos na grade em que o usuario logado pode abrir o popup (duplo clique).
+     * Valor = tipo (AVULSO, SEMANAL, QUINZENAL).
+     */
+    public Map<Long, String> montarAcoesGradePorId(AgendaSalaView agendaSala, Usuario usuarioLogado) {
+        Map<Long, String> acoes = new LinkedHashMap<>();
+        if (agendaSala == null || agendaSala.getLinhas() == null) {
+            return acoes;
+        }
+        for (AgendaSalaLinha linha : agendaSala.getLinhas()) {
+            if (linha.getAgendamentos() == null) {
+                continue;
+            }
+            for (Agendamento agendamento : linha.getAgendamentos()) {
+                if (podeCancelarAgendamento(agendamento, usuarioLogado)) {
+                    acoes.put(agendamento.getId(), tipoAcaoGrade(agendamento));
+                }
+            }
+        }
+        return acoes;
+    }
+
     @Transactional
     public void cancelar(Long id, Usuario usuarioLogado) {
         Agendamento agendamento = repository.findById(id)

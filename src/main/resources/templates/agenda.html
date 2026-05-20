@@ -15,7 +15,12 @@
         .shell-card {
             border: 0;
             border-radius: 24px;
+            background: #fff;
             box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+        }
+
+        .agenda-main {
+            min-height: 200px;
         }
 
         .hero-band {
@@ -210,6 +215,45 @@
         .admin-modal .modal-title {
             font-weight: 700;
         }
+
+        .slot-own-actionable {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .slot-own-actionable:hover {
+            outline: 2px solid #0f766e;
+            outline-offset: -2px;
+        }
+
+        .grade-action-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .grade-action-stack .btn {
+            width: 100%;
+            font-weight: 600;
+            padding: 10px 12px;
+        }
+
+        .agenda-quick-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .agenda-quick-nav .btn {
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 1199.98px) {
+            .agenda-sidebar {
+                margin-top: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -242,9 +286,15 @@
     <div th:if="${erro}" class="alert alert-danger shell-card" th:text="${erro}"></div>
     <div th:if="${sucesso}" class="alert alert-success shell-card" th:text="${sucesso}"></div>
 
-    <div class="row g-4 align-items-start">
-        <div class="col-xl-4">
-            <div class="card shell-card">
+    <nav class="agenda-quick-nav mb-4" aria-label="Atalhos da agenda">
+        <a href="#grade-semanal" class="btn btn-sm btn-primary">Grade semanal</a>
+        <a href="#novo-agendamento" class="btn btn-sm btn-outline-secondary">Novo agendamento</a>
+        <a href="#meus-agendamentos" class="btn btn-sm btn-outline-secondary">Meus agendamentos</a>
+    </nav>
+
+    <div class="row g-4 align-items-start agenda-main">
+        <div class="col-12 col-xl-4 order-2 order-xl-1 agenda-sidebar">
+            <div class="card shell-card" id="novo-agendamento">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h2 class="h4 mb-0">Novo agendamento</h2>
@@ -324,7 +374,7 @@
                 </div>
             </div>
 
-            <div class="card shell-card mt-4">
+            <div class="card shell-card mt-4" id="meus-agendamentos">
                 <div class="card-body p-4">
                     <h2 class="h5 mb-3">Meus agendamentos</h2>
                     <p class="small text-muted mb-3">Somente os agendamentos do usuario logado. A grade da sala mostra todos os profissionais.</p>
@@ -485,7 +535,7 @@
             </div>
         </div>
 
-        <div class="col-xl-8">
+        <div class="col-12 col-xl-8 order-1 order-xl-2" id="grade-semanal">
             <div class="card shell-card">
                 <div class="card-body p-4">
                     <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
@@ -511,6 +561,8 @@
                         </div>
                     </div>
 
+                    <p class="small text-muted mb-3">De dois cliques no <strong>seu</strong> horario na grade para cancelar ou encerrar serie (sem rolar ate Meus agendamentos).</p>
+
                     <div class="d-flex flex-wrap gap-2 mb-4">
                         <a th:each="sala : ${salas}"
                            th:href="@{/agendamentos/dashboard(salaId=${sala.id}, semana=${agendaSala.inicioSemana})}"
@@ -534,12 +586,18 @@
                             <tr th:each="linha : ${agendaSala.linhas}">
                                 <th class="time-col" th:text="${#temporals.format(linha.horario, 'HH:mm')}">08:00</th>
                                 <td th:each="item : ${linha.agendamentos}"
-                                    th:class="${item != null ? (item.fixo ? 'slot-booked fixed-slot' : 'slot-booked') : 'slot-empty'}">
+                                    th:with="tipoAcao=${item != null ? gradeAcoesPorId[item.id] : null}, podeAgir=${tipoAcao != null}"
+                                    th:class="${(item != null ? (item.fixo == true ? 'slot-booked fixed-slot' : 'slot-booked') : 'slot-empty') + (podeAgir ? ' slot-own-actionable' : '')}"
+                                    th:data-agendamento-id="${podeAgir ? item.id : null}"
+                                    th:data-tipo="${tipoAcao}"
+                                    th:data-cliente="${podeAgir ? item.nomeCliente : null}"
+                                    th:data-inicio="${podeAgir ? #temporals.format(item.dataHoraInicio, 'dd/MM/yyyy HH:mm') : null}"
+                                    th:data-sala="${podeAgir and item.sala != null ? item.sala.nome : null}">
                                     <div th:if="${item != null}">
-                                        <div class="professional" th:text="${item.profissional.nome}">Profissional</div>
+                                        <div class="professional" th:text="${item.profissional != null ? item.profissional.nome : 'Profissional'}">Profissional</div>
                                         <div class="client" th:text="${item.nomeCliente}">Cliente</div>
                                         <div class="meta" th:text="${'Fim ' + #temporals.format(item.dataHoraFim, 'HH:mm')}">Fim 09:00</div>
-                                        <span th:if="${item.fixo}" class="fixed-badge" th:text="${item.recorrenciaLabel}">Fixo</span>
+                                        <span th:if="${item.fixo == true}" class="fixed-badge" th:text="${item.recorrenciaLabel}">Fixo</span>
                                     </div>
                                     <div th:if="${item == null}" class="text-muted small">Disponivel</div>
                                 </td>
@@ -583,6 +641,40 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade admin-modal" id="gradeAgendamentoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header px-4 py-3">
+                <div>
+                    <h2 class="modal-title h5 mb-1" id="gradeModalTitulo">Seu agendamento</h2>
+                    <p class="text-muted small mb-0" id="gradeModalResumo">Cliente - data</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <div class="grade-action-stack">
+                    <form id="gradeFormEncerrar" method="post" class="d-none">
+                        <input type="hidden" name="_csrf" id="gradeEncerrarCsrf">
+                        <button type="submit"
+                                class="btn btn-outline-primary"
+                                id="gradeBtnEncerrar"
+                                onclick="return confirm('Isso vai encerrar esta serie desta data em diante. Os horarios passados continuam no historico. Deseja continuar?');">
+                            Encerrar serie fixa
+                        </button>
+                    </form>
+                    <form id="gradeFormCancelar" method="post" class="d-none">
+                        <input type="hidden" name="_csrf" id="gradeCancelarCsrf">
+                        <button type="submit"
+                                class="btn btn-outline-danger"
+                                onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
+                            Cancelar somente este
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -655,6 +747,74 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        var basePath = /*[[@{/}]]*/ '/';
+        var modalElement = document.getElementById('gradeAgendamentoModal');
+        var formEncerrar = document.getElementById('gradeFormEncerrar');
+        var formCancelar = document.getElementById('gradeFormCancelar');
+        var btnEncerrar = document.getElementById('gradeBtnEncerrar');
+        var resumo = document.getElementById('gradeModalResumo');
+        var csrfSource = document.querySelector('input[name="_csrf"]');
+
+        if (!modalElement || !formCancelar) {
+            return;
+        }
+
+        function copiarCsrf() {
+            if (!csrfSource) {
+                return;
+            }
+            var encerrarCsrf = document.getElementById('gradeEncerrarCsrf');
+            var cancelarCsrf = document.getElementById('gradeCancelarCsrf');
+            if (encerrarCsrf) {
+                encerrarCsrf.name = csrfSource.name;
+                encerrarCsrf.value = csrfSource.value;
+            }
+            if (cancelarCsrf) {
+                cancelarCsrf.name = csrfSource.name;
+                cancelarCsrf.value = csrfSource.value;
+            }
+        }
+
+        function abrirModalGrade(celula) {
+            var id = celula.dataset.agendamentoId;
+            var tipo = celula.dataset.tipo;
+            if (!id) {
+                return;
+            }
+
+            copiarCsrf();
+
+            var cliente = celula.dataset.cliente || '';
+            var inicio = celula.dataset.inicio || '';
+            var sala = celula.dataset.sala || '';
+            resumo.textContent = cliente + ' - ' + inicio + ' (' + sala + ')';
+
+            formCancelar.action = basePath + 'agendamentos/' + id + '/cancelar';
+            formCancelar.classList.remove('d-none');
+
+            if (tipo === 'SEMANAL' || tipo === 'QUINZENAL') {
+                formEncerrar.action = basePath + 'agendamentos/' + id + '/encerrar-fixo';
+                btnEncerrar.textContent = tipo === 'QUINZENAL'
+                    ? 'Encerrar serie quinzenal'
+                    : 'Encerrar serie fixa';
+                formEncerrar.classList.remove('d-none');
+            } else {
+                formEncerrar.classList.add('d-none');
+            }
+
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        }
+
+        document.querySelectorAll('td.slot-own-actionable').forEach(function (celula) {
+            celula.addEventListener('dblclick', function (evento) {
+                evento.preventDefault();
+                abrirModalGrade(celula);
+            });
+        });
+    });
+</script>
 <script th:if="${abrirModalTrocarSenha}">
     document.addEventListener('DOMContentLoaded', function () {
         var modalElement = document.getElementById('trocarSenhaModal');

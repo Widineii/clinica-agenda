@@ -20,7 +20,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/agendamentos")
@@ -40,6 +42,11 @@ public class AgendamentoController {
         this.authService = authService;
         this.startupDataInitializer = startupDataInitializer;
         this.usuarioService = usuarioService;
+    }
+
+    @ModelAttribute("gradeAcoesPorId")
+    public Map<Long, String> gradeAcoesPorIdPadrao() {
+        return Collections.emptyMap();
     }
 
     @GetMapping("/dashboard")
@@ -98,7 +105,10 @@ public class AgendamentoController {
         model.addAttribute("salas", service.listarSalas());
         model.addAttribute("profissionais", isAdmin ? service.listarProfissionais() : java.util.List.of(usuarioLogado));
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
-        model.addAttribute("agendaSala", service.montarAgendaSala(salaId, semana));
+        var agendaSala = service.montarAgendaSala(salaId, semana);
+        Map<Long, String> gradeAcoesPorId = service.montarAcoesGradePorId(agendaSala, usuarioLogado);
+        model.addAttribute("agendaSala", agendaSala);
+        model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
         return "agenda";
     }
 

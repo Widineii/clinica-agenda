@@ -29,8 +29,8 @@ public class PersistenciaDatabaseVerifier implements ApplicationRunner {
 
             if (url.contains("h2:mem")) {
                 boolean hospedagemNuvem = System.getenv("RAILWAY_ENVIRONMENT") != null
-                        || System.getenv("RENDER") != null
-                        || (System.getenv("PORT") != null && System.getenv("DATABASE_URL") != null);
+                        || "true".equalsIgnoreCase(System.getenv("RENDER"))
+                        || "true".equalsIgnoreCase(System.getenv("RENDER_SERVICE_ID"));
 
                 if (hospedagemNuvem) {
                     throw new IllegalStateException(
