@@ -85,6 +85,47 @@
             margin-bottom: 8px;
         }
 
+        .grade-day-nav {
+            display: none;
+            flex-wrap: nowrap;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .grade-day-btn {
+            flex: 0 0 auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            background: #fff;
+            color: #164e63;
+            padding: 8px 12px;
+            font-weight: 600;
+            line-height: 1.15;
+            text-align: center;
+        }
+
+        .grade-day-btn.active {
+            background: #164e63;
+            border-color: #164e63;
+            color: #fff;
+        }
+
+        .grade-day-btn-dow {
+            display: block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            opacity: 0.9;
+        }
+
+        .grade-day-btn-date {
+            display: block;
+            font-size: 0.9rem;
+        }
+
         .agenda-grid {
             width: 100%;
             table-layout: fixed;
@@ -309,7 +350,7 @@
             font-weight: 600;
         }
 
-        /* Notebook / tablet: grade com rolagem lateral */
+        /* Notebook / tablet */
         @media (max-width: 1199.98px) {
             .agenda-sidebar {
                 margin-top: 0.5rem;
@@ -318,7 +359,10 @@
             .shell-card .card-body {
                 padding: 1.25rem !important;
             }
+        }
 
+        /* Tablet: rolagem lateral */
+        @media (min-width: 768px) and (max-width: 1199.98px) {
             .grade-scroll-hint {
                 display: block;
             }
@@ -379,21 +423,55 @@
                 text-align: center;
             }
 
+            .grade-day-nav {
+                display: flex;
+            }
+
+            .grade-scroll-hint {
+                display: none !important;
+            }
+
+            .grade-scroll-wrap::after {
+                opacity: 0;
+            }
+
+            .grade-scroll-wrap.grade-mobile-days {
+                overflow: visible;
+            }
+
+            .grade-scroll-wrap.grade-mobile-days .agenda-grid {
+                width: 100%;
+                min-width: 0;
+                table-layout: fixed;
+            }
+
+            .grade-scroll-wrap.grade-mobile-days .agenda-grid thead th:not(.time-col) {
+                min-width: 0;
+                width: auto;
+            }
+
+            .grade-mobile-days .grade-dia-col {
+                display: none;
+            }
+
+            .grade-mobile-days .grade-dia-col.is-visible {
+                display: table-cell;
+            }
+
             .agenda-grid thead th:not(.time-col) {
-                min-width: 84px;
                 font-size: 0.78rem;
                 padding: 0.45rem;
             }
 
             .agenda-grid .time-col {
-                width: 64px;
-                min-width: 64px;
+                width: 56px;
+                min-width: 56px;
                 font-size: 0.82rem;
             }
 
             .slot-booked,
             .slot-empty {
-                min-height: 62px;
+                min-height: 58px;
             }
 
             .slot-booked .professional {
@@ -786,13 +864,29 @@
                            th:text="${sala.nome}">Sala</a>
                     </div>
 
-                    <p class="grade-scroll-hint small text-muted">Deslize a grade para o lado para ver todos os dias da semana (segunda a sabado).</p>
-                    <div class="table-responsive rounded-4 overflow-hidden border grade-scroll-wrap">
+                    <p class="grade-scroll-hint small text-muted d-none d-md-block">Deslize a grade para o lado para ver todos os dias da semana (segunda a sabado).</p>
+                    <p class="small text-muted d-md-none mb-2">Toque no dia abaixo para ver os horarios da sala.</p>
+                    <div class="grade-day-nav" id="gradeDayNav" role="tablist" aria-label="Dia da semana na grade">
+                        <button type="button"
+                                th:each="dia, stat : ${agendaSala.diasSemana}"
+                                class="grade-day-btn"
+                                th:data-day-index="${stat.index}"
+                                th:classappend="${dia.equals(T(java.time.LocalDate).now())} ? ' active' : ''"
+                                role="tab"
+                                th:attr="aria-selected=${dia.equals(T(java.time.LocalDate).now())}">
+                            <span class="grade-day-btn-dow" th:text="${#temporals.format(dia, 'EEE')}">SEG</span>
+                            <span class="grade-day-btn-date" th:text="${#temporals.format(dia, 'dd/MM')}">18/05</span>
+                        </button>
+                    </div>
+                    <div class="table-responsive rounded-4 overflow-hidden border grade-scroll-wrap"
+                         id="gradeScrollWrap"
+                         th:data-today-index="${#lists.indexOf(agendaSala.diasSemana, T(java.time.LocalDate).now())}">
                         <table class="table agenda-grid mb-0">
                             <thead>
                             <tr>
                                 <th class="time-col">Horario</th>
-                                <th th:each="dia : ${agendaSala.diasSemana}">
+                                <th th:each="dia, stat : ${agendaSala.diasSemana}"
+                                    th:class="${'grade-dia-col grade-dia-' + stat.index}">
                                     <div class="fw-bold text-uppercase small" th:text="${#temporals.format(dia, 'EEE')}">SEG</div>
                                     <div th:text="${#temporals.format(dia, 'dd/MM')}">20/04</div>
                                 </th>
@@ -801,9 +895,9 @@
                             <tbody>
                             <tr th:each="linha : ${agendaSala.linhas}">
                                 <th class="time-col" th:text="${#temporals.format(linha.horario, 'HH:mm')}">08:00</th>
-                                <td th:each="item : ${linha.agendamentos}"
+                                <td th:each="item, stat : ${linha.agendamentos}"
                                     th:with="tipoAcao=${item != null ? gradeAcoesPorId[item.id] : null}, podeAgir=${tipoAcao != null}"
-                                    th:class="${(item != null ? (item.fixo == true ? 'slot-booked fixed-slot' : 'slot-booked') : 'slot-empty') + (podeAgir ? ' slot-own-actionable' : '')}"
+                                    th:class="${(item != null ? (item.fixo == true ? 'slot-booked fixed-slot' : 'slot-booked') : 'slot-empty') + (podeAgir ? ' slot-own-actionable' : '') + ' grade-dia-col grade-dia-' + stat.index}"
                                     th:data-agendamento-id="${podeAgir ? item.id : null}"
                                     th:data-tipo="${tipoAcao}"
                                     th:data-cliente="${podeAgir ? item.nomeCliente : null}"
@@ -815,7 +909,7 @@
                                         <div class="meta" th:text="${'Fim ' + #temporals.format(item.dataHoraFim, 'HH:mm')}">Fim 09:00</div>
                                         <span th:if="${item.fixo == true}" class="fixed-badge" th:text="${item.recorrenciaLabel}">Fixo</span>
                                     </div>
-                                    <div th:if="${item == null}" class="text-muted small">Disponivel</div>
+                                    <div th:if="${item == null}" class="text-muted small"><span class="d-md-none">Livre</span><span class="d-none d-md-inline">Disponivel</span></div>
                                 </td>
                             </tr>
                             </tbody>
@@ -1043,6 +1137,71 @@
                 abrirModalGrade(celula);
             });
         });
+
+        var gradeWrap = document.getElementById('gradeScrollWrap');
+        var gradeDayNav = document.getElementById('gradeDayNav');
+        var mobileMq = window.matchMedia('(max-width: 767.98px)');
+
+        function indiceDiaHoje() {
+            if (!gradeWrap) {
+                return 0;
+            }
+            var idx = parseInt(gradeWrap.getAttribute('data-today-index'), 10);
+            return Number.isNaN(idx) || idx < 0 ? 0 : idx;
+        }
+
+        function mostrarDiaNaGrade(dayIndex) {
+            if (!gradeWrap) {
+                return;
+            }
+            gradeWrap.querySelectorAll('.grade-dia-col').forEach(function (coluna) {
+                coluna.classList.remove('is-visible');
+            });
+            gradeWrap.querySelectorAll('.grade-dia-' + dayIndex).forEach(function (coluna) {
+                coluna.classList.add('is-visible');
+            });
+            if (gradeDayNav) {
+                gradeDayNav.querySelectorAll('.grade-day-btn').forEach(function (botao) {
+                    var ativo = parseInt(botao.dataset.dayIndex, 10) === dayIndex;
+                    botao.classList.toggle('active', ativo);
+                    botao.setAttribute('aria-selected', ativo ? 'true' : 'false');
+                });
+            }
+        }
+
+        function atualizarModoGradeMobile() {
+            if (!gradeWrap) {
+                return;
+            }
+            var mobile = mobileMq.matches;
+            gradeWrap.classList.toggle('grade-mobile-days', mobile);
+            if (mobile) {
+                var botaoAtivo = gradeDayNav && gradeDayNav.querySelector('.grade-day-btn.active');
+                var indice = botaoAtivo
+                    ? parseInt(botaoAtivo.dataset.dayIndex, 10)
+                    : indiceDiaHoje();
+                mostrarDiaNaGrade(indice);
+            } else {
+                gradeWrap.querySelectorAll('.grade-dia-col').forEach(function (coluna) {
+                    coluna.classList.remove('is-visible');
+                });
+            }
+        }
+
+        if (gradeDayNav) {
+            gradeDayNav.querySelectorAll('.grade-day-btn').forEach(function (botao) {
+                botao.addEventListener('click', function () {
+                    mostrarDiaNaGrade(parseInt(botao.dataset.dayIndex, 10));
+                });
+            });
+        }
+
+        atualizarModoGradeMobile();
+        if (typeof mobileMq.addEventListener === 'function') {
+            mobileMq.addEventListener('change', atualizarModoGradeMobile);
+        } else if (typeof mobileMq.addListener === 'function') {
+            mobileMq.addListener(atualizarModoGradeMobile);
+        }
     });
 </script>
 <script th:if="${abrirModalTrocarSenha}">
