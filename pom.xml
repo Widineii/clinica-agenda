@@ -11,7 +11,7 @@
     <groupId>com.clinica</groupId>
     <artifactId>agenda-affetto</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Agenda Affetto</name>
+    <name>Agenda Afetto</name>
     <description>Sistema web de agenda para clinica com controle por profissional, sala e cliente.</description>
     <url>https://github.com/Widineii/clinica-agenda</url>
     <licenses>

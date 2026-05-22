@@ -59,6 +59,7 @@ public class RelatorioController {
 
         try {
             relatorioMensalService.executarFechamentoAutomaticoSeDevido();
+            relatorioMensalService.removerPdfsExpiradosSeDevido();
             arquivado = relatorioMensalService.buscarArquivado(mesPassado);
             relatorio = relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
             historico = relatorioMensalService.listarArquivados();
@@ -88,7 +89,11 @@ public class RelatorioController {
         model.addAttribute("relatorio", relatorio);
         model.addAttribute("mesPassadoLabel", relatorio.getMesReferenciaLabel());
         model.addAttribute("relatorioArquivado", arquivado.isPresent());
-        model.addAttribute("podeBaixarPdf", arquivado.isPresent() && !aguardandoDia3);
+        model.addAttribute("podeBaixarPdf",
+                arquivado.isPresent() && !aguardandoDia3 && relatorioMensalService.temPdfDisponivel(arquivado.orElse(null)));
+        model.addAttribute("pdfRemovido",
+                arquivado.isPresent() && !relatorioMensalService.temPdfDisponivel(arquivado.orElse(null)));
+        model.addAttribute("diaRemocaoPdf", relatorioMensalService.getDiaRemocaoPdf());
         model.addAttribute("aguardandoDia3", aguardandoDia3);
         model.addAttribute("aguardandoProcessamentoAutomatico",
                 relatorioMensalService.podeExecutarFechamentoAutomatico() && arquivado.isEmpty());
@@ -118,7 +123,7 @@ public class RelatorioController {
                 : relatorioMensalService.mesPassadoReferencia();
 
         Optional<RelatorioMensalArquivado> arquivado = relatorioMensalService.buscarArquivado(mesReferencia);
-        if (arquivado.isEmpty()) {
+        if (arquivado.isEmpty() || !relatorioMensalService.temPdfDisponivel(arquivado.get())) {
             return ResponseEntity.notFound().build();
         }
 

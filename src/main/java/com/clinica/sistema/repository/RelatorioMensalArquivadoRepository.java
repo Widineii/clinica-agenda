@@ -15,4 +15,6 @@ public interface RelatorioMensalArquivadoRepository extends JpaRepository<Relato
     boolean existsByAnoAndMes(int ano, int mes);
 
     List<RelatorioMensalArquivado> findAllByOrderByAnoDescMesDesc();
+
+    List<RelatorioMensalArquivado> findByPdfIsNotNull();
 }

@@ -39,9 +39,14 @@ public class RelatorioMensalArquivado {
     private LocalDateTime geradoEm;
 
     @Lob
-    @Column(nullable = false)
     private byte[] pdf;
+
+    private LocalDateTime pdfRemovidoEm;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String dadosJson;
+
+    public boolean temPdfDisponivel() {
+        return pdf != null && pdf.length > 0;
+    }
 }

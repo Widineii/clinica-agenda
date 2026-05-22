@@ -70,8 +70,13 @@
                     <span th:text="${agendamentosRemovidos}">0</span> agendamento(s) avulso(s) do mes passado ja foram removidos do banco.
                 </span>
             </p>
-            <p class="small text-muted mb-3" th:if="${relatorioArquivado}">
-                Voce so precisa baixar o PDF se quiser guardar. Cancelados nao entram na contagem.
+            <p class="small text-muted mb-3" th:if="${relatorioArquivado and podeBaixarPdf}">
+                Baixe o PDF ate o dia <span th:text="${diaRemocaoPdf}">10</span> do mes seguinte.
+                Depois disso o arquivo e removido do banco para economizar espaco; os numeros continuam aqui.
+            </p>
+            <p class="mb-3 alert alert-secondary py-2" th:if="${pdfRemovido}">
+                O PDF deste mes ja foi removido automaticamente (apos o dia <span th:text="${diaRemocaoPdf}">10</span>).
+                Os dados do relatorio continuam visiveis abaixo.
             </p>
             <a th:if="${podeBaixarPdf}"
                th:href="@{/agendamentos/relatorio/mensal/download}"
@@ -115,10 +120,12 @@
                 <li class="list-group-item d-flex justify-content-between align-items-center px-0"
                     th:each="item : ${historico}">
                     <span th:text="${item.mesLabel}">Mes</span>
-                    <a th:href="@{/agendamentos/relatorio/mensal/download(ano=${item.ano}, mes=${item.mes})}"
+                    <a th:if="${item.temPdfDisponivel()}"
+                       th:href="@{/agendamentos/relatorio/mensal/download(ano=${item.ano}, mes=${item.mes})}"
                        class="btn btn-sm btn-outline-primary">
                         Baixar PDF
                     </a>
+                    <span th:if="${!item.temPdfDisponivel()}" class="small text-muted">PDF removido</span>
                 </li>
             </ul>
         </div>

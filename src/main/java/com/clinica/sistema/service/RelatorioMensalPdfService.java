@@ -30,7 +30,7 @@ public class RelatorioMensalPdfService {
             documento.open();
 
             documento.add(new Paragraph("Relatorio mensal de uso de salas", TITULO));
-            documento.add(new Paragraph("Clinica Affetto", TEXTO));
+            documento.add(new Paragraph("Clinica Afetto", TEXTO));
             documento.add(new Paragraph(" "));
             documento.add(new Paragraph("Periodo: " + relatorio.getMesReferenciaLabel(), SUBTITULO));
             documento.add(new Paragraph(

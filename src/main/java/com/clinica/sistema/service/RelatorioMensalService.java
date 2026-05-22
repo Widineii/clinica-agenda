@@ -32,6 +32,9 @@ public class RelatorioMensalService {
     @Value("${app.relatorio-mensal.dia-fechamento:3}")
     private int diaFechamento;
 
+    @Value("${app.relatorio-mensal.dia-remocao-pdf:10}")
+    private int diaRemocaoPdf;
+
     public RelatorioMensalService(
             AgendamentoService agendamentoService,
             RelatorioMensalPdfService relatorioMensalPdfService,
@@ -68,6 +71,48 @@ public class RelatorioMensalService {
 
     public boolean podeExecutarFechamentoAutomatico() {
         return LocalDate.now().getDayOfMonth() >= diaFechamento;
+    }
+
+    public int getDiaRemocaoPdf() {
+        return diaRemocaoPdf;
+    }
+
+    public boolean temPdfDisponivel(RelatorioMensalArquivado arquivado) {
+        return arquivado != null && arquivado.temPdfDisponivel();
+    }
+
+    /**
+     * PDF do relatorio de um mes fica disponivel ate o dia anterior ao diaRemocaoPdf
+     * do mes seguinte (ex.: abril some no dia 10 de maio).
+     */
+    boolean pdfExpiradoParaRelatorio(int ano, int mes, LocalDate referencia) {
+        LocalDate inicioRemocao = YearMonth.of(ano, mes).plusMonths(1).atDay(diaRemocaoPdf);
+        return !referencia.isBefore(inicioRemocao);
+    }
+
+    /** Remove bytes do PDF expirados; mantem JSON com os numeros na tela. */
+    @Transactional
+    public int removerPdfsExpiradosSeDevido() {
+        LocalDate hoje = LocalDate.now();
+        if (hoje.getDayOfMonth() < diaRemocaoPdf) {
+            return 0;
+        }
+
+        int removidos = 0;
+        for (RelatorioMensalArquivado arquivado : relatorioMensalArquivadoRepository.findByPdfIsNotNull()) {
+            if (!pdfExpiradoParaRelatorio(arquivado.getAno(), arquivado.getMes(), hoje)) {
+                continue;
+            }
+            arquivado.setPdf(null);
+            arquivado.setPdfRemovidoEm(LocalDateTime.now());
+            relatorioMensalArquivadoRepository.save(arquivado);
+            removidos++;
+        }
+
+        if (removidos > 0) {
+            log.info("Removidos {} PDF(s) de relatorios mensais para liberar espaco no banco.", removidos);
+        }
+        return removidos;
     }
 
     /** @return true se gerou/arquivou o relatorio nesta execucao */

@@ -1,4 +1,4 @@
-# Agenda Affetto
+# Agenda Afetto
 
 ![Status](https://img.shields.io/badge/status-online%20demo-16a34a)
 ![CI](https://github.com/Widineii/clinica-agenda/actions/workflows/ci.yml/badge.svg)
