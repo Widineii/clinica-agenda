@@ -8,11 +8,14 @@ import com.clinica.sistema.model.RelatorioMensalArquivado;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.RelatorioMensalService;
+import com.clinica.sistema.service.RelatorioSemanalService;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.YearMonth;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -34,20 +38,39 @@ public class RelatorioController {
     private static final Logger log = LoggerFactory.getLogger(RelatorioController.class);
 
     private final RelatorioMensalService relatorioMensalService;
+    private final RelatorioSemanalService relatorioSemanalService;
     private final AuthService authService;
+    private final Environment environment;
 
-    public RelatorioController(RelatorioMensalService relatorioMensalService, AuthService authService) {
+    public RelatorioController(
+            RelatorioMensalService relatorioMensalService,
+            RelatorioSemanalService relatorioSemanalService,
+            AuthService authService,
+            Environment environment
+    ) {
         this.relatorioMensalService = relatorioMensalService;
+        this.relatorioSemanalService = relatorioSemanalService;
         this.authService = authService;
+        this.environment = environment;
+    }
+
+    private boolean isPerfilLocal() {
+        return Arrays.asList(environment.getActiveProfiles()).contains("local");
     }
 
     @GetMapping
-    public String relatorioPrincipal(Model model, RedirectAttributes redirectAttributes) {
-        return relatorioMensal(model, redirectAttributes);
+    public String relatorioPrincipal(Model model, RedirectAttributes redirectAttributes, HttpSession session) {
+        return relatorioMensal(model, redirectAttributes, session, false);
     }
 
     @GetMapping("/mensal")
-    public String relatorioMensal(Model model, RedirectAttributes redirectAttributes) {
+    public String relatorioMensal(
+            Model model,
+            RedirectAttributes redirectAttributes,
+            HttpSession session,
+            @RequestParam(required = false, defaultValue = "false") boolean viaNotificacao
+    ) {
+        relatorioSemanalService.limparSessao(session);
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
         if (!podeVerRelatorio(usuarioLogado)) {
             redirectAttributes.addFlashAttribute(
@@ -62,8 +85,9 @@ public class RelatorioController {
         RelatorioMensalUsoSalasView relatorio;
         List<RelatorioMensalArquivado> historico = Collections.emptyList();
 
+        boolean fechamentoNestaVisita = false;
         try {
-            relatorioMensalService.executarFechamentoAutomaticoSeDevido();
+            fechamentoNestaVisita = relatorioMensalService.executarFechamentoAutomaticoSeDevido();
             relatorioMensalService.removerPdfsExpiradosSeDevido();
             arquivado = relatorioMensalService.buscarArquivado(mesPassado);
             if (arquivado.isPresent() && relatorioMensalService.podeExportarPdf(arquivado.get())) {
@@ -118,6 +142,25 @@ public class RelatorioController {
             model.addAttribute("geradoEm", arquivado.get().getGeradoEm());
             model.addAttribute("agendamentosRemovidos", arquivado.get().getAgendamentosRemovidos());
         }
+        if (viaNotificacao && !aguardandoDia3 && arquivado.isPresent() && podeBaixarPdf) {
+            model.addAttribute(
+                    "sucessoNotificacao",
+                    "O relatorio de " + relatorio.getMesReferenciaLabel()
+                            + " esta pronto. Use o botao Baixar PDF no topo da pagina."
+            );
+        } else if (viaNotificacao && !aguardandoDia3 && fechamentoNestaVisita) {
+            model.addAttribute(
+                    "sucessoNotificacao",
+                    "O relatorio de " + relatorio.getMesReferenciaLabel()
+                            + " foi gerado agora. Use o botao Baixar PDF no topo da pagina."
+            );
+        } else if (viaNotificacao && !aguardandoDia3) {
+            model.addAttribute(
+                    "sucessoNotificacao",
+                    "Abrindo o relatorio de " + relatorio.getMesReferenciaLabel()
+                            + ". Quando o fechamento terminar, o botao Baixar PDF ficara disponivel."
+            );
+        }
         return "relatorio-mensal";
     }
 
@@ -156,6 +199,75 @@ public class RelatorioController {
                 .header(HttpHeaders.PRAGMA, "no-cache")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
+    }
+
+    @GetMapping("/semanal")
+    public String relatorioSemanal(Model model, RedirectAttributes redirectAttributes, HttpSession session) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!podeVerRelatorio(usuarioLogado)) {
+            redirectAttributes.addFlashAttribute(
+                    "erro",
+                    "Somente administracao ou dona da clinica pode ver o relatorio."
+            );
+            return "redirect:/agendamentos/dashboard";
+        }
+
+        try {
+            RelatorioMensalUsoSalasView relatorio = relatorioSemanalService.montarRelatorioSemanalAtual();
+            relatorioSemanalService.armazenarNaSessao(session, relatorio);
+
+            model.addAttribute("usuarioLogado", usuarioLogado);
+            model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
+            model.addAttribute("relatorio", relatorio);
+            model.addAttribute("linhas", montarLinhasRelatorio(relatorio));
+            model.addAttribute("totalProfissionais", relatorio.getProfissionais().size());
+            model.addAttribute("periodoLabel", relatorio.getMesReferenciaLabel());
+            model.addAttribute("versaoDownload", System.currentTimeMillis());
+            model.addAttribute("geradoEm", java.time.LocalDateTime.now());
+            model.addAttribute("perfilLocal", isPerfilLocal());
+            return "relatorio-semanal";
+        } catch (RuntimeException e) {
+            log.error("Falha ao carregar relatorio semanal", e);
+            redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
+            redirectAttributes.addFlashAttribute(
+                    "erro",
+                    "Nao foi possivel gerar o relatorio semanal. Tente novamente."
+            );
+            return "redirect:/agendamentos/relatorio/mensal";
+        }
+    }
+
+    @GetMapping("/semanal/download")
+    public ResponseEntity<byte[]> baixarPdfSemanal(HttpSession session) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!podeVerRelatorio(usuarioLogado)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        if (relatorioSemanalService.obterDaSessao(session).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            RelatorioMensalUsoSalasView relatorio = relatorioSemanalService.obterDaSessao(session).get();
+            byte[] pdf = relatorioSemanalService.gerarPdfDaSessao(session);
+            String nomeArquivo = relatorioSemanalService.nomeArquivoPdf(relatorio);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nomeArquivo + "\"")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (RuntimeException e) {
+            log.error("Falha ao gerar PDF do relatorio semanal", e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/semanal/limpar")
+    public ResponseEntity<Void> limparRelatorioSemanal(HttpSession session) {
+        relatorioSemanalService.limparSessao(session);
+        return ResponseEntity.noContent().build();
     }
 
     private boolean podeVerRelatorio(Usuario usuario) {

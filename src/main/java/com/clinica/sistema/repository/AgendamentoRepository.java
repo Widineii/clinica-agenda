@@ -91,6 +91,26 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             @Param("fim") LocalDateTime fim
     );
 
+    /**
+     * Igual ao relatorio por periodo, mas so conta horarios cujo inicio ja passou
+     * da regra das 24h (inicio + 24h &lt;= agora).
+     */
+    @Query("""
+            SELECT a.profissional.nome, a.sala.nome, COUNT(a)
+            FROM Agendamento a
+            WHERE a.dataHoraInicio >= :inicio
+              AND a.dataHoraInicio < :fim
+              AND a.dataHoraInicio <= :corteConfirmadoApos24h
+              AND a.profissional.cargo = 'ROLE_PROFISSIONAL'
+            GROUP BY a.profissional.id, a.profissional.nome, a.sala.id, a.sala.nome
+            ORDER BY a.profissional.nome ASC, a.sala.nome ASC
+            """)
+    List<Object[]> contarUsoSalasPorProfissionalNoPeriodoAposRegra24h(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim,
+            @Param("corteConfirmadoApos24h") LocalDateTime corteConfirmadoApos24h
+    );
+
     long countByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(
             LocalDateTime inicio,
             LocalDateTime fim
@@ -109,4 +129,12 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
     );
+
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            DELETE FROM Agendamento a
+            WHERE a.nomeCliente LIKE :prefixo
+            """)
+    int deleteByNomeClienteLike(@Param("prefixo") String prefixo);
 }

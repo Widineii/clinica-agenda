@@ -490,6 +490,34 @@ class AgendamentoServiceTest {
     }
 
     @Test
+    void relatorioSemanalConsultaApenasHorariosAposRegra24h() {
+        LocalDate inicio = LocalDate.of(2026, 5, 25);
+        LocalDate fim = LocalDate.of(2026, 5, 28);
+        LocalDateTime inicioDataHora = inicio.atStartOfDay();
+        LocalDateTime fimDataHora = fim.plusDays(1).atStartOfDay();
+
+        when(agendamentoRepository.contarUsoSalasPorProfissionalNoPeriodoAposRegra24h(
+                eq(inicioDataHora),
+                eq(fimDataHora),
+                any(LocalDateTime.class)
+        )).thenReturn(Collections.singletonList(new Object[]{"Julia", "Sala 1", 3L}));
+
+        RelatorioMensalUsoSalasView relatorio = agendamentoService.montarRelatorioUsoSalasNoPeriodoAposRegra24h(
+                inicio,
+                fim,
+                "Semana"
+        );
+
+        assertEquals(3L, relatorio.getTotalGeral());
+        verify(agendamentoRepository).contarUsoSalasPorProfissionalNoPeriodoAposRegra24h(
+                eq(inicioDataHora),
+                eq(fimDataHora),
+                any(LocalDateTime.class)
+        );
+        verify(agendamentoRepository, never()).contarUsoSalasPorProfissionalNoPeriodo(any(), any());
+    }
+
+    @Test
     void deveSepararSeriesSemanalEQuinzenal() {
         Agendamento semanal = agendamentoSerie("semanal-1", LocalDateTime.now().plusDays(3));
         Agendamento quinzenal = agendamentoSerie("quinzenal-1", LocalDateTime.now().plusDays(4));

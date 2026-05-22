@@ -10,6 +10,8 @@ public class RelatorioMensalUsoSalasView {
     private int anoReferencia;
     private int mesReferencia;
     private String mesReferenciaLabel;
+    private String tituloRelatorio;
+    private boolean relatorioSemanal;
     private List<RelatorioUsoSalaProfissional> profissionais = new ArrayList<>();
     private long totalGeral;
 }

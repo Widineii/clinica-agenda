@@ -188,11 +188,139 @@ public class AgendamentoService {
         return repository.deleteAvulsosByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(inicio, fim);
     }
 
-    public RelatorioMensalUsoSalasView montarRelatorioMensalUsoSalas(YearMonth mesReferencia) {
-        LocalDateTime inicio = mesReferencia.atDay(1).atStartOfDay();
-        LocalDateTime fim = mesReferencia.plusMonths(1).atDay(1).atStartOfDay();
+    public static final String PREFIXO_CLIENTE_TESTE_RELATORIO_SEMANAL = "TESTE-REL-SEMANAL-";
 
-        List<Object[]> linhas = repository.contarUsoSalasPorProfissionalNoPeriodo(inicio, fim);
+    /**
+     * Cria avulsos na semana atual (segunda ate hoje/sabado) para testar relatorio semanal e regra 24h.
+     */
+    @Transactional
+    public int semearAvulsosSemanaAtualParaTesteRelatorio() {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicio;
+        LocalDate fim;
+        if (hoje.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            inicio = hoje.minusDays(6);
+            fim = inicio.plusDays(5);
+        } else {
+            inicio = hoje.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            fim = hoje;
+        }
+
+        repository.deleteByNomeClienteLike(PREFIXO_CLIENTE_TESTE_RELATORIO_SEMANAL + "%");
+
+        List<Usuario> profissionais = usuarioRepository.findAll().stream()
+                .filter(usuario -> "ROLE_PROFISSIONAL".equals(usuario.getCargo()))
+                .sorted(Comparator.comparing(Usuario::getNome))
+                .toList();
+        List<Sala> salas = salaRepository.findAllByOrderByNomeAsc();
+        if (profissionais.isEmpty() || salas.isEmpty()) {
+            return 0;
+        }
+
+        LocalDateTime limite24h = LocalDateTime.now().minusHours(24);
+        List<Agendamento> criados = new ArrayList<>();
+        int indice = 0;
+
+        for (LocalDate dia = inicio; !dia.isAfter(fim); dia = dia.plusDays(1)) {
+            for (int hora : List.of(8, 10, 14)) {
+                LocalDateTime inicioSlot = dia.atTime(hora, 0);
+                if (inicioSlot.isAfter(limite24h)) {
+                    continue;
+                }
+                Usuario profissional = profissionais.get(indice % profissionais.size());
+                Sala sala = salas.get(indice % salas.size());
+                Agendamento agendamento = new Agendamento();
+                agendamento.setProfissional(profissional);
+                agendamento.setSala(sala);
+                agendamento.setNomeCliente(
+                        PREFIXO_CLIENTE_TESTE_RELATORIO_SEMANAL
+                                + dia.format(DateTimeFormatter.ofPattern("dd/MM"))
+                                + "-"
+                                + hora
+                                + "h"
+                );
+                agendamento.setDataHoraInicio(inicioSlot);
+                agendamento.setDataHoraFim(inicioSlot.plusHours(1));
+                agendamento.setFixo(false);
+                agendamento.setTipoRecorrencia(RECORRENCIA_AVULSO);
+                criados.add(agendamento);
+                indice++;
+            }
+        }
+
+        LocalDateTime consultaRecente = LocalDateTime.now().minusHours(2);
+        if (!consultaRecente.toLocalDate().isBefore(inicio) && !consultaRecente.toLocalDate().isAfter(fim)) {
+            Usuario profissional = profissionais.get(0);
+            Sala sala = salas.get(0);
+            Agendamento recente = new Agendamento();
+            recente.setProfissional(profissional);
+            recente.setSala(sala);
+            recente.setNomeCliente(PREFIXO_CLIENTE_TESTE_RELATORIO_SEMANAL + "recente-menos-24h");
+            recente.setDataHoraInicio(consultaRecente);
+            recente.setDataHoraFim(consultaRecente.plusHours(1));
+            recente.setFixo(false);
+            recente.setTipoRecorrencia(RECORRENCIA_AVULSO);
+            criados.add(recente);
+        }
+
+        if (!criados.isEmpty()) {
+            repository.saveAll(criados);
+        }
+        return criados.size();
+    }
+
+    public RelatorioMensalUsoSalasView montarRelatorioMensalUsoSalas(YearMonth mesReferencia) {
+        LocalDate inicio = mesReferencia.atDay(1);
+        LocalDate fim = mesReferencia.atEndOfMonth();
+        RelatorioMensalUsoSalasView relatorio = montarRelatorioUsoSalasNoPeriodo(
+                inicio,
+                fim,
+                formatarMesReferencia(mesReferencia)
+        );
+        relatorio.setAnoReferencia(mesReferencia.getYear());
+        relatorio.setMesReferencia(mesReferencia.getMonthValue());
+        return relatorio;
+    }
+
+    public RelatorioMensalUsoSalasView montarRelatorioUsoSalasNoPeriodo(
+            LocalDate inicio,
+            LocalDate fim,
+            String periodoLabel
+    ) {
+        return montarRelatorioUsoSalasNoPeriodo(inicio, fim, periodoLabel, false);
+    }
+
+    public RelatorioMensalUsoSalasView montarRelatorioUsoSalasNoPeriodoAposRegra24h(
+            LocalDate inicio,
+            LocalDate fim,
+            String periodoLabel
+    ) {
+        return montarRelatorioUsoSalasNoPeriodo(inicio, fim, periodoLabel, true);
+    }
+
+    private RelatorioMensalUsoSalasView montarRelatorioUsoSalasNoPeriodo(
+            LocalDate inicio,
+            LocalDate fim,
+            String periodoLabel,
+            boolean aplicarRegra24Horas
+    ) {
+        if (fim.isBefore(inicio)) {
+            throw new RuntimeException("Periodo invalido para o relatorio.");
+        }
+        LocalDateTime inicioDataHora = inicio.atStartOfDay();
+        LocalDateTime fimDataHora = fim.plusDays(1).atStartOfDay();
+
+        List<Object[]> linhas;
+        if (aplicarRegra24Horas) {
+            LocalDateTime corte = LocalDateTime.now().minusHours(24);
+            linhas = repository.contarUsoSalasPorProfissionalNoPeriodoAposRegra24h(
+                    inicioDataHora,
+                    fimDataHora,
+                    corte
+            );
+        } else {
+            linhas = repository.contarUsoSalasPorProfissionalNoPeriodo(inicioDataHora, fimDataHora);
+        }
         Map<String, RelatorioUsoSalaProfissional> porProfissional = new LinkedHashMap<>();
         long totalGeral = 0;
 
@@ -219,9 +347,9 @@ public class AgendamentoService {
         }
 
         RelatorioMensalUsoSalasView relatorio = new RelatorioMensalUsoSalasView();
-        relatorio.setAnoReferencia(mesReferencia.getYear());
-        relatorio.setMesReferencia(mesReferencia.getMonthValue());
-        relatorio.setMesReferenciaLabel(formatarMesReferencia(mesReferencia));
+        relatorio.setAnoReferencia(inicio.getYear());
+        relatorio.setMesReferencia(inicio.getMonthValue());
+        relatorio.setMesReferenciaLabel(periodoLabel);
         relatorio.setProfissionais(new ArrayList<>(porProfissional.values()));
         relatorio.setTotalGeral(totalGeral);
         return relatorio;

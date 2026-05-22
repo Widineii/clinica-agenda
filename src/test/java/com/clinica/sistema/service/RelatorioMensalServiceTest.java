@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.RelatorioMensalNotificacaoView;
 import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
 import com.clinica.sistema.dto.RelatorioUsoSalaItem;
 import com.clinica.sistema.dto.RelatorioUsoSalaProfissional;
@@ -12,11 +13,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -45,6 +49,8 @@ class RelatorioMensalServiceTest {
                 relatorioMensalArquivadoRepository,
                 JsonMapper.builder().build()
         );
+        ReflectionTestUtils.setField(relatorioMensalService, "diaFechamento", 3);
+        ReflectionTestUtils.setField(relatorioMensalService, "diaRemocaoPdf", 10);
     }
 
     @Test
@@ -74,6 +80,50 @@ class RelatorioMensalServiceTest {
         assertEquals(2026, captor.getValue().getAno());
         assertEquals(5, captor.getValue().getMes());
         assertTrue(captor.getValue().getDadosJson().contains("Julia"));
+    }
+
+    @Test
+    void notificacaoOcultaAntesDoDiaDeFechamento() {
+        assertTrue(relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(2)).isEmpty());
+    }
+
+    @Test
+    void notificacaoPendenteAPartirDoDiaDeFechamento() {
+        YearMonth mesPassado = YearMonth.now().minusMonths(1);
+        when(relatorioMensalArquivadoRepository.findByAnoAndMes(
+                mesPassado.getYear(),
+                mesPassado.getMonthValue()
+        )).thenReturn(Optional.empty());
+
+        Optional<RelatorioMensalNotificacaoView> notificacao =
+                relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(3));
+
+        assertTrue(notificacao.isPresent());
+        assertTrue(notificacao.get().isPendenteArquivamento());
+        assertTrue(notificacao.get().getMensagemPainel().contains("pronto para gerar"));
+    }
+
+    @Test
+    void notificacaoProntaParaBaixarQuandoArquivado() {
+        YearMonth mesPassado = YearMonth.now().minusMonths(1);
+        RelatorioMensalArquivado arquivado = new RelatorioMensalArquivado();
+        arquivado.setAno(mesPassado.getYear());
+        arquivado.setMes(mesPassado.getMonthValue());
+        arquivado.setDadosJson("{\"anoReferencia\":2026,\"mesReferencia\":4,\"mesReferenciaLabel\":\"Abril\","
+                + "\"totalGeral\":1,\"profissionais\":[]}");
+        arquivado.setPdf(new byte[] {1});
+
+        when(relatorioMensalArquivadoRepository.findByAnoAndMes(
+                mesPassado.getYear(),
+                mesPassado.getMonthValue()
+        )).thenReturn(Optional.of(arquivado));
+
+        Optional<RelatorioMensalNotificacaoView> notificacao =
+                relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(5));
+
+        assertTrue(notificacao.isPresent());
+        assertFalse(notificacao.get().isPendenteArquivamento());
+        assertTrue(notificacao.get().getMensagemPainel().contains("ja foi gerado"));
     }
 
     @Test

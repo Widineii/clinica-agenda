@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.RelatorioMensalNotificacaoView;
 import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
 import com.clinica.sistema.model.RelatorioMensalArquivado;
 import com.clinica.sistema.repository.RelatorioMensalArquivadoRepository;
@@ -70,7 +71,61 @@ public class RelatorioMensalService {
     }
 
     public boolean podeExecutarFechamentoAutomatico() {
-        return LocalDate.now().getDayOfMonth() >= diaFechamento;
+        return podeExecutarFechamentoAutomatico(LocalDate.now());
+    }
+
+    boolean podeExecutarFechamentoAutomatico(LocalDate referencia) {
+        return referencia.getDayOfMonth() >= diaFechamento;
+    }
+
+    public static final String URL_RELATORIO_VIA_NOTIFICACAO =
+            "/agendamentos/relatorio/mensal?viaNotificacao=1";
+
+    /**
+     * Sino na agenda: a partir do dia de fechamento, enquanto o relatorio do mes passado
+     * ainda pode ser gerado ou baixado em PDF.
+     */
+    public Optional<RelatorioMensalNotificacaoView> avaliarNotificacaoMensal() {
+        return avaliarNotificacaoMensal(LocalDate.now());
+    }
+
+    Optional<RelatorioMensalNotificacaoView> avaliarNotificacaoMensal(LocalDate referencia) {
+        if (!podeExecutarFechamentoAutomatico(referencia)) {
+            return Optional.empty();
+        }
+
+        YearMonth mesPassado = mesPassadoReferencia();
+        String mesLabel = formatarMesReferencia(mesPassado);
+        Optional<RelatorioMensalArquivado> arquivado = buscarArquivado(mesPassado);
+
+        if (arquivado.isPresent() && !podeExportarPdf(arquivado.get())) {
+            return Optional.empty();
+        }
+
+        boolean pendente = arquivado.isEmpty();
+        String mensagemPainel = pendente
+                ? "O relatorio de " + mesLabel + " ja esta pronto para gerar. "
+                        + "Ao abrir, o sistema fecha o mes passado e voce pode baixar o PDF."
+                : "O relatorio de " + mesLabel + " ja foi gerado. "
+                        + "Abra para conferir os numeros e baixar o PDF.";
+
+        String mensagemResumo = pendente
+                ? "Relatorio de " + mesLabel + " pronto para gerar"
+                : "Relatorio de " + mesLabel + " pronto para baixar";
+
+        return Optional.of(new RelatorioMensalNotificacaoView(
+                mesLabel,
+                mensagemResumo,
+                mensagemPainel,
+                pendente,
+                URL_RELATORIO_VIA_NOTIFICACAO
+        ));
+    }
+
+    public void adicionarNotificacaoAoModelSeAplicavel(org.springframework.ui.Model model) {
+        avaliarNotificacaoMensal().ifPresent(notificacao ->
+                model.addAttribute("notificacaoRelatorioMensal", notificacao)
+        );
     }
 
     public int getDiaRemocaoPdf() {

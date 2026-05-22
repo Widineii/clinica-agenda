@@ -7,7 +7,10 @@ import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.RelatorioMensalService;
+import com.clinica.sistema.service.RelatorioSemanalService;
 import com.clinica.sistema.service.UsuarioService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,17 +35,23 @@ public class AgendamentoController {
     private final AuthService authService;
     private final StartupDataInitializer startupDataInitializer;
     private final UsuarioService usuarioService;
+    private final RelatorioSemanalService relatorioSemanalService;
+    private final RelatorioMensalService relatorioMensalService;
 
     public AgendamentoController(
             AgendamentoService service,
             AuthService authService,
             StartupDataInitializer startupDataInitializer,
-            UsuarioService usuarioService
+            UsuarioService usuarioService,
+            RelatorioSemanalService relatorioSemanalService,
+            RelatorioMensalService relatorioMensalService
     ) {
         this.service = service;
         this.authService = authService;
         this.startupDataInitializer = startupDataInitializer;
         this.usuarioService = usuarioService;
+        this.relatorioSemanalService = relatorioSemanalService;
+        this.relatorioMensalService = relatorioMensalService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -54,8 +63,10 @@ public class AgendamentoController {
     public String abrirDashboard(
             Model model,
             @RequestParam(required = false) Long salaId,
-            @RequestParam(required = false) LocalDate semana
+            @RequestParam(required = false) LocalDate semana,
+            HttpSession session
     ) {
+        relatorioSemanalService.limparSessao(session);
         Usuario usuarioLogado = authService.buscarUsuarioLogado().orElse(null);
         if (usuarioLogado == null) {
             return "redirect:/login";
@@ -125,6 +136,9 @@ public class AgendamentoController {
         model.addAttribute("dataAgendaDia", LocalDate.now());
         model.addAttribute("totalAgendamentosDoDia", agendamentosDoDia.size());
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
+        if (podeGerenciarEquipe) {
+            relatorioMensalService.adicionarNotificacaoAoModelSeAplicavel(model);
+        }
         return "agenda";
     }
 
@@ -147,6 +161,7 @@ public class AgendamentoController {
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
         model.addAttribute("profissionais", usuarioService.listarProfissionaisDaEquipe());
         model.addAttribute("usuariosSenha", usuarioService.listarUsuariosParaTrocaSenha());
+        relatorioMensalService.adicionarNotificacaoAoModelSeAplicavel(model);
         return "central-profissionais";
     }
 

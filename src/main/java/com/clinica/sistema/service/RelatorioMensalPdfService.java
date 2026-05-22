@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -72,7 +73,11 @@ public class RelatorioMensalPdfService {
             documento.add(criarCardsResumo(relatorio, escala));
             documento.add(espaco(escala.espacoPequeno));
 
-            Paragraph aviso = new Paragraph("* Agendamentos cancelados nao entram neste relatorio", escala.fontDisclaimer);
+            String textoAviso = relatorio.isRelatorioSemanal()
+                    ? "* Agendamentos cancelados nao entram neste relatorio. "
+                            + "Consultas com menos de 24h desde o horario agendado tambem nao entram."
+                    : "* Agendamentos cancelados nao entram neste relatorio";
+            Paragraph aviso = new Paragraph(textoAviso, escala.fontDisclaimer);
             aviso.setAlignment(Element.ALIGN_CENTER);
             documento.add(aviso);
             documento.add(espaco(escala.espacoAntesTabela));
@@ -180,7 +185,10 @@ public class RelatorioMensalPdfService {
         cell.setBorder(PdfPCell.NO_BORDER);
         cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        cell.addElement(paragrafo("RELATORIO MENSAL DE USO DE SALAS", escala.fontReportTitle, Element.ALIGN_RIGHT));
+        String titulo = relatorio.getTituloRelatorio() != null && !relatorio.getTituloRelatorio().isBlank()
+                ? relatorio.getTituloRelatorio()
+                : "RELATORIO MENSAL DE USO DE SALAS";
+        cell.addElement(paragrafo(titulo, escala.fontReportTitle, Element.ALIGN_RIGHT));
         cell.addElement(paragrafo("Periodo: " + relatorio.getMesReferenciaLabel(), escala.fontBody, Element.ALIGN_RIGHT));
         cell.addElement(paragrafo(
                 "Gerado em: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
@@ -211,8 +219,14 @@ public class RelatorioMensalPdfService {
 
         PdfPTable cards = new PdfPTable(2);
         cards.setWidthPercentage(100);
-        cards.addCell(cardResumo("Total de Horarios Agendados no Mes", String.valueOf(relatorio.getTotalGeral()), "calendario", escala));
-        cards.addCell(cardResumo("Profissionais Ativos no Mes", String.valueOf(relatorio.getProfissionais().size()), "profissional", escala));
+        String rotuloHorarios = relatorio.isRelatorioSemanal()
+                ? "Total de Horarios Agendados na Semana"
+                : "Total de Horarios Agendados no Mes";
+        String rotuloProfissionais = relatorio.isRelatorioSemanal()
+                ? "Profissionais Ativos na Semana"
+                : "Profissionais Ativos no Mes";
+        cards.addCell(cardResumo(rotuloHorarios, String.valueOf(relatorio.getTotalGeral()), "calendario", escala));
+        cards.addCell(cardResumo(rotuloProfissionais, String.valueOf(relatorio.getProfissionais().size()), "profissional", escala));
         conteudo.addElement(cards);
 
         painel.addCell(conteudo);
@@ -498,11 +512,26 @@ public class RelatorioMensalPdfService {
     }
 
     public String nomeArquivo(RelatorioMensalUsoSalasView relatorio) {
+        if (relatorio.isRelatorioSemanal()) {
+            return nomeArquivoSemanal(relatorio);
+        }
         return "relatorio-salas-"
                 + relatorio.getAnoReferencia()
                 + "-"
                 + String.format("%02d", relatorio.getMesReferencia())
                 + ".pdf";
+    }
+
+    public String nomeArquivoSemanal(RelatorioMensalUsoSalasView relatorio) {
+        String slug = relatorio.getMesReferenciaLabel() != null
+                ? relatorio.getMesReferenciaLabel()
+                        .toLowerCase(Locale.ROOT)
+                        .replace("semana de ", "semana-")
+                        .replace(" a ", "-a-")
+                        .replace("/", "-")
+                        .replaceAll("\\s+", "")
+                : "semana-atual";
+        return "relatorio-semanal-" + slug + ".pdf";
     }
 
     private record SalaEstilo(String nome, Color texto, Color fundo, Color borda) {
