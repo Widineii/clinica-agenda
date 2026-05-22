@@ -81,6 +81,40 @@ public class RelatorioMensalService {
         return arquivado != null && arquivado.temPdfDisponivel();
     }
 
+    /** Pode baixar se o relatorio foi arquivado e ainda tem os dados salvos (JSON). */
+    public boolean podeExportarPdf(RelatorioMensalArquivado arquivado) {
+        return arquivado != null
+                && arquivado.getDadosJson() != null
+                && !arquivado.getDadosJson().isBlank();
+    }
+
+    public boolean pdfRemovidoDoBanco(RelatorioMensalArquivado arquivado) {
+        return arquivado != null && !arquivado.temPdfDisponivel() && podeExportarPdf(arquivado);
+    }
+
+    public byte[] obterPdfParaDownload(YearMonth mesReferencia) {
+        RelatorioMensalArquivado arquivado = buscarArquivado(mesReferencia)
+                .orElseThrow(() -> new RuntimeException("Relatorio nao encontrado para o periodo informado."));
+
+        if (!podeExportarPdf(arquivado)) {
+            throw new RuntimeException("Nao ha dados para gerar o PDF deste relatorio.");
+        }
+
+        return regenerarESalvarPdf(arquivado);
+    }
+
+    /** Sempre gera PDF novo a partir do JSON (layout atualizado); atualiza bytes no banco se existir arquivo. */
+    @Transactional
+    public byte[] regenerarESalvarPdf(RelatorioMensalArquivado arquivado) {
+        RelatorioMensalUsoSalasView relatorio = desserializarRelatorio(arquivado.getDadosJson());
+        byte[] pdf = relatorioMensalPdfService.gerarPdf(relatorio);
+        arquivado.setPdf(pdf);
+        arquivado.setPdfRemovidoEm(null);
+        relatorioMensalArquivadoRepository.save(arquivado);
+        log.info("PDF do relatorio {} regenerado ({} bytes).", relatorio.getMesReferenciaLabel(), pdf.length);
+        return pdf;
+    }
+
     /**
      * PDF do relatorio de um mes fica disponivel ate o dia anterior ao diaRemocaoPdf
      * do mes seguinte (ex.: abril some no dia 10 de maio).
@@ -138,10 +172,12 @@ public class RelatorioMensalService {
                 mesReferencia.getYear(),
                 mesReferencia.getMonthValue()
         )) {
-            return relatorioMensalArquivadoRepository.findByAnoAndMes(
+            Optional<RelatorioMensalArquivado> existente = relatorioMensalArquivadoRepository.findByAnoAndMes(
                     mesReferencia.getYear(),
                     mesReferencia.getMonthValue()
             );
+            existente.ifPresent(this::regenerarESalvarPdf);
+            return existente;
         }
 
         RelatorioMensalUsoSalasView relatorio = agendamentoService.montarRelatorioMensalUsoSalas(mesReferencia);
@@ -180,6 +216,21 @@ public class RelatorioMensalService {
 
     public List<RelatorioMensalArquivado> listarArquivados() {
         return relatorioMensalArquivadoRepository.findAllByOrderByAnoDescMesDesc();
+    }
+
+    @Transactional
+    public boolean removerArquivoMesPassadoSeExistir() {
+        YearMonth mesPassado = mesPassadoReferencia();
+        Optional<RelatorioMensalArquivado> arquivado = relatorioMensalArquivadoRepository.findByAnoAndMes(
+                mesPassado.getYear(),
+                mesPassado.getMonthValue()
+        );
+        if (arquivado.isEmpty()) {
+            return false;
+        }
+        relatorioMensalArquivadoRepository.delete(arquivado.get());
+        log.info("Arquivo de relatorio removido para teste: {}", mesPassado);
+        return true;
     }
 
     public RelatorioMensalUsoSalasView carregarRelatorioParaExibicao(YearMonth mesReferencia) {

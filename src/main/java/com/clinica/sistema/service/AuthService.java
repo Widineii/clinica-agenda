@@ -40,4 +40,8 @@ public class AuthService {
     public boolean isDonaClinica(Usuario usuario) {
         return usuario != null && Boolean.TRUE.equals(usuario.getDonaClinica());
     }
+
+    public boolean podeGerenciarEquipe(Usuario usuario) {
+        return isAdmin(usuario) || isDonaClinica(usuario);
+    }
 }

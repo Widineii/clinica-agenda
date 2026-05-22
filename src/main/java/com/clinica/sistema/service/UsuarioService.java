@@ -1,33 +1,48 @@
 package com.clinica.sistema.service;
 
 import com.clinica.sistema.dto.CadastroProfissionalForm;
+import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
 import com.clinica.sistema.model.Usuario;
+import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
+    private final AgendamentoRepository agendamentoRepository;
     private final AuthService authService;
     private final PasswordEncoder passwordEncoder;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
+            AgendamentoRepository agendamentoRepository,
             AuthService authService,
             PasswordEncoder passwordEncoder
     ) {
         this.usuarioRepository = usuarioRepository;
+        this.agendamentoRepository = agendamentoRepository;
         this.authService = authService;
         this.passwordEncoder = passwordEncoder;
     }
 
+    public List<Usuario> listarProfissionaisDaEquipe() {
+        return usuarioRepository.findByCargoOrderByNomeAsc("ROLE_PROFISSIONAL");
+    }
+
+    public List<Usuario> listarUsuariosParaTrocaSenha() {
+        return usuarioRepository.findAll().stream()
+                .sorted((a, b) -> a.getNome().compareToIgnoreCase(b.getNome()))
+                .toList();
+    }
+
     public Usuario cadastrarProfissional(CadastroProfissionalForm form, Usuario usuarioLogado) {
-        if (!authService.isAdmin(usuarioLogado)) {
-            throw new RuntimeException("Somente a administracao pode cadastrar profissionais.");
-        }
+        validarGerenciamentoEquipe(usuarioLogado);
 
         String nome = form.getNome() != null ? form.getNome().trim() : "";
         String login = form.getLogin() != null ? form.getLogin().trim().toLowerCase() : "";
@@ -73,6 +88,59 @@ public class UsuarioService {
         if (!verificarSenhaAtual(usuario, senhaAtual)) {
             throw new RuntimeException("Senha atual incorreta.");
         }
+        aplicarNovaSenha(usuario, novaSenha, confirmarSenha, true, senhaAtual);
+        usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public void trocarSenhaComoGestor(TrocarSenhaAdminForm form, Usuario usuarioLogado) {
+        validarGerenciamentoEquipe(usuarioLogado);
+
+        if (form.getUsuarioId() == null) {
+            throw new RuntimeException("Selecione o usuario para alterar a senha.");
+        }
+
+        Usuario alvo = usuarioRepository.findById(form.getUsuarioId())
+                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
+
+        String novaSenha = normalizarSenha(form.getNovaSenha());
+        String confirmarSenha = normalizarSenha(form.getConfirmarSenha());
+        aplicarNovaSenha(alvo, novaSenha, confirmarSenha, false, null);
+        usuarioRepository.save(alvo);
+    }
+
+    @Transactional
+    public void excluirUsuario(Long usuarioId, Usuario usuarioLogado) {
+        validarGerenciamentoEquipe(usuarioLogado);
+
+        if (usuarioId == null) {
+            throw new RuntimeException("Selecione o usuario para excluir.");
+        }
+        if (usuarioId.equals(usuarioLogado.getId())) {
+            throw new RuntimeException("Voce nao pode excluir o seu proprio usuario.");
+        }
+
+        Usuario alvo = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado."));
+
+        if (authService.isAdmin(alvo)) {
+            throw new RuntimeException("Nao e permitido excluir o usuario administrador.");
+        }
+        if (!"ROLE_PROFISSIONAL".equals(alvo.getCargo())) {
+            throw new RuntimeException("Somente profissionais podem ser excluidos por aqui.");
+        }
+
+        agendamentoRepository.deleteByProfissionalIdIn(List.of(usuarioId));
+        usuarioRepository.delete(alvo);
+    }
+
+    private void aplicarNovaSenha(
+            Usuario usuario,
+            String novaSenha,
+            String confirmarSenha,
+            boolean exigirDiferenteDaAtual,
+            String senhaAtual
+    ) {
         if (novaSenha.isBlank()) {
             throw new RuntimeException("Informe a nova senha.");
         }
@@ -82,12 +150,17 @@ public class UsuarioService {
         if (!novaSenha.equals(confirmarSenha)) {
             throw new RuntimeException("A confirmacao da senha nao confere.");
         }
-        if (novaSenha.equals(senhaAtual)) {
+        if (exigirDiferenteDaAtual && novaSenha.equals(senhaAtual)) {
             throw new RuntimeException("A nova senha precisa ser diferente da senha atual.");
         }
 
         usuario.setSenha(passwordEncoder.encode(novaSenha));
-        usuarioRepository.save(usuario);
+    }
+
+    private void validarGerenciamentoEquipe(Usuario usuarioLogado) {
+        if (!authService.podeGerenciarEquipe(usuarioLogado)) {
+            throw new RuntimeException("Somente administracao ou dona da clinica podem gerenciar a equipe.");
+        }
     }
 
     private boolean verificarSenhaAtual(Usuario usuario, String senhaAtual) {

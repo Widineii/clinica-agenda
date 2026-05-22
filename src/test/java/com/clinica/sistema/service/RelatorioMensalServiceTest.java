@@ -79,17 +79,28 @@ class RelatorioMensalServiceTest {
     @Test
     void naoDeveArquivarMesDuasVezes() {
         YearMonth maio = YearMonth.of(2026, 5);
+        RelatorioMensalUsoSalasView relatorio = relatorioExemplo(maio);
         RelatorioMensalArquivado existente = new RelatorioMensalArquivado();
         existente.setAno(2026);
         existente.setMes(5);
+        existente.setDadosJson(
+                "{\"anoReferencia\":2026,\"mesReferencia\":5,\"mesReferenciaLabel\":\"Maio de 2026\","
+                        + "\"totalGeral\":7,\"profissionais\":[{\"profissionalNome\":\"Julia\","
+                        + "\"totalHorarios\":7,\"salas\":[{\"salaNome\":\"Sala 1\",\"quantidade\":7}]}]}"
+        );
 
         when(relatorioMensalArquivadoRepository.existsByAnoAndMes(2026, 5)).thenReturn(true);
         when(relatorioMensalArquivadoRepository.findByAnoAndMes(2026, 5)).thenReturn(Optional.of(existente));
+        when(relatorioMensalPdfService.gerarPdf(relatorio)).thenReturn(new byte[] {9, 9, 9});
+        when(relatorioMensalArquivadoRepository.save(any(RelatorioMensalArquivado.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         relatorioMensalService.arquivarMesSeNecessario(maio);
 
         verify(agendamentoService, never()).montarRelatorioMensalUsoSalas(any());
         verify(agendamentoService, never()).limparAgendamentosNoPeriodo(any(), any());
+        verify(relatorioMensalPdfService).gerarPdf(any());
+        verify(relatorioMensalArquivadoRepository).save(existente);
     }
 
     private RelatorioMensalUsoSalasView relatorioExemplo(YearMonth mes) {

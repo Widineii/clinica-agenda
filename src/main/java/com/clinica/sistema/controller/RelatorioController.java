@@ -1,6 +1,9 @@
 package com.clinica.sistema.controller;
 
+import com.clinica.sistema.dto.RelatorioLinhaView;
 import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
+import com.clinica.sistema.dto.RelatorioUsoSalaItem;
+import com.clinica.sistema.dto.RelatorioUsoSalaProfissional;
 import com.clinica.sistema.model.RelatorioMensalArquivado;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AuthService;
@@ -19,7 +22,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.YearMonth;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Controller
@@ -61,6 +66,10 @@ public class RelatorioController {
             relatorioMensalService.executarFechamentoAutomaticoSeDevido();
             relatorioMensalService.removerPdfsExpiradosSeDevido();
             arquivado = relatorioMensalService.buscarArquivado(mesPassado);
+            if (arquivado.isPresent() && relatorioMensalService.podeExportarPdf(arquivado.get())) {
+                relatorioMensalService.regenerarESalvarPdf(arquivado.get());
+                arquivado = relatorioMensalService.buscarArquivado(mesPassado);
+            }
             relatorio = relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
             historico = relatorioMensalService.listarArquivados();
         } catch (RuntimeException e) {
@@ -87,12 +96,16 @@ public class RelatorioController {
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
         model.addAttribute("relatorio", relatorio);
+        model.addAttribute("linhas", montarLinhasRelatorio(relatorio));
+        model.addAttribute("totalProfissionais", relatorio.getProfissionais().size());
         model.addAttribute("mesPassadoLabel", relatorio.getMesReferenciaLabel());
         model.addAttribute("relatorioArquivado", arquivado.isPresent());
-        model.addAttribute("podeBaixarPdf",
-                arquivado.isPresent() && !aguardandoDia3 && relatorioMensalService.temPdfDisponivel(arquivado.orElse(null)));
+        boolean podeBaixarPdf = arquivado.isPresent()
+                && !aguardandoDia3
+                && relatorioMensalService.podeExportarPdf(arquivado.orElse(null));
+        model.addAttribute("podeBaixarPdf", podeBaixarPdf);
         model.addAttribute("pdfRemovido",
-                arquivado.isPresent() && !relatorioMensalService.temPdfDisponivel(arquivado.orElse(null)));
+                arquivado.isPresent() && relatorioMensalService.pdfRemovidoDoBanco(arquivado.orElse(null)));
         model.addAttribute("diaRemocaoPdf", relatorioMensalService.getDiaRemocaoPdf());
         model.addAttribute("aguardandoDia3", aguardandoDia3);
         model.addAttribute("aguardandoProcessamentoAutomatico",
@@ -100,6 +113,7 @@ public class RelatorioController {
         model.addAttribute("diaFechamento", 3);
         model.addAttribute("historico", historico);
         model.addAttribute("mesAtualLabel", relatorioMensalService.formatarMesReferencia(YearMonth.now()));
+        model.addAttribute("versaoDownload", System.currentTimeMillis());
         if (arquivado.isPresent()) {
             model.addAttribute("geradoEm", arquivado.get().getGeradoEm());
             model.addAttribute("agendamentosRemovidos", arquivado.get().getAgendamentosRemovidos());
@@ -123,20 +137,50 @@ public class RelatorioController {
                 : relatorioMensalService.mesPassadoReferencia();
 
         Optional<RelatorioMensalArquivado> arquivado = relatorioMensalService.buscarArquivado(mesReferencia);
-        if (arquivado.isEmpty() || !relatorioMensalService.temPdfDisponivel(arquivado.get())) {
+        if (arquivado.isEmpty() || !relatorioMensalService.podeExportarPdf(arquivado.get())) {
             return ResponseEntity.notFound().build();
         }
 
-        byte[] pdf = arquivado.get().getPdf();
+        byte[] pdf;
+        try {
+            pdf = relatorioMensalService.obterPdfParaDownload(mesReferencia);
+        } catch (RuntimeException e) {
+            log.error("Falha ao gerar PDF do relatorio {}", mesReferencia, e);
+            return ResponseEntity.notFound().build();
+        }
         String nomeArquivo = relatorioMensalService.nomeArquivoPdf(mesReferencia);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nomeArquivo + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                .header(HttpHeaders.PRAGMA, "no-cache")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
 
     private boolean podeVerRelatorio(Usuario usuario) {
         return authService.isAdmin(usuario) || authService.isDonaClinica(usuario);
+    }
+
+    private List<RelatorioLinhaView> montarLinhasRelatorio(RelatorioMensalUsoSalasView relatorio) {
+        return relatorio.getProfissionais().stream()
+                .map(this::paraLinhaView)
+                .toList();
+    }
+
+    private RelatorioLinhaView paraLinhaView(RelatorioUsoSalaProfissional profissional) {
+        Map<String, Long> porSala = new HashMap<>();
+        for (RelatorioUsoSalaItem item : profissional.getSalas()) {
+            porSala.put(item.getSalaNome(), item.getQuantidade());
+        }
+
+        RelatorioLinhaView linha = new RelatorioLinhaView();
+        linha.setProfissionalNome(profissional.getProfissionalNome());
+        linha.setTotalHorarios(profissional.getTotalHorarios());
+        linha.setSala1(porSala.getOrDefault("Sala 1", 0L));
+        linha.setSala2(porSala.getOrDefault("Sala 2", 0L));
+        linha.setSala3(porSala.getOrDefault("Sala 3", 0L));
+        linha.setSala4(porSala.getOrDefault("Sala 4", 0L));
+        return linha;
     }
 }

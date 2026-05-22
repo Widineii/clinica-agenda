@@ -3,133 +3,547 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatorio mensal</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <title>Clinica Afetto - Relatorio Mensal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        :root {
+            --primary-teal: #1B4D5C;
+            --bg-light: #F8FAFC;
+            --text-dark: #334155;
+            --sala1-color: #3B82F6;
+            --sala2-color: #10B981;
+            --sala3-color: #A855F7;
+            --sala4-color: #F97316;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            min-height: 100vh;
-            background: linear-gradient(180deg, #f8fafc 0%, #eef4f7 100%);
+            background-color: #F1F5F9;
+            color: var(--text-dark);
+            font-family: 'Lato', sans-serif;
+            padding: 24px 16px 40px;
         }
-        .shell-card {
-            border: 0;
-            border-radius: 24px;
-            background: #fff;
-            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+
+        .page-wrap {
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        .hero-band {
-            background: linear-gradient(135deg, #0f766e 0%, #164e63 100%);
-            color: #fff;
-            border-radius: 24px;
-            padding: 24px;
-        }
-        .profissional-card {
-            border: 1px solid #d9e2ec;
+
+        .container {
+            background: white;
+            padding: 30px;
             border-radius: 16px;
-            padding: 16px;
-            background: #f8fafc;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-img {
+            height: 72px;
+            width: auto;
+            max-width: 140px;
+            object-fit: contain;
+            display: block;
+            flex-shrink: 0;
+        }
+
+        .logo-text h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 22px;
+            color: var(--primary-teal);
+            line-height: 1.2;
+        }
+
+        .logo-text p {
+            font-size: 14px;
+            color: #64748B;
+        }
+
+        .title-area {
+            text-align: right;
+        }
+
+        .title-area h2 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 18px;
+            color: #0F172A;
+            letter-spacing: 0.02em;
+        }
+
+        .title-area p {
+            font-size: 14px;
+            color: #64748B;
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .btn-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #E2E8F0;
+            background: #fff;
+            color: var(--primary-teal);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-link:hover {
+            background: var(--bg-light);
+        }
+
+        .alert-box {
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .alert-warning {
+            background: #FFFBEB;
+            border: 1px solid #FDE68A;
+            color: #92400E;
+        }
+
+        .alert-info {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            color: #1E40AF;
+        }
+
+        .alert-muted {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            color: #475569;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 12px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        }
+
+        .card-icon {
+            background-color: var(--primary-teal);
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .card-info p {
+            font-size: 14px;
+            color: #64748B;
+            margin-bottom: 5px;
+        }
+
+        .card-info h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 32px;
+            color: var(--primary-teal);
+        }
+
+        .disclaimer {
+            font-size: 13px;
+            font-style: italic;
+            color: #94A3B8;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .table-container {
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 720px;
+        }
+
+        th {
+            background-color: var(--primary-teal);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 16px 20px;
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #E2E8F0;
+            vertical-align: middle;
+            font-size: 15px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .prof-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .prof-icon {
+            color: #94A3B8;
+            background: #F1F5F9;
+            width: 32px;
+            height: 32px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .tags-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .tag.sala-1 { background: #EFF6FF; color: var(--sala1-color); border-color: #BFDBFE; }
+        .tag.sala-2 { background: #ECFDF5; color: var(--sala2-color); border-color: #A7F3D0; }
+        .tag.sala-3 { background: #F3E8FF; color: var(--sala3-color); border-color: #E9D5FF; }
+        .tag.sala-4 { background: #FFF7ED; color: var(--sala4-color); border-color: #FFEDD5; }
+        .tag.disabled { background: #F8FAFC; color: #94A3B8; border-color: #E2E8F0; }
+
+        .total-badge {
+            display: inline-block;
+            background-color: var(--primary-teal);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .btn-export-header {
+            background-color: var(--primary-teal);
+            color: white;
+            border: none;
+        }
+
+        .btn-export-header:hover {
+            background-color: #133842;
+            color: white;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .btn-export {
+            background-color: var(--primary-teal);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .btn-export:hover {
+            background-color: #133842;
+            color: white;
+        }
+
+        .btn-export-header {
+            padding: 10px 18px;
+            font-size: 14px;
+        }
+
+        .total-salas-text {
+            font-weight: 600;
+            color: var(--text-dark);
+            white-space: nowrap;
+        }
+
+        .btn-export.disabled {
+            background-color: #94A3B8;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748B;
+        }
+
+        .historico {
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 1px solid #E2E8F0;
+        }
+
+        .historico h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            color: var(--primary-teal);
+            margin-bottom: 12px;
+        }
+
+        .historico-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #F1F5F9;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .cards-container {
+                grid-template-columns: 1fr;
+            }
+
+            .title-area {
+                text-align: left;
+                width: 100%;
+            }
+
+            body {
+                padding: 12px 8px 32px;
+            }
+
+            .container {
+                padding: 20px 16px;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container py-4 py-lg-5" style="max-width: 900px;">
-    <div class="hero-band mb-4">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-            <div>
-                <p class="text-uppercase small mb-2 opacity-75">Relatorio da clinica</p>
-                <h1 class="h3 mb-1">Uso de salas por profissional</h1>
-                <p class="mb-0 opacity-75">
-                    Periodo: <strong th:text="${mesPassadoLabel}">Mes passado</strong>
-                    <span class="opacity-75"> (sempre o mes passado, nunca <span th:text="${mesAtualLabel}">mes atual</span>)</span>
-                </p>
+
+<div class="page-wrap">
+    <div class="container">
+        <div class="header">
+            <div class="logo-area">
+                <img th:src="@{/images/logo-afetto.png}" src="/images/logo-afetto.png" alt="Clinica Afetto" class="logo-img">
+                <div class="logo-text">
+                    <h1>Clinica Afetto</h1>
+                    <p>Psicologia &amp; Saude</p>
+                </div>
             </div>
-            <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar para agenda</a>
+            <div class="title-area">
+                <h2>RELATORIO MENSAL DE USO DE SALAS</h2>
+                <p th:text="|Periodo: ${mesPassadoLabel}|">Periodo: Abril de 2026</p>
+            </div>
+            <div class="header-actions">
+                <a th:if="${podeBaixarPdf}"
+                   th:href="@{/agendamentos/relatorio/mensal/download(v=${versaoDownload})}"
+                   class="btn-export btn-export-header"
+                   download>
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span th:text="${pdfRemovido} ? 'Baixar PDF' : 'Baixar PDF oficial'">Baixar PDF</span>
+                </a>
+                <a th:href="@{/agendamentos/dashboard}" class="btn-link">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar para agenda
+                </a>
+            </div>
         </div>
-    </div>
 
-    <div th:if="${sucesso}" class="alert alert-success shell-card" th:text="${sucesso}"></div>
-    <div th:if="${erro}" class="alert alert-danger shell-card" th:text="${erro}"></div>
+        <div th:if="${aguardandoDia3}" class="alert-box alert-warning">
+            Previa do mes passado (<span th:text="${mesPassadoLabel}">mes</span>).
+            A partir do dia <span th:text="${diaFechamento}">3</span> de
+            <span th:text="${mesAtualLabel}">mes atual</span> o sistema fecha o periodo e gera o PDF.
+        </div>
+        <div th:if="${aguardandoProcessamentoAutomatico}" class="alert-box alert-warning">
+            O fechamento automatico do dia 3 ainda nao rodou. Abra esta pagina de novo em alguns minutos.
+        </div>
+        <div th:if="${pdfRemovido}" class="alert-box alert-muted">
+            O arquivo PDF foi removido do banco no dia <span th:text="${diaRemocaoPdf}">10</span> para economizar espaco.
+            Voce ainda pode baixar uma copia: o sistema gera o PDF na hora com os dados salvos.
+        </div>
+        <div th:if="${relatorioArquivado and !aguardandoDia3 and podeBaixarPdf}" class="alert-box alert-info">
+            PDF compacto (1 ou 2 paginas no maximo), gerado de novo ao abrir esta pagina ou ao baixar.
+            Arquivado em
+            <strong th:text="${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')}">data</strong>.
+            <span th:if="${agendamentosRemovidos > 0}">
+                <span th:text="${agendamentosRemovidos}">0</span> agendamento(s) avulso(s) do mes passado foram removidos.
+            </span>
+        </div>
 
-    <div class="card shell-card mb-4">
-        <div class="card-body p-4">
-            <p class="mb-3 alert alert-warning py-2" th:if="${aguardandoDia3}">
-                Voce esta vendo uma <strong>previa</strong> do mes passado (<span th:text="${mesPassadoLabel}">mes</span>).
-                A partir do <strong>dia <span th:text="${diaFechamento}">3</span></strong> de
-                <span th:text="${mesAtualLabel}">mes atual</span> o sistema fecha esse periodo:
-                gera o PDF definitivo de <span th:text="${mesPassadoLabel}">mes passado</span> e apaga somente
-                agendamentos avulsos daquele mes. Semanal e quinzenal continuam na agenda.
-            </p>
-            <p class="mb-3 alert alert-warning py-2" th:if="${aguardandoProcessamentoAutomatico}">
-                O processamento automatico do dia 3 ainda nao rodou (o site pode ter estado parado).
-                Abra esta pagina de novo em alguns minutos ou apos o horario programado (03:00).
-            </p>
-            <p class="mb-3" th:if="${relatorioArquivado and !aguardandoDia3}">
-                <strong>Relatorio de <span th:text="${mesPassadoLabel}">mes passado</span> pronto.</strong>
-                Gerado automaticamente em
-                <strong th:text="${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')}">data</strong>.
-                <span th:if="${agendamentosRemovidos > 0}">
-                    <span th:text="${agendamentosRemovidos}">0</span> agendamento(s) avulso(s) do mes passado ja foram removidos do banco.
-                </span>
-            </p>
-            <p class="small text-muted mb-3" th:if="${relatorioArquivado and podeBaixarPdf}">
-                Baixe o PDF ate o dia <span th:text="${diaRemocaoPdf}">10</span> do mes seguinte.
-                Depois disso o arquivo e removido do banco para economizar espaco; os numeros continuam aqui.
-            </p>
-            <p class="mb-3 alert alert-secondary py-2" th:if="${pdfRemovido}">
-                O PDF deste mes ja foi removido automaticamente (apos o dia <span th:text="${diaRemocaoPdf}">10</span>).
-                Os dados do relatorio continuam visiveis abaixo.
-            </p>
-            <a th:if="${podeBaixarPdf}"
-               th:href="@{/agendamentos/relatorio/mensal/download}"
-               class="btn btn-primary btn-lg">
-                Baixar PDF
+        <div class="cards-container">
+            <div class="card">
+                <div class="card-icon"><i class="fa-solid fa-calendar-days"></i></div>
+                <div class="card-info">
+                    <p>Total de Horarios Agendados no Mes</p>
+                    <h3 th:text="${relatorio.totalGeral}">0</h3>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon"><i class="fa-solid fa-user-doctor"></i></div>
+                <div class="card-info">
+                    <p>Profissionais Ativos no Mes</p>
+                    <h3 th:text="${totalProfissionais}">0</h3>
+                </div>
+            </div>
+        </div>
+        <p class="disclaimer">* Agendamentos cancelados nao entram neste relatorio</p>
+
+        <div class="table-container" th:if="${!#lists.isEmpty(linhas)}">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Profissional</th>
+                        <th>Distribuicao por Sala</th>
+                        <th>Total de sala usada</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="linha : ${linhas}">
+                        <td>
+                            <div class="prof-cell">
+                                <span class="prof-icon"><i class="fa-solid fa-user"></i></span>
+                                <span th:text="${linha.profissionalNome}">Profissional</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="tags-container">
+                                <span th:class="${linha.sala1 > 0} ? 'tag sala-1' : 'tag disabled'">
+                                    Sala 1:
+                                    <strong th:if="${linha.sala1 > 0}" th:text="|${linha.sala1}x|">1x</strong>
+                                    <span th:if="${linha.sala1 == 0}">-</span>
+                                </span>
+                                <span th:class="${linha.sala2 > 0} ? 'tag sala-2' : 'tag disabled'">
+                                    Sala 2:
+                                    <strong th:if="${linha.sala2 > 0}" th:text="|${linha.sala2}x|">1x</strong>
+                                    <span th:if="${linha.sala2 == 0}">-</span>
+                                </span>
+                                <span th:class="${linha.sala3 > 0} ? 'tag sala-3' : 'tag disabled'">
+                                    Sala 3:
+                                    <strong th:if="${linha.sala3 > 0}" th:text="|${linha.sala3}x|">1x</strong>
+                                    <span th:if="${linha.sala3 == 0}">-</span>
+                                </span>
+                                <span th:class="${linha.sala4 > 0} ? 'tag sala-4' : 'tag disabled'">
+                                    Sala 4:
+                                    <strong th:if="${linha.sala4 > 0}" th:text="|${linha.sala4}x|">1x</strong>
+                                    <span th:if="${linha.sala4 == 0}">-</span>
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="total-badge" th:text="${linha.totalSalasUsadasLabel}">1 sala usada</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(linhas)}">
+            <p>Nenhum agendamento registrado neste periodo.</p>
+        </div>
+
+        <div class="btn-container" th:if="${podeBaixarPdf}">
+            <a th:href="@{/agendamentos/relatorio/mensal/download(v=${versaoDownload})}" class="btn-export">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span th:text="${pdfRemovido} ? 'Baixar PDF (gerado na hora)' : 'Exportar PDF Oficial'">Exportar PDF</span>
             </a>
-            <p class="small text-muted mb-0 mt-3" th:if="${podeBaixarPdf}">
-                O arquivo vai para a pasta de downloads do seu computador ou celular.
-            </p>
         </div>
-    </div>
-
-    <div class="alert alert-info shell-card" th:if="${relatorio.totalGeral == 0}">
-        Nenhum agendamento registrado neste periodo.
-    </div>
-
-    <div class="mb-3" th:if="${relatorio.totalGeral > 0}">
-        <span class="badge text-bg-secondary" th:text="|Total de horarios: ${relatorio.totalGeral}|">Total</span>
-    </div>
-
-    <div class="d-flex flex-column gap-3 mb-4" th:if="${relatorio.totalGeral > 0}">
-        <div class="profissional-card" th:each="prof : ${relatorio.profissionais}">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="h5 mb-0" th:text="${prof.profissionalNome}">Julia</h2>
-                <span class="badge text-bg-primary" th:text="|${prof.totalHorarios} horario(s)|">0</span>
-            </div>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent"
-                    th:each="sala : ${prof.salas}">
-                    <span th:text="${sala.salaNome}">Sala 1</span>
-                    <strong th:text="|${sala.quantidade} vez(es)|">7</strong>
-                </li>
-            </ul>
+        <div class="btn-container" th:if="${!podeBaixarPdf and relatorioArquivado and !aguardandoDia3}">
+            <span class="btn-export disabled">
+                <i class="fa-solid fa-file-pdf"></i> PDF indisponivel
+            </span>
         </div>
-    </div>
 
-    <div class="card shell-card" th:if="${!#lists.isEmpty(historico) and historico.size() > 1}">
-        <div class="card-body p-4">
-            <h2 class="h5 mb-3">Historico de relatorios</h2>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between align-items-center px-0"
-                    th:each="item : ${historico}">
-                    <span th:text="${item.mesLabel}">Mes</span>
-                    <a th:if="${item.temPdfDisponivel()}"
+        <div class="historico" th:if="${!#lists.isEmpty(historico) and historico.size() > 1}">
+            <h3>Historico de relatorios</h3>
+            <div class="historico-item" th:each="item : ${historico}">
+                <span th:text="${item.mesLabel}">Mes</span>
+                    <a th:if="${item.dadosJson != null and !#strings.isEmpty(item.dadosJson)}"
                        th:href="@{/agendamentos/relatorio/mensal/download(ano=${item.ano}, mes=${item.mes})}"
-                       class="btn btn-sm btn-outline-primary">
+                       class="btn-link" style="padding: 6px 12px;">
                         Baixar PDF
                     </a>
-                    <span th:if="${!item.temPdfDisponivel()}" class="small text-muted">PDF removido</span>
-                </li>
-            </ul>
+                    <span th:if="${item.dadosJson == null or #strings.isEmpty(item.dadosJson)}"
+                          class="disclaimer" style="margin: 0;">Sem dados</span>
+            </div>
         </div>
     </div>
 </div>
+
 </body>
 </html>

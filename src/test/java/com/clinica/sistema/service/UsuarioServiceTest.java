@@ -29,6 +29,9 @@ class UsuarioServiceTest {
     private UsuarioRepository usuarioRepository;
 
     @Mock
+    private com.clinica.sistema.repository.AgendamentoRepository agendamentoRepository;
+
+    @Mock
     private AuthService authService;
 
     @Mock
@@ -61,7 +64,7 @@ class UsuarioServiceTest {
 
     @Test
     void deveCadastrarProfissionalQuandoUsuarioLogadoForAdmin() {
-        when(authService.isAdmin(admin)).thenReturn(true);
+        when(authService.podeGerenciarEquipe(admin)).thenReturn(true);
         when(usuarioRepository.findByLogin("novoprof")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("1234")).thenReturn("hash-1234");
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -77,12 +80,12 @@ class UsuarioServiceTest {
 
     @Test
     void naoDeveCadastrarQuandoUsuarioNaoForAdmin() {
-        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.podeGerenciarEquipe(profissional)).thenReturn(false);
 
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> usuarioService.cadastrarProfissional(form, profissional));
 
-        assertEquals("Somente a administracao pode cadastrar profissionais.", exception.getMessage());
+        assertEquals("Somente administracao ou dona da clinica podem gerenciar a equipe.", exception.getMessage());
     }
 
     @Test
@@ -123,7 +126,7 @@ class UsuarioServiceTest {
 
     @Test
     void naoDeveCadastrarQuandoLoginJaExistir() {
-        when(authService.isAdmin(admin)).thenReturn(true);
+        when(authService.podeGerenciarEquipe(admin)).thenReturn(true);
         when(usuarioRepository.findByLogin("novoprof")).thenReturn(Optional.of(new Usuario()));
 
         RuntimeException exception = assertThrows(RuntimeException.class,

@@ -2,6 +2,7 @@ package com.clinica.sistema.controller;
 
 import com.clinica.sistema.dto.LoginForm;
 import com.clinica.sistema.dto.TrocarSenhaForm;
+import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.Cookie;
@@ -74,11 +75,21 @@ public class AuthController {
     ) {
         try {
             usuarioService.trocarSenha(trocarSenhaForm, authService.buscarUsuarioLogadoObrigatorio());
-            encerrarSessaoDoUsuario(request, response);
+            HttpSession sessao = request.getSession(false);
+            if (sessao != null) {
+                sessao.invalidate();
+            }
+            SecurityContextHolder.clearContext();
             return "redirect:/login?senhaAlterada=1";
         } catch (RuntimeException e) {
-            redirectAttributes.addFlashAttribute("erro", e.getMessage());
-            redirectAttributes.addFlashAttribute("abrirModalTrocarSenha", true);
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            boolean senhaAtualIncorreta = "Senha atual incorreta.".equals(e.getMessage());
+            redirectAttributes.addFlashAttribute("erroSenha", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroSenhaAtual", senhaAtualIncorreta);
+            redirectAttributes.addFlashAttribute("trocarSenhaForm", trocarSenhaForm);
+            if (authService.podeGerenciarEquipe(usuarioLogado)) {
+                return "redirect:/agendamentos/central-profissionais";
+            }
             return "redirect:/agendamentos/dashboard";
         }
     }

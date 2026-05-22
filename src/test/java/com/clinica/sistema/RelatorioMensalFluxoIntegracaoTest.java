@@ -2,6 +2,7 @@ package com.clinica.sistema;
 
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
+import com.lowagie.text.pdf.PdfReader;
 import com.clinica.sistema.dto.RelatorioUsoSalaProfissional;
 import com.clinica.sistema.model.RelatorioMensalArquivado;
 import com.clinica.sistema.model.Sala;
@@ -60,7 +61,7 @@ class RelatorioMensalFluxoIntegracaoTest {
     }
 
     @Test
-    void deveCriar15AgendamentosEGerarRelatorioDoMesPassado() {
+    void deveCriar15AgendamentosEGerarRelatorioDoMesPassado() throws Exception {
         YearMonth mesPassado = YearMonth.now().minusMonths(1);
 
         Usuario admin = usuarioRepository.findByLogin("admin").orElseThrow();
@@ -118,6 +119,11 @@ class RelatorioMensalFluxoIntegracaoTest {
         System.out.println();
         System.out.println("PDF gerado: " + relatorioMensalService.nomeArquivoPdf(mesPassado));
         System.out.println("Tamanho do PDF: " + arquivado.get().getPdf().length + " bytes");
+        PdfReader leitorPdf = new PdfReader(arquivado.get().getPdf());
+        int paginas = leitorPdf.getNumberOfPages();
+        leitorPdf.close();
+        System.out.println("Paginas no PDF: " + paginas);
+        assertTrue(paginas <= 2, "PDF deve ter no maximo 2 paginas, mas tem " + paginas);
         System.out.println("Teste OK: 15 agendamentos criados, relatorio gerado e mes passado limpo do banco.");
     }
 

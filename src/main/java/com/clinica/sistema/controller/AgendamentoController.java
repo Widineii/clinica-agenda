@@ -3,6 +3,7 @@ package com.clinica.sistema.controller;
 import com.clinica.sistema.config.StartupDataInitializer;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
+import com.clinica.sistema.dto.TrocarSenhaAdminForm;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
@@ -74,11 +75,16 @@ public class AgendamentoController {
             form.setHorarioAtendimento(service.listarHorariosDisponiveis().get(0));
             model.addAttribute("agendamentoForm", form);
         }
-        if (!model.containsAttribute("cadastroProfissionalForm")) {
-            model.addAttribute("cadastroProfissionalForm", new CadastroProfissionalForm());
-        }
-        if (!model.containsAttribute("trocarSenhaForm")) {
+        boolean podeGerenciarEquipe = authService.podeGerenciarEquipe(usuarioLogado);
+        if (!podeGerenciarEquipe && !model.containsAttribute("trocarSenhaForm")) {
             model.addAttribute("trocarSenhaForm", new com.clinica.sistema.dto.TrocarSenhaForm());
+        }
+        if (model.containsAttribute("trocarSenhaForm")) {
+            Object formFlash = model.getAttribute("trocarSenhaForm");
+            if (formFlash instanceof com.clinica.sistema.dto.TrocarSenhaForm form) {
+                form.setSenhaAtual("");
+                model.addAttribute("trocarSenhaForm", form);
+            }
         }
 
         List<com.clinica.sistema.model.Agendamento> agendamentos = service.buscarParaUsuario(usuarioLogado);
@@ -92,6 +98,7 @@ public class AgendamentoController {
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
+        model.addAttribute("podeGerenciarEquipe", podeGerenciarEquipe);
         model.addAttribute("agendamentos", agendamentos);
         model.addAttribute("agendamentosAvulsos", agendamentosAvulsos);
         model.addAttribute("agendamentosFixos", agendamentosFixos);
@@ -103,18 +110,93 @@ public class AgendamentoController {
         model.addAttribute("totalAgendamentosQuinzenais",
                 service.contarOcorrencias(agendamentos, com.clinica.sistema.model.Agendamento::isQuinzenal));
         model.addAttribute("salas", service.listarSalas());
-        model.addAttribute("profissionais", isAdmin ? service.listarProfissionais() : java.util.List.of(usuarioLogado));
+        model.addAttribute("profissionais", podeGerenciarEquipe
+                ? service.listarProfissionais().stream()
+                        .filter(profissional -> !authService.isAdmin(profissional))
+                        .toList()
+                : java.util.List.of(usuarioLogado));
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
         var agendaSala = service.montarAgendaSala(salaId, semana);
         Map<Long, String> gradeAcoesPorId = service.montarAcoesGradePorId(agendaSala, usuarioLogado);
         List<com.clinica.sistema.model.Agendamento> agendamentosDoDia =
-                service.listarAgendamentosDoDia(usuarioLogado, isAdmin);
+                service.listarAgendamentosDoDia(usuarioLogado, podeGerenciarEquipe);
         model.addAttribute("agendaSala", agendaSala);
         model.addAttribute("agendamentosDoDia", agendamentosDoDia);
         model.addAttribute("dataAgendaDia", LocalDate.now());
         model.addAttribute("totalAgendamentosDoDia", agendamentosDoDia.size());
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
         return "agenda";
+    }
+
+    @GetMapping("/central-profissionais")
+    public String abrirCentralProfissionais(Model model) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!authService.podeGerenciarEquipe(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+
+        if (!model.containsAttribute("cadastroProfissionalForm")) {
+            model.addAttribute("cadastroProfissionalForm", new CadastroProfissionalForm());
+        }
+        if (!model.containsAttribute("trocarSenhaAdminForm")) {
+            model.addAttribute("trocarSenhaAdminForm", new TrocarSenhaAdminForm());
+        }
+
+        model.addAttribute("usuarioLogado", usuarioLogado);
+        model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
+        model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
+        model.addAttribute("profissionais", usuarioService.listarProfissionaisDaEquipe());
+        model.addAttribute("usuariosSenha", usuarioService.listarUsuariosParaTrocaSenha());
+        return "central-profissionais";
+    }
+
+    @PostMapping("/central-profissionais/cadastrar")
+    public String cadastrarProfissionalCentral(
+            @ModelAttribute CadastroProfissionalForm cadastroProfissionalForm,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            Usuario novo = usuarioService.cadastrarProfissional(cadastroProfissionalForm, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Profissional cadastrado: " + novo.getNome() + ".");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("cadastroProfissionalForm", cadastroProfissionalForm);
+            redirectAttributes.addFlashAttribute("abrirModalCadastro", true);
+        }
+        return "redirect:/agendamentos/central-profissionais";
+    }
+
+    @PostMapping("/central-profissionais/trocar-senha")
+    public String trocarSenhaCentral(
+            @ModelAttribute TrocarSenhaAdminForm trocarSenhaAdminForm,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            usuarioService.trocarSenhaComoGestor(trocarSenhaAdminForm, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Senha alterada com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("trocarSenhaAdminForm", trocarSenhaAdminForm);
+            redirectAttributes.addFlashAttribute("abrirModalTrocarSenha", true);
+        }
+        return "redirect:/agendamentos/central-profissionais";
+    }
+
+    @PostMapping("/central-profissionais/excluir")
+    public String excluirProfissionalCentral(
+            @RequestParam Long usuarioId,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            usuarioService.excluirUsuario(usuarioId, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Usuario excluido com sucesso.");
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/agendamentos/central-profissionais";
     }
 
     @PostMapping
@@ -135,24 +217,9 @@ public class AgendamentoController {
             );
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
             redirectAttributes.addFlashAttribute("abrirModalErroAgendamento", true);
             redirectAttributes.addFlashAttribute("agendamentoForm", agendamentoForm);
-        }
-        return "redirect:/agendamentos/dashboard";
-    }
-
-    @PostMapping("/profissionais")
-    public String cadastrarProfissional(
-            @ModelAttribute CadastroProfissionalForm cadastroProfissionalForm,
-            RedirectAttributes redirectAttributes
-    ) {
-        try {
-            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-            Usuario novoProfissional = usuarioService.cadastrarProfissional(cadastroProfissionalForm, usuarioLogado);
-            redirectAttributes.addFlashAttribute("sucesso", "Profissional cadastrado com sucesso: " + novoProfissional.getNome() + ".");
-        } catch (RuntimeException e) {
-            redirectAttributes.addFlashAttribute("erro", e.getMessage());
-            redirectAttributes.addFlashAttribute("cadastroProfissionalForm", cadastroProfissionalForm);
         }
         return "redirect:/agendamentos/dashboard";
     }
@@ -168,6 +235,7 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute("sucesso", "Agendamento cancelado com sucesso.");
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
         }
         return "redirect:/agendamentos/dashboard";
     }
@@ -183,6 +251,7 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute("sucesso", "Horario fixo encerrado com sucesso para as proximas ocorrencias.");
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
         }
         return "redirect:/agendamentos/dashboard";
     }
@@ -201,6 +270,7 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute("sucesso", "Agenda fixa da planilha carregada com sucesso.");
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
         }
         return "redirect:/agendamentos/dashboard";
     }
@@ -219,6 +289,7 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute("sucesso", "Demonstracao restaurada com sucesso.");
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            redirectAttributes.addFlashAttribute("erroContexto", "agendamento");
         }
         return "redirect:/agendamentos/dashboard";
     }

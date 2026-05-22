@@ -4,10 +4,13 @@ import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.Sala;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
+import com.clinica.sistema.repository.RelatorioMensalArquivadoRepository;
 import com.clinica.sistema.repository.SalaRepository;
 import com.clinica.sistema.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +19,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,6 +29,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class StartupDataInitializer implements CommandLineRunner {
     private static final String SENHA_PROFISSIONAIS_PADRAO = "297b";
     private static final int SEMANAS_FIXAS_PADRAO = 12;
@@ -37,6 +42,7 @@ public class StartupDataInitializer implements CommandLineRunner {
     private final SalaRepository salaRepository;
     private final UsuarioRepository usuarioRepository;
     private final AgendamentoRepository agendamentoRepository;
+    private final RelatorioMensalArquivadoRepository relatorioMensalArquivadoRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.seed-demo-data:false}")
@@ -55,11 +61,13 @@ public class StartupDataInitializer implements CommandLineRunner {
             SalaRepository salaRepository,
             UsuarioRepository usuarioRepository,
             AgendamentoRepository agendamentoRepository,
+            RelatorioMensalArquivadoRepository relatorioMensalArquivadoRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.salaRepository = salaRepository;
         this.usuarioRepository = usuarioRepository;
         this.agendamentoRepository = agendamentoRepository;
+        this.relatorioMensalArquivadoRepository = relatorioMensalArquivadoRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -72,6 +80,7 @@ public class StartupDataInitializer implements CommandLineRunner {
 
         if (seedDemoData) {
             resetarBaseDemonstracao();
+            semearAgendamentosAvulsosMesPassadoParaRelatorio();
             return;
         }
 
@@ -99,6 +108,7 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Transactional
     public Usuario resetarBaseDemonstracao(Usuario adminPreservado) {
         agendamentoRepository.deleteAllInBatch();
+        relatorioMensalArquivadoRepository.deleteAllInBatch();
         salaRepository.deleteAllInBatch();
 
         if (adminPreservado == null) {
@@ -190,6 +200,53 @@ public class StartupDataInitializer implements CommandLineRunner {
         );
 
         usuariosPadrao.forEach(this::salvarOuAtualizarUsuario);
+    }
+
+    /** Cria agendamentos avulsos no mes passado para o relatorio/PDF local ter dados reais. */
+    private void semearAgendamentosAvulsosMesPassadoParaRelatorio() {
+        YearMonth mesPassado = YearMonth.now().minusMonths(1);
+        Map<String, Usuario> usuariosPorLogin = usuarioRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        usuario -> usuario.getLogin().toLowerCase(Locale.ROOT),
+                        Function.identity()
+                ));
+        List<Sala> salas = salaRepository.findAllByOrderByNomeAsc();
+        if (salas.isEmpty()) {
+            return;
+        }
+
+        List<String> logins = List.of("carol", "julia", "polyana", "itamara", "juliano", "breno", "rosi");
+        List<LocalDate> dias = List.of(
+                mesPassado.atDay(7), mesPassado.atDay(8), mesPassado.atDay(9), mesPassado.atDay(10),
+                mesPassado.atDay(11), mesPassado.atDay(14), mesPassado.atDay(15), mesPassado.atDay(16),
+                mesPassado.atDay(17), mesPassado.atDay(18), mesPassado.atDay(21), mesPassado.atDay(22),
+                mesPassado.atDay(23), mesPassado.atDay(24), mesPassado.atDay(25)
+        );
+        int[] horas = {7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21};
+        List<Agendamento> avulsos = new ArrayList<>();
+
+        for (int i = 0; i < dias.size(); i++) {
+            String login = logins.get(i % logins.size());
+            Usuario profissional = usuariosPorLogin.get(login);
+            if (profissional == null) {
+                continue;
+            }
+            Sala sala = salas.get(i % salas.size());
+            LocalDateTime inicio = dias.get(i).atTime(horas[i], 0);
+            Agendamento agendamento = new Agendamento();
+            agendamento.setProfissional(profissional);
+            agendamento.setSala(sala);
+            agendamento.setNomeCliente("Demonstracao relatorio " + (i + 1));
+            agendamento.setDataHoraInicio(inicio);
+            agendamento.setDataHoraFim(inicio.plusHours(1));
+            agendamento.setFixo(false);
+            agendamento.setTipoRecorrencia(RECORRENCIA_AVULSO);
+            avulsos.add(agendamento);
+        }
+
+        if (!avulsos.isEmpty()) {
+            agendamentoRepository.saveAll(avulsos);
+        }
     }
 
     private void sincronizarAgendamentosFixosPadrao() {
