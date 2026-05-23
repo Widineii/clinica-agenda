@@ -1,6 +1,6 @@
 package com.clinica.sistema.repository;
 
-import com.clinica.sistema.dto.RelatorioHistoricoResumo;
+import com.clinica.sistema.dto.RelatorioHistoricoMetadadosProjection;
 import com.clinica.sistema.model.RelatorioMensalArquivado;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,14 +20,11 @@ public interface RelatorioMensalArquivadoRepository extends JpaRepository<Relato
     List<RelatorioMensalArquivado> findAllByOrderByAnoDescMesDesc();
 
     @Query("""
-            SELECT new com.clinica.sistema.dto.RelatorioHistoricoResumo(
-                r.ano, r.mes, r.mesLabel,
-                CASE WHEN r.dadosJson IS NOT NULL AND r.dadosJson <> '' THEN true ELSE false END
-            )
+            SELECT r.ano AS ano, r.mes AS mes, r.mesLabel AS mesLabel, r.dadosJson AS dadosJson
             FROM RelatorioMensalArquivado r
             ORDER BY r.ano DESC, r.mes DESC
             """)
-    List<RelatorioHistoricoResumo> listarHistoricoResumo();
+    List<RelatorioHistoricoMetadadosProjection> listarHistoricoMetadados();
 
     @Query("""
             SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END

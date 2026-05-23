@@ -281,7 +281,14 @@ public class RelatorioMensalService {
     }
 
     public List<RelatorioHistoricoResumo> listarHistoricoResumo() {
-        return relatorioMensalArquivadoRepository.listarHistoricoResumo();
+        return relatorioMensalArquivadoRepository.listarHistoricoMetadados().stream()
+                .map(item -> new RelatorioHistoricoResumo(
+                        item.getAno(),
+                        item.getMes(),
+                        item.getMesLabel(),
+                        item.getDadosJson() != null && !item.getDadosJson().isBlank()
+                ))
+                .toList();
     }
 
     @Transactional
@@ -301,7 +308,18 @@ public class RelatorioMensalService {
 
     public RelatorioMensalUsoSalasView carregarRelatorioParaExibicao(YearMonth mesReferencia) {
         return buscarArquivado(mesReferencia)
-                .map(arquivado -> desserializarRelatorio(arquivado.getDadosJson()))
+                .map(arquivado -> {
+                    try {
+                        return desserializarRelatorio(arquivado.getDadosJson());
+                    } catch (RuntimeException e) {
+                        log.warn(
+                                "Relatorio arquivado de {} com JSON invalido; remontando a partir dos agendamentos.",
+                                formatarMesReferencia(mesReferencia),
+                                e
+                        );
+                        return agendamentoService.montarRelatorioMensalUsoSalas(mesReferencia);
+                    }
+                })
                 .orElseGet(() -> agendamentoService.montarRelatorioMensalUsoSalas(mesReferencia));
     }
 

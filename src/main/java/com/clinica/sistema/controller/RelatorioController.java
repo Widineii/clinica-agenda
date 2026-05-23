@@ -93,11 +93,19 @@ public class RelatorioController {
             arquivado = relatorioMensalService.buscarArquivado(mesPassado);
             if (arquivado.isPresent()
                     && relatorioMensalService.pdfRemovidoDoBanco(arquivado.get())) {
-                relatorioMensalService.regenerarESalvarPdf(arquivado.get());
-                arquivado = relatorioMensalService.buscarArquivado(mesPassado);
+                try {
+                    relatorioMensalService.regenerarESalvarPdf(arquivado.get());
+                    arquivado = relatorioMensalService.buscarArquivado(mesPassado);
+                } catch (RuntimeException e) {
+                    log.warn("Falha ao regenerar PDF de {}; exibindo relatorio na tela.", mesPassado, e);
+                }
             }
             relatorio = relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
-            historico = relatorioMensalService.listarHistoricoResumo();
+            try {
+                historico = relatorioMensalService.listarHistoricoResumo();
+            } catch (RuntimeException e) {
+                log.warn("Historico de relatorios indisponivel; continuando sem lista.", e);
+            }
         } catch (RuntimeException e) {
             log.error("Falha ao carregar relatorio mensal de {}", mesPassado, e);
             redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
