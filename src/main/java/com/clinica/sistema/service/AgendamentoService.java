@@ -59,10 +59,6 @@ public class AgendamentoService {
         this.authService = authService;
     }
 
-    public List<Agendamento> buscarTodos() {
-        return repository.findAllByOrderByDataHoraInicioAsc();
-    }
-
     public List<Agendamento> buscarParaUsuario(Usuario usuarioLogado) {
         return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId());
     }

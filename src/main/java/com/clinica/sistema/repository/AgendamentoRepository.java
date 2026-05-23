@@ -15,7 +15,6 @@ import java.util.Optional;
 
 @Repository
 public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> {
-    List<Agendamento> findAllByOrderByDataHoraInicioAsc();
 
     @EntityGraph(attributePaths = {"profissional", "sala"})
     List<Agendamento> findByProfissionalIdOrderByDataHoraInicioAsc(Long profissionalId);

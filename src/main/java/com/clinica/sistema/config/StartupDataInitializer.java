@@ -314,6 +314,9 @@ public class StartupDataInitializer implements CommandLineRunner {
     }
 
     private void migrarSenhasLegadas() {
+        if (!usuarioRepository.existsSenhaLegada()) {
+            return;
+        }
         for (Usuario usuario : usuarioRepository.findAll()) {
             String senha = usuario.getSenha();
             if (senha != null && !senha.isBlank() && !senha.startsWith("$2a$")) {

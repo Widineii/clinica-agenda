@@ -127,6 +127,25 @@ class RelatorioMensalServiceTest {
     }
 
     @Test
+    void deveReutilizarPdfExistenteNoDownload() {
+        YearMonth abril = YearMonth.of(2026, 4);
+        RelatorioMensalArquivado arquivado = new RelatorioMensalArquivado();
+        arquivado.setAno(2026);
+        arquivado.setMes(4);
+        arquivado.setDadosJson("{\"anoReferencia\":2026,\"mesReferencia\":4,\"profissionais\":[]}");
+        arquivado.setPdf(new byte[] {10, 20, 30});
+
+        when(relatorioMensalArquivadoRepository.findByAnoAndMes(2026, 4)).thenReturn(Optional.of(arquivado));
+
+        byte[] pdf = relatorioMensalService.obterPdfParaDownload(abril);
+
+        assertEquals(3, pdf.length);
+        assertEquals(10, pdf[0]);
+        verify(relatorioMensalPdfService, never()).gerarPdf(any());
+        verify(relatorioMensalArquivadoRepository, never()).save(any());
+    }
+
+    @Test
     void naoDeveArquivarMesDuasVezes() {
         YearMonth maio = YearMonth.of(2026, 5);
         RelatorioMensalUsoSalasView relatorio = relatorioExemplo(maio);

@@ -20,4 +20,4 @@ ENV PORT=10000
 
 EXPOSE 10000
 
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+ENTRYPOINT ["java","-XX:+TieredCompilation","-XX:TieredStopAtLevel=1","-Xms128m","-Xmx512m","-jar","/app/app.jar"]

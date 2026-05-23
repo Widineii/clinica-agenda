@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.RelatorioHistoricoResumo;
 import com.clinica.sistema.dto.RelatorioMensalNotificacaoView;
 import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
 import com.clinica.sistema.model.RelatorioMensalArquivado;
@@ -155,6 +156,10 @@ public class RelatorioMensalService {
             throw new RuntimeException("Nao ha dados para gerar o PDF deste relatorio.");
         }
 
+        if (arquivado.temPdfDisponivel()) {
+            return arquivado.getPdf();
+        }
+
         return regenerarESalvarPdf(arquivado);
     }
 
@@ -271,6 +276,10 @@ public class RelatorioMensalService {
 
     public List<RelatorioMensalArquivado> listarArquivados() {
         return relatorioMensalArquivadoRepository.findAllByOrderByAnoDescMesDesc();
+    }
+
+    public List<RelatorioHistoricoResumo> listarHistoricoResumo() {
+        return relatorioMensalArquivadoRepository.listarHistoricoResumo();
     }
 
     @Transactional

@@ -539,12 +539,12 @@
             <h3>Historico de relatorios</h3>
             <div class="historico-item" th:each="item : ${historico}">
                 <span th:text="${item.mesLabel}">Mes</span>
-                    <a th:if="${item.dadosJson != null and !#strings.isEmpty(item.dadosJson)}"
+                    <a th:if="${item.temDados}"
                        th:href="@{/agendamentos/relatorio/mensal/download(ano=${item.ano}, mes=${item.mes})}"
                        class="btn-link" style="padding: 6px 12px;">
                         Baixar PDF
                     </a>
-                    <span th:if="${item.dadosJson == null or #strings.isEmpty(item.dadosJson)}"
+                    <span th:unless="${item.temDados}"
                           class="disclaimer" style="margin: 0;">Sem dados</span>
             </div>
         </div>

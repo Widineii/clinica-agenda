@@ -1,5 +1,6 @@
 package com.clinica.sistema.controller;
 
+import com.clinica.sistema.dto.RelatorioHistoricoResumo;
 import com.clinica.sistema.dto.RelatorioLinhaView;
 import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
 import com.clinica.sistema.dto.RelatorioUsoSalaItem;
@@ -83,19 +84,20 @@ public class RelatorioController {
         YearMonth mesPassado = relatorioMensalService.mesPassadoReferencia();
         Optional<RelatorioMensalArquivado> arquivado = Optional.empty();
         RelatorioMensalUsoSalasView relatorio;
-        List<RelatorioMensalArquivado> historico = Collections.emptyList();
+        List<RelatorioHistoricoResumo> historico = Collections.emptyList();
 
         boolean fechamentoNestaVisita = false;
         try {
             fechamentoNestaVisita = relatorioMensalService.executarFechamentoAutomaticoSeDevido();
             relatorioMensalService.removerPdfsExpiradosSeDevido();
             arquivado = relatorioMensalService.buscarArquivado(mesPassado);
-            if (arquivado.isPresent() && relatorioMensalService.podeExportarPdf(arquivado.get())) {
+            if (arquivado.isPresent()
+                    && relatorioMensalService.pdfRemovidoDoBanco(arquivado.get())) {
                 relatorioMensalService.regenerarESalvarPdf(arquivado.get());
                 arquivado = relatorioMensalService.buscarArquivado(mesPassado);
             }
             relatorio = relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
-            historico = relatorioMensalService.listarArquivados();
+            historico = relatorioMensalService.listarHistoricoResumo();
         } catch (RuntimeException e) {
             log.error("Falha ao carregar relatorio mensal de {}", mesPassado, e);
             redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
