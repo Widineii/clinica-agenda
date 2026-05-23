@@ -544,6 +544,9 @@
             <div class="top-actions">
                 <th:block th:if="${isAdmin or isDonaClinica}"
                           th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
+                <a th:if="${isAdmin}"
+                   th:href="@{/agendamentos/admin/uso-banco}"
+                   class="btn btn-outline-light">Uso do banco</a>
                 <a th:if="${isAdmin or isDonaClinica}"
                    th:href="@{/agendamentos/central-profissionais}"
                    class="btn btn-warning">Central dos profissionais</a>

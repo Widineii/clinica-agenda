@@ -72,6 +72,7 @@
             </div>
             <div class="top-actions">
                 <th:block th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
+                <a th:if="${isAdmin}" th:href="@{/agendamentos/admin/uso-banco}" class="btn btn-outline-light">Uso do banco</a>
                 <a th:href="@{/agendamentos/dashboard}" class="btn btn-light">Voltar para agenda</a>
                 <a th:href="@{/agendamentos/relatorio}" class="btn btn-light">Relatorio</a>
                 <form th:action="@{/logout}" method="post">

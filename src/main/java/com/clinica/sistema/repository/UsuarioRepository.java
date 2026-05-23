@@ -22,4 +22,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
               AND u.senha NOT LIKE '$2a$%'
             """)
     boolean existsSenhaLegada();
+
+    long countByCargo(String cargo);
 }

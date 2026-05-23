@@ -73,4 +73,28 @@ public interface RelatorioMensalArquivadoRepository extends JpaRepository<Relato
             @Param("ano") int ano,
             @Param("mes") int mes
     );
+
+    @Query("""
+            SELECT COALESCE(SUM(LENGTH(r.dadosJson)), 0)
+            FROM RelatorioMensalArquivado r
+            WHERE r.dadosJson IS NOT NULL
+            """)
+    long somaBytesJson();
+
+    @Query("""
+            SELECT COUNT(r)
+            FROM RelatorioMensalArquivado r
+            WHERE r.pdf IS NOT NULL
+            """)
+    long countComPdfLegado();
+
+    @Query(
+            value = """
+                    SELECT COALESCE(SUM(octet_length(pdf)), 0)
+                    FROM relatorios_mensais_arquivados
+                    WHERE pdf IS NOT NULL
+                    """,
+            nativeQuery = true
+    )
+    Long somaBytesPdfLegado();
 }

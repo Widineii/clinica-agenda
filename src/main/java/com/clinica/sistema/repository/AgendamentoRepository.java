@@ -115,6 +115,40 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime fim
     );
 
+    @Query("""
+            SELECT COUNT(a)
+            FROM Agendamento a
+            WHERE (a.fixo IS NULL OR a.fixo = false)
+              AND (a.tipoRecorrencia IS NULL OR UPPER(a.tipoRecorrencia) NOT IN ('SEMANAL', 'QUINZENAL'))
+            """)
+    long countAvulsos();
+
+    @Query("""
+            SELECT COUNT(a)
+            FROM Agendamento a
+            WHERE a.fixo = true
+               OR UPPER(COALESCE(a.tipoRecorrencia, '')) IN ('SEMANAL', 'QUINZENAL')
+            """)
+    long countFixosOuQuinzenais();
+
+    @Query("""
+            SELECT COUNT(a)
+            FROM Agendamento a
+            WHERE a.dataHoraFim < :limite
+            """)
+    long countComDataHoraFimAntesDe(@Param("limite") LocalDateTime limite);
+
+    @Query("""
+            SELECT COUNT(a)
+            FROM Agendamento a
+            WHERE a.dataHoraInicio >= :inicio
+              AND a.dataHoraInicio < :fim
+            """)
+    long countNoPeriodo(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim
+    );
+
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""

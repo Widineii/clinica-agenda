@@ -351,6 +351,36 @@
             color: #64748B;
         }
 
+        .relatorio-tipo-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .relatorio-tipo-nav a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            margin-bottom: -2px;
+            border-bottom: 3px solid transparent;
+            color: #64748B;
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .relatorio-tipo-nav a:hover {
+            color: var(--primary-teal);
+        }
+
+        .relatorio-tipo-nav a.active {
+            color: var(--primary-teal);
+            border-bottom-color: var(--primary-teal);
+        }
+
         .historico {
             margin-top: 28px;
             padding-top: 24px;
@@ -410,20 +440,24 @@
                 <p th:text="|Periodo: ${periodoLabel}|">Periodo: Semana atual</p>
             </div>
             <div class="header-actions">
-                <a th:href="@{/agendamentos/relatorio/semanal/download(v=${versaoDownload})}"
-                   class="btn-export btn-export-header"
-                   download>
-                    <i class="fa-solid fa-file-pdf"></i>
-                    <span>Baixar PDF semanal</span>
-                </a>
-                <a th:href="@{/agendamentos/relatorio/mensal}" class="btn-link">
-                    <i class="fa-solid fa-calendar-days"></i> Relatorio mensal
+                <a th:href="@{/agendamentos/relatorio/semanal(v=${versaoDownload})}"
+                   class="btn-export btn-export-header">
+                    <i class="fa-solid fa-rotate"></i> Gerar relatorio
                 </a>
                 <a th:href="@{/agendamentos/dashboard}" class="btn-link" id="link-sair-semanal">
                     <i class="fa-solid fa-arrow-left"></i> Voltar para agenda
                 </a>
             </div>
         </div>
+
+        <nav class="relatorio-tipo-nav" aria-label="Tipo de relatorio">
+            <a th:href="@{/agendamentos/relatorio/semanal}" class="active">
+                <i class="fa-solid fa-calendar-week"></i> Relatorio semanal
+            </a>
+            <a th:href="@{/agendamentos/relatorio/mensal}">
+                <i class="fa-solid fa-calendar-days"></i> Relatorio mensal
+            </a>
+        </nav>
 
         <div class="alert-box alert-warning" style="margin-bottom: 12px;">
             Este e o <strong>relatorio semanal</strong>. Ele nao remove o ponto laranja do sino.

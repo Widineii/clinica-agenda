@@ -18,5 +18,7 @@ if (Test-Path $dataDir) {
 $env:SPRING_PROFILES_ACTIVE = "local"
 Write-Host "Subindo agenda limpa em http://localhost:8081 ..." -ForegroundColor Green
 Write-Host "Login: admin / Luquinha12@" -ForegroundColor Gray
-Write-Host "(Sem agendamentos e sem relatorios; seed demo desligado)" -ForegroundColor Gray
+Write-Host "Agenda zerada: sem agendamentos, sem relatorios arquivados." -ForegroundColor Gray
+Write-Host "Usuarios e salas sao recriados no primeiro start (admin + equipe)." -ForegroundColor Gray
+Write-Host "Relatorio mensal: mesmo comportamento da producao (fecha no dia 3)." -ForegroundColor Gray
 .\mvnw.cmd spring-boot:run

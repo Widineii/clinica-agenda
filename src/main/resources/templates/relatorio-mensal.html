@@ -384,6 +384,60 @@
             padding: 20px;
         }
 
+        .relatorio-tipo-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .relatorio-tipo-nav a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            margin-bottom: -2px;
+            border-bottom: 3px solid transparent;
+            color: #64748B;
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .relatorio-tipo-nav a:hover {
+            color: var(--primary-teal);
+        }
+
+        .relatorio-tipo-nav a.active {
+            color: var(--primary-teal);
+            border-bottom-color: var(--primary-teal);
+        }
+
+        .pdf-viewer-wrap {
+            margin: 16px 0 20px;
+            border: 1px solid #CBD5E1;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #E2E8F0;
+        }
+
+        .pdf-viewer-caption {
+            padding: 10px 16px;
+            font-size: 13px;
+            color: #475569;
+            background: #F8FAFC;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .pdf-viewer-wrap iframe {
+            display: block;
+            width: 100%;
+            height: min(75vh, 820px);
+            border: none;
+            background: #fff;
+        }
+
         .mes-passado-status {
             font-size: 15px;
             line-height: 1.5;
@@ -482,21 +536,20 @@
                 <p th:text="|Periodo: ${mesPassadoLabel}|">Periodo: Abril de 2026</p>
             </div>
             <div class="header-actions">
-                <a th:href="@{/agendamentos/relatorio/semanal}" class="btn-link" style="background:#EFF6FF;border-color:#BFDBFE;">
-                    <i class="fa-solid fa-calendar-week"></i> Relatorio semanal
-                </a>
-                <a th:if="${podeBaixarPdf}"
-                   th:href="@{/agendamentos/relatorio/mensal/download(v=${versaoDownload})}"
-                   class="btn-export btn-export-header"
-                   download>
-                    <i class="fa-solid fa-file-pdf"></i>
-                    <span th:text="${pdfRemovido} ? 'Baixar PDF mensal' : 'Baixar PDF oficial (mensal)'">Baixar PDF</span>
-                </a>
                 <a th:href="@{/agendamentos/dashboard}" class="btn-link">
                     <i class="fa-solid fa-arrow-left"></i> Voltar para agenda
                 </a>
             </div>
         </div>
+
+        <nav class="relatorio-tipo-nav" aria-label="Tipo de relatorio">
+            <a th:href="@{/agendamentos/relatorio/semanal}">
+                <i class="fa-solid fa-calendar-week"></i> Relatorio semanal
+            </a>
+            <a th:href="@{/agendamentos/relatorio/mensal}" class="active">
+                <i class="fa-solid fa-calendar-days"></i> Relatorio mensal
+            </a>
+        </nav>
 
         <div th:if="${sucessoNotificacao}" class="alert-box alert-success">
             <span th:text="${sucessoNotificacao}">Relatorio pronto.</span>
@@ -531,12 +584,22 @@
                     <span th:if="${agendamentosRemovidos != null and agendamentosRemovidos > 0}">
                         <strong th:text="${agendamentosRemovidos}">0</strong> avulso(s) do mes passado ja foram removidos da agenda.
                     </span>
-                    Use o botao <strong>Baixar PDF oficial (mensal)</strong> abaixo. O relatorio semanal nao altera o sino.
+                    Visualize o PDF abaixo ou use <strong>Baixar PDF oficial (mensal)</strong>. O relatorio semanal nao altera o sino.
                 </p>
                 <p class="mes-passado-status" th:if="${pdfRemovido and relatorioArquivado and !aguardandoDia3}">
                     O PDF foi removido do banco no dia <strong th:text="${diaRemocaoPdf}">10</strong> para economizar espaco.
                     Voce ainda pode baixar: o sistema gera o PDF na hora com os dados salvos.
                 </p>
+
+                <div th:if="${exibirPdfInline}" class="pdf-viewer-wrap">
+                    <div class="pdf-viewer-caption">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        PDF gerado — <span th:text="${mesPassadoLabel}">Mes passado</span>
+                    </div>
+                    <iframe th:src="@{/agendamentos/relatorio/mensal/visualizar(v=${versaoDownload})}"
+                            title="Relatorio mensal em PDF"
+                            loading="lazy"></iframe>
+                </div>
 
         <div class="cards-container">
             <div class="card">

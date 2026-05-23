@@ -67,8 +67,8 @@ public class RelatorioDevController {
         if (arquivado.isEmpty()) {
             return "Nao ha relatorio arquivado para " + mes + ". Abra a pagina do relatorio primeiro.";
         }
-        byte[] pdf = relatorioMensalService.regenerarESalvarPdf(arquivado.get());
-        return "PDF regenerado para " + mes + " (" + pdf.length + " bytes). Baixe de novo com Ctrl+F5.";
+        byte[] pdf = relatorioMensalService.gerarPdfDoArquivado(arquivado.get());
+        return "PDF gerado na hora para " + mes + " (" + pdf.length + " bytes, nao gravado no banco). Baixe com Ctrl+F5.";
     }
 
     @PostMapping("/semear-semana-atual")

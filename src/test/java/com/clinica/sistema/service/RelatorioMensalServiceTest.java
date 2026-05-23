@@ -54,13 +54,12 @@ class RelatorioMensalServiceTest {
     }
 
     @Test
-    void deveArquivarMesGerarPdfELimparAgendamentos() {
+    void deveArquivarMesSemPdfNoBancoELimparAgendamentos() {
         YearMonth maio = YearMonth.of(2026, 5);
         RelatorioMensalUsoSalasView relatorio = relatorioExemplo(maio);
 
         when(relatorioMensalArquivadoRepository.existsByAnoAndMes(2026, 5)).thenReturn(false);
         when(agendamentoService.montarRelatorioMensalUsoSalas(maio)).thenReturn(relatorio);
-        when(relatorioMensalPdfService.gerarPdf(relatorio)).thenReturn(new byte[] {1, 2, 3});
         when(agendamentoService.limparAgendamentosNoPeriodo(
                 maio.atDay(1).atStartOfDay(),
                 maio.plusMonths(1).atDay(1).atStartOfDay()
@@ -73,13 +72,14 @@ class RelatorioMensalServiceTest {
         assertTrue(resultado.isPresent());
         assertEquals(7L, resultado.get().getTotalGeral());
         assertEquals(15L, resultado.get().getAgendamentosRemovidos());
-        assertEquals(3, resultado.get().getPdf().length);
+        assertTrue(resultado.get().getPdf() == null || resultado.get().getPdf().length == 0);
 
         ArgumentCaptor<RelatorioMensalArquivado> captor = ArgumentCaptor.forClass(RelatorioMensalArquivado.class);
         verify(relatorioMensalArquivadoRepository).save(captor.capture());
         assertEquals(2026, captor.getValue().getAno());
         assertEquals(5, captor.getValue().getMes());
         assertTrue(captor.getValue().getDadosJson().contains("Julia"));
+        verify(relatorioMensalPdfService, never()).gerarPdf(any());
     }
 
     @Test
@@ -128,13 +128,10 @@ class RelatorioMensalServiceTest {
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
         )).thenReturn(true);
-        when(relatorioMensalArquivadoRepository.temPdfByAnoAndMes(
-                mesPassado.getYear(),
-                mesPassado.getMonthValue()
-        )).thenReturn(Optional.of(true));
 
+        LocalDate diaNaJanela = mesPassado.plusMonths(1).atDay(5);
         Optional<RelatorioMensalNotificacaoView> notificacao =
-                relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(5));
+                relatorioMensalService.avaliarNotificacaoMensal(diaNaJanela);
 
         assertTrue(notificacao.isPresent());
         assertFalse(notificacao.get().isPendenteArquivamento());
@@ -144,6 +141,7 @@ class RelatorioMensalServiceTest {
     @Test
     void bolinhaSomeDepoisDeBaixarPdfMensalNaSessao() {
         YearMonth mesPassado = YearMonth.now().minusMonths(1);
+        LocalDate diaNaJanela = mesPassado.plusMonths(1).atDay(5);
         when(relatorioMensalArquivadoRepository.existsByAnoAndMes(
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
@@ -152,13 +150,10 @@ class RelatorioMensalServiceTest {
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
         )).thenReturn(true);
-        when(relatorioMensalArquivadoRepository.temPdfByAnoAndMes(
-                mesPassado.getYear(),
-                mesPassado.getMonthValue()
-        )).thenReturn(Optional.of(true));
 
         jakarta.servlet.http.HttpSession session = org.mockito.Mockito.mock(jakarta.servlet.http.HttpSession.class);
-        assertTrue(relatorioMensalService.deveExibirBolinhaNotificacao(session));
+        assertTrue(relatorioMensalService.avaliarNotificacaoMensal(diaNaJanela).isPresent());
+        assertFalse(relatorioMensalService.notificacaoMensalJaFoiAtendida(session, mesPassado));
 
         relatorioMensalService.marcarPdfMensalBaixadoNaNotificacao(session, mesPassado);
         org.mockito.Mockito.verify(session).setAttribute(
@@ -168,24 +163,21 @@ class RelatorioMensalServiceTest {
 
         when(session.getAttribute(RelatorioMensalService.SESSAO_NOTIFICACAO_PDF_MENSAL_BAIXADO))
                 .thenReturn(RelatorioMensalService.chaveMesReferencia(mesPassado));
-        assertFalse(relatorioMensalService.deveExibirBolinhaNotificacao(session));
+        assertTrue(relatorioMensalService.notificacaoMensalJaFoiAtendida(session, mesPassado));
 
-        RelatorioMensalArquivado arquivado = new RelatorioMensalArquivado();
-        arquivado.setAno(mesPassado.getYear());
-        arquivado.setMes(mesPassado.getMonthValue());
-        arquivado.setPdfNotificacaoBaixadoEm(java.time.LocalDateTime.now());
         when(relatorioMensalArquivadoRepository.findPdfNotificacaoBaixadoEmByAnoAndMes(
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
         )).thenReturn(Optional.of(java.time.LocalDateTime.now()));
 
         jakarta.servlet.http.HttpSession sessaoNova = org.mockito.Mockito.mock(jakarta.servlet.http.HttpSession.class);
-        assertFalse(relatorioMensalService.deveExibirBolinhaNotificacao(sessaoNova));
+        assertTrue(relatorioMensalService.notificacaoMensalJaFoiAtendida(sessaoNova, mesPassado));
     }
 
     @Test
-    void notificacaoAtivaComJsonMesmoSemPdfNoBanco() {
+    void notificacaoAtivaComJsonArquivadoSemPdfNoBanco() {
         YearMonth mesPassado = YearMonth.now().minusMonths(1);
+        LocalDate diaNaJanela = mesPassado.plusMonths(1).atDay(5);
         when(relatorioMensalArquivadoRepository.existsByAnoAndMes(
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
@@ -194,16 +186,12 @@ class RelatorioMensalServiceTest {
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
         )).thenReturn(true);
-        when(relatorioMensalArquivadoRepository.temPdfByAnoAndMes(
-                mesPassado.getYear(),
-                mesPassado.getMonthValue()
-        )).thenReturn(Optional.of(false));
 
-        assertTrue(relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(5)).isPresent());
+        assertTrue(relatorioMensalService.avaliarNotificacaoMensal(diaNaJanela).isPresent());
     }
 
     @Test
-    void deveRegenerarPdfNoDownloadMesmoComBytesAntigos() {
+    void deveGerarPdfNoDownloadSemSalvarNoBanco() {
         YearMonth abril = YearMonth.of(2026, 4);
         RelatorioMensalArquivado arquivado = new RelatorioMensalArquivado();
         arquivado.setAno(2026);
@@ -214,17 +202,14 @@ class RelatorioMensalServiceTest {
         );
         arquivado.setPdf(new byte[] {10, 20, 30});
 
-        when(relatorioMensalArquivadoRepository.findByAnoAndMes(2026, 4)).thenReturn(Optional.of(arquivado));
         when(relatorioMensalPdfService.gerarPdf(any())).thenReturn(new byte[] {9, 9, 9});
-        when(relatorioMensalArquivadoRepository.save(any(RelatorioMensalArquivado.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        byte[] pdf = relatorioMensalService.obterPdfParaDownload(abril);
+        byte[] pdf = relatorioMensalService.gerarPdfDoArquivado(arquivado);
 
         assertEquals(3, pdf.length);
         assertEquals(9, pdf[0]);
         verify(relatorioMensalPdfService).gerarPdf(any());
-        verify(relatorioMensalArquivadoRepository).save(arquivado);
+        verify(relatorioMensalArquivadoRepository, never()).save(any());
     }
 
     @Test

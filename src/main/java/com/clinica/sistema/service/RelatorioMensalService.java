@@ -69,7 +69,44 @@ public class RelatorioMensalService {
                 + formatarMesReferencia(mesPassadoReferencia())
                 + " (mes passado) so fica disponivel a partir do dia "
                 + diaFechamento
-                + " deste mes. Nesse dia o sistema gera o PDF e remove agendamentos avulsos daquele mes.";
+                + " deste mes. Nesse dia o sistema arquiva os dados, exibe o PDF na tela (gerado na hora) "
+                + "e remove agendamentos avulsos daquele mes.";
+    }
+
+    public String mensagemRelatorioSaiuDaTela() {
+        return "O relatorio do mes passado saiu da tela no dia "
+                + diaRemocaoPdf
+                + " deste mes. Volte no dia "
+                + diaFechamento
+                + " do proximo mes para o novo relatorio.";
+    }
+
+    /**
+     * Relatorio mensal na interface: do dia de fechamento ate o dia anterior a remocao
+     * (ex.: dias 3 a 9), com JSON arquivado. A partir do dia de remocao some da tela.
+     */
+    public boolean relatorioMensalVisivelNaTela(YearMonth mesReferencia) {
+        LocalDate hoje = LocalDate.now();
+        if (!podeExecutarFechamentoAutomatico(hoje)) {
+            return false;
+        }
+        if (!temDadosArquivados(mesReferencia)) {
+            return false;
+        }
+        return !pdfExpiradoParaRelatorio(
+                mesReferencia.getYear(),
+                mesReferencia.getMonthValue(),
+                hoje
+        );
+    }
+
+    public boolean relatorioSaiuDaTela(YearMonth mesReferencia) {
+        return temDadosArquivados(mesReferencia)
+                && pdfExpiradoParaRelatorio(
+                        mesReferencia.getYear(),
+                        mesReferencia.getMonthValue(),
+                        LocalDate.now()
+                );
     }
 
     public boolean podeExecutarFechamentoAutomatico() {
@@ -119,9 +156,7 @@ public class RelatorioMensalService {
         boolean pendente = !arquivadoExiste;
         boolean temDadosSalvos = arquivadoExiste
                 && relatorioMensalArquivadoRepository.existsComDadosJson(ano, mes);
-        boolean pdfNoBanco = temPdfSalvoNoBanco(mesPassado);
-        boolean pdfDisponivel = pdfNoBanco
-                || (temDadosSalvos && !pdfExpiradoParaRelatorio(ano, mes, referencia));
+        boolean pdfDisponivel = temDadosSalvos && !pdfExpiradoParaRelatorio(ano, mes, referencia);
 
         if (!pendente && !pdfDisponivel) {
             return Optional.empty();
@@ -225,11 +260,18 @@ public class RelatorioMensalService {
         return arquivado != null && arquivado.temPdfDisponivel();
     }
 
-    /** Pode baixar se o relatorio foi arquivado e ainda tem os dados salvos (JSON). */
+    public boolean podeExportarPdf(YearMonth mesReferencia) {
+        return relatorioMensalVisivelNaTela(mesReferencia);
+    }
+
+    /** Pode baixar se o relatorio foi arquivado e ainda esta no periodo visivel na tela. */
     public boolean podeExportarPdf(RelatorioMensalArquivado arquivado) {
-        return arquivado != null
-                && arquivado.getDadosJson() != null
-                && !arquivado.getDadosJson().isBlank();
+        if (arquivado == null
+                || arquivado.getDadosJson() == null
+                || arquivado.getDadosJson().isBlank()) {
+            return false;
+        }
+        return relatorioMensalVisivelNaTela(YearMonth.of(arquivado.getAno(), arquivado.getMes()));
     }
 
     public boolean pdfRemovidoDoBanco(RelatorioMensalArquivado arquivado) {
@@ -237,27 +279,31 @@ public class RelatorioMensalService {
     }
 
     public byte[] obterPdfParaDownload(YearMonth mesReferencia) {
+        if (!podeExportarPdf(mesReferencia)) {
+            throw new RuntimeException(
+                    "Relatorio de " + formatarMesReferencia(mesReferencia)
+                            + " nao esta disponivel para download neste periodo."
+            );
+        }
         RelatorioMensalArquivado arquivado = buscarArquivado(mesReferencia)
                 .orElseThrow(() -> new RuntimeException("Relatorio nao encontrado para o periodo informado."));
-
-        if (!podeExportarPdf(arquivado)) {
-            throw new RuntimeException("Nao ha dados para gerar o PDF deste relatorio.");
-        }
-
-        // Sempre gera de novo a partir do JSON para refletir layout e numeros atuais.
-        return regenerarESalvarPdf(arquivado);
+        return gerarPdfDoArquivado(arquivado);
     }
 
-    /** Sempre gera PDF novo a partir do JSON (layout atualizado); atualiza bytes no banco se existir arquivo. */
-    @Transactional
-    public byte[] regenerarESalvarPdf(RelatorioMensalArquivado arquivado) {
+    /** Gera PDF a partir do JSON arquivado, sem persistir bytes no banco. */
+    public byte[] gerarPdfDoArquivado(RelatorioMensalArquivado arquivado) {
         RelatorioMensalUsoSalasView relatorio = desserializarRelatorio(arquivado.getDadosJson());
         byte[] pdf = relatorioMensalPdfService.gerarPdf(relatorio);
-        arquivado.setPdf(pdf);
-        arquivado.setPdfRemovidoEm(null);
-        relatorioMensalArquivadoRepository.save(arquivado);
-        log.info("PDF do relatorio {} regenerado ({} bytes).", relatorio.getMesReferenciaLabel(), pdf.length);
+        log.debug("PDF do relatorio {} gerado sob demanda ({} bytes).",
+                relatorio.getMesReferenciaLabel(), pdf.length);
         return pdf;
+    }
+
+    /** @deprecated PDF nao e mais gravado no banco; use {@link #gerarPdfDoArquivado}. */
+    @Deprecated
+    @Transactional
+    public byte[] regenerarESalvarPdf(RelatorioMensalArquivado arquivado) {
+        return gerarPdfDoArquivado(arquivado);
     }
 
     /**
@@ -269,7 +315,7 @@ public class RelatorioMensalService {
         return !referencia.isBefore(inicioRemocao);
     }
 
-    /** Remove bytes do PDF expirados; mantem JSON com os numeros na tela. */
+    /** Remove bytes legados de PDF ainda gravados em versoes antigas; JSON permanece arquivado. */
     @Transactional
     public int removerPdfsExpiradosSeDevido() {
         LocalDate hoje = LocalDate.now();
@@ -308,7 +354,7 @@ public class RelatorioMensalService {
     }
 
     /**
-     * Fechamento do mes passado: monta relatorio com dados do periodo, salva PDF e so depois
+     * Fechamento do mes passado: monta relatorio, arquiva JSON e so depois
      * apaga agendamentos avulsos daquele mes (semanal/quinzenal permanecem).
      */
     @Transactional
@@ -322,12 +368,10 @@ public class RelatorioMensalService {
                     mesReferencia.getMonthValue()
             );
             existente.ifPresent(ignored -> garantirRemocaoAvulsosDoMesArquivado(mesReferencia));
-            existente.filter(this::pdfRemovidoDoBanco).ifPresent(this::regenerarESalvarPdf);
             return existente;
         }
 
         RelatorioMensalUsoSalasView relatorio = agendamentoService.montarRelatorioMensalUsoSalas(mesReferencia);
-        byte[] pdf = relatorioMensalPdfService.gerarPdf(relatorio);
 
         RelatorioMensalArquivado arquivado = new RelatorioMensalArquivado();
         arquivado.setAno(mesReferencia.getYear());
@@ -335,7 +379,8 @@ public class RelatorioMensalService {
         arquivado.setMesLabel(relatorio.getMesReferenciaLabel());
         arquivado.setTotalGeral(relatorio.getTotalGeral());
         arquivado.setGeradoEm(LocalDateTime.now());
-        arquivado.setPdf(pdf);
+        arquivado.setPdf(null);
+        arquivado.setPdfRemovidoEm(null);
         arquivado.setDadosJson(serializarRelatorio(relatorio));
 
         LocalDateTime inicio = mesReferencia.atDay(1).atStartOfDay();
@@ -399,7 +444,7 @@ public class RelatorioMensalService {
                         item.getAno(),
                         item.getMes(),
                         item.getMesLabel(),
-                        item.getDadosJson() != null && !item.getDadosJson().isBlank()
+                        relatorioMensalVisivelNaTela(YearMonth.of(item.getAno(), item.getMes()))
                 ))
                 .toList();
     }
@@ -463,13 +508,8 @@ public class RelatorioMensalService {
         );
     }
 
-    @Transactional
     public void regenerarPdfDoMesSePossivel(YearMonth mesReferencia) {
-        Optional<RelatorioMensalArquivado> arquivado = buscarArquivado(mesReferencia);
-        if (arquivado.isEmpty() || !podeExportarPdf(arquivado.get())) {
-            return;
-        }
-        regenerarESalvarPdf(arquivado.get());
+        // PDF e gerado sob demanda na visualizacao/download; nada a persistir.
     }
 
     public String nomeArquivoPdf(YearMonth mesReferencia) {

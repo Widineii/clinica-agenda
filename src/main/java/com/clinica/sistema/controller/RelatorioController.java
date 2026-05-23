@@ -13,10 +13,10 @@ import com.clinica.sistema.service.RelatorioSemanalService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,8 +60,17 @@ public class RelatorioController {
     }
 
     @GetMapping
-    public String relatorioPrincipal(Model model, RedirectAttributes redirectAttributes, HttpSession session) {
-        return relatorioMensal(model, redirectAttributes, session, false);
+    public String relatorioPrincipal() {
+        return "redirect:/agendamentos/relatorio/semanal";
+    }
+
+    @GetMapping("/semanal")
+    public String relatorioSemanal(
+            Model model,
+            RedirectAttributes redirectAttributes,
+            HttpSession session
+    ) {
+        return carregarRelatorios(model, redirectAttributes, session, "semanal", false);
     }
 
     @GetMapping("/mensal")
@@ -71,7 +80,16 @@ public class RelatorioController {
             HttpSession session,
             @RequestParam(required = false, defaultValue = "false") boolean viaNotificacao
     ) {
-        relatorioSemanalService.limparSessao(session);
+        return carregarRelatorios(model, redirectAttributes, session, "mensal", viaNotificacao);
+    }
+
+    private String carregarRelatorios(
+            Model model,
+            RedirectAttributes redirectAttributes,
+            HttpSession session,
+            String aba,
+            boolean viaNotificacao
+    ) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
         if (!podeVerRelatorio(usuarioLogado)) {
             redirectAttributes.addFlashAttribute(
@@ -81,105 +99,163 @@ public class RelatorioController {
             return "redirect:/agendamentos/dashboard";
         }
 
-        YearMonth mesPassado = relatorioMensalService.mesPassadoReferencia();
-        RelatorioMensalUsoSalasView relatorio;
-        List<RelatorioHistoricoResumo> historico = Collections.emptyList();
+        String abaAtiva = "mensal".equalsIgnoreCase(aba) ? "mensal" : "semanal";
 
+        try {
+            RelatorioMensalUsoSalasView relatorioSemanal = relatorioSemanalService.montarRelatorioSemanalAtual();
+            relatorioSemanalService.armazenarNaSessao(session, relatorioSemanal);
+
+            model.addAttribute("usuarioLogado", usuarioLogado);
+            model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
+            model.addAttribute("perfilLocal", isPerfilLocal());
+            model.addAttribute("abaAtiva", abaAtiva);
+            model.addAttribute("relatorioSemanal", relatorioSemanal);
+            model.addAttribute("linhasSemanal", montarLinhasRelatorio(relatorioSemanal));
+            model.addAttribute("totalProfissionaisSemanal", relatorioSemanal.getProfissionais().size());
+            model.addAttribute("periodoLabel", relatorioSemanal.getMesReferenciaLabel());
+            model.addAttribute("geradoEmSemanal", java.time.LocalDateTime.now());
+            model.addAttribute("versaoDownload", System.currentTimeMillis());
+
+            popularDadosMensal(model, session, viaNotificacao);
+            return "relatorio";
+        } catch (RuntimeException e) {
+            log.error("Falha ao carregar relatorios (aba={})", abaAtiva, e);
+            redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
+            redirectAttributes.addFlashAttribute(
+                    "erro",
+                    "Nao foi possivel abrir os relatorios. Tente novamente."
+            );
+            return "redirect:/agendamentos/dashboard";
+        }
+    }
+
+    private void popularDadosMensal(Model model, HttpSession session, boolean viaNotificacao) {
+        YearMonth mesPassado = relatorioMensalService.mesPassadoReferencia();
         boolean fechamentoNestaVisita = false;
+        int diaFechamento = 3;
+
+        model.addAttribute("mensalCarregado", false);
+        model.addAttribute("podeBaixarPdf", false);
+        model.addAttribute("exibirPdfInline", false);
+        model.addAttribute("relatorioGeradoAguardando", false);
+        model.addAttribute("aguardandoDia3", !relatorioMensalService.podeExecutarFechamentoAutomatico());
+        model.addAttribute("diaFechamento", diaFechamento);
+        model.addAttribute("mesAtualLabel", relatorioMensalService.formatarMesReferencia(YearMonth.now()));
+        model.addAttribute("mesPassadoLabel", relatorioMensalService.formatarMesReferencia(mesPassado));
+        model.addAttribute("historico", Collections.emptyList());
+
         try {
             fechamentoNestaVisita = relatorioMensalService.executarFechamentoAutomaticoSeDevido();
-            if (relatorioMensalService.temDadosArquivados(mesPassado)
-                    && !relatorioMensalService.temPdfSalvoNoBanco(mesPassado)) {
-                try {
-                    relatorioMensalService.regenerarPdfDoMesSePossivel(mesPassado);
-                } catch (RuntimeException e) {
-                    log.warn("Falha ao regenerar PDF de {}; exibindo relatorio na tela.", mesPassado, e);
-                }
-            }
-            relatorio = relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
+
+            RelatorioMensalUsoSalasView relatorioMensal =
+                    relatorioMensalService.carregarRelatorioParaExibicao(mesPassado);
+            List<RelatorioHistoricoResumo> historico;
             try {
                 historico = relatorioMensalService.listarHistoricoResumo();
             } catch (RuntimeException e) {
                 log.warn("Historico de relatorios indisponivel; continuando sem lista.", e);
+                historico = Collections.emptyList();
+            }
+
+            boolean aguardandoDia3 = !relatorioMensalService.podeExecutarFechamentoAutomatico();
+            boolean relatorioArquivado = relatorioMensalService.temDadosArquivados(mesPassado);
+            boolean relatorioVisivel = relatorioMensalService.relatorioMensalVisivelNaTela(mesPassado);
+            boolean relatorioSaiuDaTela = relatorioMensalService.relatorioSaiuDaTela(mesPassado);
+            var cabecalhoArquivado = relatorioMensalService.buscarCabecalhoArquivado(mesPassado);
+
+            boolean podeBaixarPdf = relatorioVisivel;
+            boolean relatorioGeradoAguardando = relatorioVisivel;
+            boolean pdfJaBaixado = relatorioMensalService.notificacaoMensalJaFoiAtendida(session, mesPassado);
+
+            model.addAttribute("mensalCarregado", true);
+            model.addAttribute("relatorioMensal", relatorioMensal);
+            model.addAttribute("mesPassadoLabel", relatorioMensal.getMesReferenciaLabel());
+            model.addAttribute("relatorioArquivado", relatorioArquivado);
+            model.addAttribute("podeBaixarPdf", podeBaixarPdf);
+            model.addAttribute("exibirPdfInline", relatorioVisivel);
+            model.addAttribute("relatorioGeradoAguardando", relatorioGeradoAguardando);
+            model.addAttribute("pdfJaBaixado", pdfJaBaixado);
+            model.addAttribute("relatorioSaiuDaTela", relatorioSaiuDaTela);
+            model.addAttribute("diaRemocaoPdf", relatorioMensalService.getDiaRemocaoPdf());
+            model.addAttribute("aguardandoDia3", aguardandoDia3);
+            model.addAttribute("aguardandoProcessamentoAutomatico",
+                    relatorioMensalService.podeExecutarFechamentoAutomatico() && !relatorioArquivado);
+            model.addAttribute("historico", historico);
+
+            cabecalhoArquivado.ifPresent(cabecalho -> {
+                model.addAttribute("geradoEmMensal", cabecalho.getGeradoEm());
+                model.addAttribute("agendamentosRemovidos", cabecalho.getAgendamentosRemovidos());
+            });
+
+            if (viaNotificacao && relatorioGeradoAguardando) {
+                model.addAttribute(
+                        "sucessoNotificacao",
+                        "Relatorio do mes passado (" + relatorioMensal.getMesReferenciaLabel() + ") gerado no dia "
+                                + diaFechamento + ". Veja o PDF na aba Mensal."
+                );
+            } else if (viaNotificacao && !aguardandoDia3 && fechamentoNestaVisita) {
+                model.addAttribute(
+                        "sucessoNotificacao",
+                        "Relatorio de " + relatorioMensal.getMesReferenciaLabel()
+                                + " gerado agora. Veja o PDF na aba Mensal."
+                );
+            } else if (viaNotificacao) {
+                model.addAttribute(
+                        "sucessoNotificacao",
+                        "Abrindo o relatorio do mes passado (" + relatorioMensal.getMesReferenciaLabel() + ")."
+                );
             }
         } catch (RuntimeException e) {
             log.error("Falha ao carregar relatorio mensal de {}", mesPassado, e);
-            redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
-            if (!relatorioMensalService.podeExecutarFechamentoAutomatico()) {
-                redirectAttributes.addFlashAttribute(
-                        "erro",
-                        relatorioMensalService.mensagemRelatorioDisponivelAposDia3()
-                );
-            } else {
-                redirectAttributes.addFlashAttribute(
-                        "erro",
-                        "Nao foi possivel abrir o relatorio de "
-                                + relatorioMensalService.formatarMesReferencia(mesPassado)
-                                + ". Tente novamente em alguns minutos."
-                );
-            }
-            return "redirect:/agendamentos/dashboard";
-        }
-
-        boolean aguardandoDia3 = !relatorioMensalService.podeExecutarFechamentoAutomatico();
-        boolean relatorioArquivado = relatorioMensalService.temDadosArquivados(mesPassado);
-        boolean temPdfSalvo = relatorioMensalService.temPdfSalvoNoBanco(mesPassado);
-        var cabecalhoArquivado = relatorioMensalService.buscarCabecalhoArquivado(mesPassado);
-
-        model.addAttribute("usuarioLogado", usuarioLogado);
-        model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
-        model.addAttribute("relatorio", relatorio);
-        model.addAttribute("linhas", montarLinhasRelatorio(relatorio));
-        model.addAttribute("totalProfissionais", relatorio.getProfissionais().size());
-        model.addAttribute("mesPassadoLabel", relatorio.getMesReferenciaLabel());
-        model.addAttribute("relatorioArquivado", relatorioArquivado);
-        boolean podeBaixarPdf = relatorioArquivado && !aguardandoDia3;
-        boolean relatorioGeradoAguardando = podeBaixarPdf;
-        boolean pdfJaBaixado = relatorioMensalService.notificacaoMensalJaFoiAtendida(session, mesPassado);
-        model.addAttribute("podeBaixarPdf", podeBaixarPdf);
-        model.addAttribute("relatorioGeradoAguardando", relatorioGeradoAguardando);
-        model.addAttribute("pdfJaBaixado", pdfJaBaixado);
-        model.addAttribute("pdfRemovido", relatorioArquivado && !temPdfSalvo);
-        model.addAttribute("diaRemocaoPdf", relatorioMensalService.getDiaRemocaoPdf());
-        model.addAttribute("aguardandoDia3", aguardandoDia3);
-        model.addAttribute("aguardandoProcessamentoAutomatico",
-                relatorioMensalService.podeExecutarFechamentoAutomatico() && !relatorioArquivado);
-        int diaFechamento = 3;
-        model.addAttribute("diaFechamento", diaFechamento);
-        model.addAttribute("historico", historico);
-        model.addAttribute("mesAtualLabel", relatorioMensalService.formatarMesReferencia(YearMonth.now()));
-        model.addAttribute("versaoDownload", System.currentTimeMillis());
-        cabecalhoArquivado.ifPresent(cabecalho -> {
-            model.addAttribute("geradoEm", cabecalho.getGeradoEm());
-            model.addAttribute("agendamentosRemovidos", cabecalho.getAgendamentosRemovidos());
-        });
-        if (viaNotificacao && relatorioGeradoAguardando) {
             model.addAttribute(
-                    "sucessoNotificacao",
-                    "Relatorio do mes passado (" + relatorio.getMesReferenciaLabel() + ") gerado no dia "
-                            + diaFechamento
-                            + " e aguardando. Baixe o PDF mensal abaixo para o sino sumir."
-            );
-        } else if (viaNotificacao && !aguardandoDia3 && fechamentoNestaVisita) {
-            model.addAttribute(
-                    "sucessoNotificacao",
-                    "Relatorio de " + relatorio.getMesReferenciaLabel()
-                            + " gerado agora (PDF salvo; avulsos do mes passado removidos). Baixe o PDF mensal abaixo."
-            );
-        } else if (viaNotificacao && !aguardandoDia3) {
-            model.addAttribute(
-                    "sucessoNotificacao",
-                    "Abrindo o relatorio do mes passado (" + relatorio.getMesReferenciaLabel() + ")."
+                    "mensalErro",
+                    !relatorioMensalService.podeExecutarFechamentoAutomatico()
+                            ? relatorioMensalService.mensagemRelatorioDisponivelAposDia3()
+                            : "Nao foi possivel carregar o relatorio de "
+                                    + relatorioMensalService.formatarMesReferencia(mesPassado)
+                                    + ". Tente novamente em alguns minutos."
             );
         }
-        return "relatorio-mensal";
+    }
+
+    @GetMapping("/mensal/visualizar")
+    public ResponseEntity<byte[]> visualizarPdfMensal(
+            @RequestParam(required = false) Integer ano,
+            @RequestParam(required = false) Integer mes
+    ) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (!podeVerRelatorio(usuarioLogado)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        YearMonth mesReferencia = ano != null && mes != null
+                ? YearMonth.of(ano, mes)
+                : relatorioMensalService.mesPassadoReferencia();
+
+        if (!relatorioMensalService.podeExportarPdf(mesReferencia)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        byte[] pdf;
+        try {
+            pdf = relatorioMensalService.obterPdfParaDownload(mesReferencia);
+        } catch (RuntimeException e) {
+            log.error("Falha ao gerar PDF para visualizacao {}", mesReferencia, e);
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     @GetMapping("/mensal/download")
     public ResponseEntity<byte[]> baixarPdf(
             @RequestParam(required = false) Integer ano,
             @RequestParam(required = false) Integer mes,
-            RedirectAttributes redirectAttributes,
             HttpSession session
     ) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
@@ -191,8 +267,7 @@ public class RelatorioController {
                 ? YearMonth.of(ano, mes)
                 : relatorioMensalService.mesPassadoReferencia();
 
-        Optional<RelatorioMensalArquivado> arquivado = relatorioMensalService.buscarArquivado(mesReferencia);
-        if (arquivado.isEmpty() || !relatorioMensalService.podeExportarPdf(arquivado.get())) {
+        if (!relatorioMensalService.podeExportarPdf(mesReferencia)) {
             return ResponseEntity.notFound().build();
         }
 
@@ -217,42 +292,6 @@ public class RelatorioController {
                 .header(HttpHeaders.PRAGMA, "no-cache")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
-    }
-
-    @GetMapping("/semanal")
-    public String relatorioSemanal(Model model, RedirectAttributes redirectAttributes, HttpSession session) {
-        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-        if (!podeVerRelatorio(usuarioLogado)) {
-            redirectAttributes.addFlashAttribute(
-                    "erro",
-                    "Somente administracao ou dona da clinica pode ver o relatorio."
-            );
-            return "redirect:/agendamentos/dashboard";
-        }
-
-        try {
-            RelatorioMensalUsoSalasView relatorio = relatorioSemanalService.montarRelatorioSemanalAtual();
-            relatorioSemanalService.armazenarNaSessao(session, relatorio);
-
-            model.addAttribute("usuarioLogado", usuarioLogado);
-            model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
-            model.addAttribute("relatorio", relatorio);
-            model.addAttribute("linhas", montarLinhasRelatorio(relatorio));
-            model.addAttribute("totalProfissionais", relatorio.getProfissionais().size());
-            model.addAttribute("periodoLabel", relatorio.getMesReferenciaLabel());
-            model.addAttribute("versaoDownload", System.currentTimeMillis());
-            model.addAttribute("geradoEm", java.time.LocalDateTime.now());
-            model.addAttribute("perfilLocal", isPerfilLocal());
-            return "relatorio-semanal";
-        } catch (RuntimeException e) {
-            log.error("Falha ao carregar relatorio semanal", e);
-            redirectAttributes.addFlashAttribute("erroContexto", "relatorio");
-            redirectAttributes.addFlashAttribute(
-                    "erro",
-                    "Nao foi possivel gerar o relatorio semanal. Tente novamente."
-            );
-            return "redirect:/agendamentos/relatorio/mensal";
-        }
     }
 
     @GetMapping("/semanal/download")
