@@ -90,10 +90,10 @@ class RelatorioMensalServiceTest {
     @Test
     void notificacaoPendenteAPartirDoDiaDeFechamento() {
         YearMonth mesPassado = YearMonth.now().minusMonths(1);
-        when(relatorioMensalArquivadoRepository.findByAnoAndMes(
+        when(relatorioMensalArquivadoRepository.existsByAnoAndMes(
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
-        )).thenReturn(Optional.empty());
+        )).thenReturn(false);
 
         Optional<RelatorioMensalNotificacaoView> notificacao =
                 relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(3));
@@ -106,17 +106,15 @@ class RelatorioMensalServiceTest {
     @Test
     void notificacaoProntaParaBaixarQuandoArquivado() {
         YearMonth mesPassado = YearMonth.now().minusMonths(1);
-        RelatorioMensalArquivado arquivado = new RelatorioMensalArquivado();
-        arquivado.setAno(mesPassado.getYear());
-        arquivado.setMes(mesPassado.getMonthValue());
-        arquivado.setDadosJson("{\"anoReferencia\":2026,\"mesReferencia\":4,\"mesReferenciaLabel\":\"Abril\","
-                + "\"totalGeral\":1,\"profissionais\":[]}");
-        arquivado.setPdf(new byte[] {1});
 
-        when(relatorioMensalArquivadoRepository.findByAnoAndMes(
+        when(relatorioMensalArquivadoRepository.existsByAnoAndMes(
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
-        )).thenReturn(Optional.of(arquivado));
+        )).thenReturn(true);
+        when(relatorioMensalArquivadoRepository.existsComDadosJson(
+                mesPassado.getYear(),
+                mesPassado.getMonthValue()
+        )).thenReturn(true);
 
         Optional<RelatorioMensalNotificacaoView> notificacao =
                 relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(5));

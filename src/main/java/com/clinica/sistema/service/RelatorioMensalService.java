@@ -97,13 +97,15 @@ public class RelatorioMensalService {
 
         YearMonth mesPassado = mesPassadoReferencia();
         String mesLabel = formatarMesReferencia(mesPassado);
-        Optional<RelatorioMensalArquivado> arquivado = buscarArquivado(mesPassado);
+        int ano = mesPassado.getYear();
+        int mes = mesPassado.getMonthValue();
+        boolean arquivadoExiste = relatorioMensalArquivadoRepository.existsByAnoAndMes(ano, mes);
 
-        if (arquivado.isPresent() && !podeExportarPdf(arquivado.get())) {
+        if (arquivadoExiste && !relatorioMensalArquivadoRepository.existsComDadosJson(ano, mes)) {
             return Optional.empty();
         }
 
-        boolean pendente = arquivado.isEmpty();
+        boolean pendente = !arquivadoExiste;
         String mensagemPainel = pendente
                 ? "O relatorio de " + mesLabel + " ja esta pronto para gerar. "
                         + "Ao abrir, o sistema fecha o mes passado e voce pode baixar o PDF."

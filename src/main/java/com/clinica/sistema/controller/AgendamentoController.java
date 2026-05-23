@@ -12,6 +12,7 @@ import com.clinica.sistema.service.RelatorioSemanalService;
 import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -60,6 +61,7 @@ public class AgendamentoController {
     }
 
     @GetMapping("/dashboard")
+    @Transactional(readOnly = true)
     public String abrirDashboard(
             Model model,
             @RequestParam(required = false) Long salaId,
