@@ -12,6 +12,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,6 +33,9 @@ class UsoBancoServiceTest {
     @Mock
     private SalaRepository salaRepository;
 
+    @Mock
+    private DataSource dataSource;
+
     private UsoBancoService usoBancoService;
 
     @BeforeEach
@@ -37,13 +44,20 @@ class UsoBancoServiceTest {
                 agendamentoRepository,
                 relatorioMensalArquivadoRepository,
                 usuarioRepository,
-                salaRepository
+                salaRepository,
+                dataSource
         );
         ReflectionTestUtils.setField(usoBancoService, "limiteNeonMb", 512);
     }
 
     @Test
-    void deveMontarResumoComEstimativa() {
+    void deveMontarResumoComEstimativa() throws Exception {
+        Connection connection = org.mockito.Mockito.mock(Connection.class);
+        DatabaseMetaData metaData = org.mockito.Mockito.mock(DatabaseMetaData.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn("H2");
+
         when(agendamentoRepository.count()).thenReturn(12_500L);
         when(agendamentoRepository.countAvulsos()).thenReturn(3_000L);
         when(agendamentoRepository.countFixosOuQuinzenais()).thenReturn(9_500L);
@@ -52,7 +66,6 @@ class UsoBancoServiceTest {
         when(relatorioMensalArquivadoRepository.count()).thenReturn(8L);
         when(relatorioMensalArquivadoRepository.countComPdfLegado()).thenReturn(0L);
         when(relatorioMensalArquivadoRepository.somaBytesJson()).thenReturn(120_000L);
-        when(relatorioMensalArquivadoRepository.somaBytesPdfLegado()).thenReturn(0L);
         when(usuarioRepository.count()).thenReturn(21L);
         when(usuarioRepository.countByCargo("ROLE_PROFISSIONAL")).thenReturn(20L);
         when(salaRepository.count()).thenReturn(4L);

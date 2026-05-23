@@ -13,6 +13,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -31,6 +34,7 @@ public class UsoBancoService {
     private final RelatorioMensalArquivadoRepository relatorioMensalArquivadoRepository;
     private final UsuarioRepository usuarioRepository;
     private final SalaRepository salaRepository;
+    private final DataSource dataSource;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -42,12 +46,14 @@ public class UsoBancoService {
             AgendamentoRepository agendamentoRepository,
             RelatorioMensalArquivadoRepository relatorioMensalArquivadoRepository,
             UsuarioRepository usuarioRepository,
-            SalaRepository salaRepository
+            SalaRepository salaRepository,
+            DataSource dataSource
     ) {
         this.agendamentoRepository = agendamentoRepository;
         this.relatorioMensalArquivadoRepository = relatorioMensalArquivadoRepository;
         this.usuarioRepository = usuarioRepository;
         this.salaRepository = salaRepository;
+        this.dataSource = dataSource;
     }
 
     @Transactional(readOnly = true)
@@ -69,14 +75,15 @@ public class UsoBancoService {
         long relatorios = relatorioMensalArquivadoRepository.count();
         long relatoriosComPdf = relatorioMensalArquivadoRepository.countComPdfLegado();
         long bytesJson = somarBytesJsonRelatorios();
-        long bytesPdf = somarBytesPdfLegado();
+        boolean postgres = isPostgresql();
+        long bytesPdf = postgres ? somarBytesPdfLegado() : 0L;
 
         long bytesEstimados = BYTES_ESTIMADOS_OVERHEAD
                 + totalAgendamentos * BYTES_ESTIMADOS_POR_AGENDAMENTO
                 + bytesJson
                 + bytesPdf;
 
-        Long bytesBancoReal = consultarTamanhoBancoPostgres().orElse(null);
+        Long bytesBancoReal = postgres ? consultarTamanhoBancoPostgres().orElse(null) : null;
         long bytesReferencia = bytesBancoReal != null ? bytesBancoReal : bytesEstimados;
         long limiteBytes = (long) limiteNeonMb * 1024L * 1024L;
         double percentual = limiteBytes > 0
@@ -128,6 +135,16 @@ public class UsoBancoService {
         }
     }
 
+    private boolean isPostgresql() {
+        try (Connection connection = dataSource.getConnection()) {
+            String produto = connection.getMetaData().getDatabaseProductName();
+            return produto != null && produto.toLowerCase(Locale.ROOT).contains("postgres");
+        } catch (SQLException e) {
+            log.debug("Nao foi possivel detectar o banco: {}", e.getMessage());
+            return false;
+        }
+    }
+
     private java.util.Optional<Long> consultarTamanhoBancoPostgres() {
         if (entityManager == null) {
             return java.util.Optional.empty();
@@ -140,7 +157,7 @@ public class UsoBancoService {
                 return java.util.Optional.of(number.longValue());
             }
         } catch (RuntimeException e) {
-            log.debug("Tamanho real do banco nao disponivel (esperado em H2 local): {}", e.getMessage());
+            log.warn("Falha ao ler tamanho do banco PostgreSQL: {}", e.getMessage());
         }
         return java.util.Optional.empty();
     }
