@@ -57,7 +57,7 @@ public interface RelatorioMensalArquivadoRepository extends JpaRepository<Relato
             WHERE r.ano = :ano
               AND r.mes = :mes
               AND r.dadosJson IS NOT NULL
-              AND r.dadosJson <> ''
+              AND LENGTH(r.dadosJson) > 0
             """)
     boolean existsComDadosJson(@Param("ano") int ano, @Param("mes") int mes);
 

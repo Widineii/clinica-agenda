@@ -239,7 +239,7 @@ public class RelatorioMensalService {
                     mesReferencia.getYear(),
                     mesReferencia.getMonthValue()
             );
-            existente.ifPresent(this::regenerarESalvarPdf);
+            existente.filter(this::pdfRemovidoDoBanco).ifPresent(this::regenerarESalvarPdf);
             return existente;
         }
 
