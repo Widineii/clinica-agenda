@@ -26,7 +26,7 @@
                    th:text="${notificacaoRelatorioMensal.mensagemPainel}">Mensagem</p>
                 <a th:href="@{/agendamentos/relatorio/mensal(viaNotificacao=1)}"
                    class="btn btn-warning w-100"
-                   th:text="${notificacaoRelatorioMensal.pendenteArquivamento} ? 'Gerar relatorio e baixar PDF' : 'Abrir relatorio e baixar PDF'">
+                   th:text="${notificacaoRelatorioMensal.pendenteArquivamento} ? 'Ver relatorio do mes passado' : 'Relatorio gerado — baixar PDF'">
                     Abrir relatorio
                 </a>
             </th:block>

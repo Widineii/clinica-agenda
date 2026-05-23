@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -135,16 +136,13 @@ public class AgendamentoService {
                         fimConsulta
                 );
 
-        Map<LocalDateTime, Agendamento> agendaPorHorario = agendamentosSemana.stream()
-                .collect(Collectors.toMap(Agendamento::getDataHoraInicio, agendamento -> agendamento));
-
         List<LocalDate> diasSemana = inicioSemana.datesUntil(fimSemana.plusDays(1)).toList();
         List<AgendaSalaLinha> linhas = new ArrayList<>();
 
         for (LocalTime horario = HORA_ABERTURA; horario.isBefore(HORA_FECHAMENTO); horario = horario.plusHours(1)) {
             List<Agendamento> porDia = new ArrayList<>();
             for (LocalDate dia : diasSemana) {
-                porDia.add(agendaPorHorario.get(LocalDateTime.of(dia, horario)));
+                porDia.add(buscarAgendamentoNaCelula(agendamentosSemana, dia, horario));
             }
             linhas.add(new AgendaSalaLinha(horario, porDia));
         }
@@ -166,9 +164,12 @@ public class AgendamentoService {
     }
 
     public long contarAgendamentosDoMesPassado() {
-        YearMonth mesPassado = YearMonth.now().minusMonths(1);
-        LocalDateTime inicio = mesPassado.atDay(1).atStartOfDay();
-        LocalDateTime fim = YearMonth.now().atDay(1).atStartOfDay();
+        return contarAgendamentosNoMes(YearMonth.now().minusMonths(1));
+    }
+
+    public long contarAgendamentosNoMes(YearMonth mesReferencia) {
+        LocalDateTime inicio = mesReferencia.atDay(1).atStartOfDay();
+        LocalDateTime fim = mesReferencia.plusMonths(1).atDay(1).atStartOfDay();
         return repository.countByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(inicio, fim);
     }
 
@@ -711,6 +712,91 @@ public class AgendamentoService {
             return agendamento.getSerieFixaId();
         }
         return "avulso-" + agendamento.getId();
+    }
+
+    public Long resolverSalaIdParaGrade(Long salaId, LocalDate referencia) {
+        if (salaId != null) {
+            return salaId;
+        }
+
+        Map<Long, Integer> contagem = contarAgendamentosPorSalaNaSemana(referencia);
+        for (Sala sala : listarSalas()) {
+            if (contagem.getOrDefault(sala.getId(), 0) > 0) {
+                return sala.getId();
+            }
+        }
+
+        List<Sala> salas = listarSalas();
+        if (salas.isEmpty()) {
+            throw new RuntimeException("Nenhuma sala cadastrada.");
+        }
+        return salas.get(0).getId();
+    }
+
+    public Map<Long, Integer> contarAgendamentosPorSalaNaSemana(LocalDate referencia) {
+        LocalDate inicioSemana = obterInicioSemana(referencia);
+        LocalDate fimSemana = inicioSemana.plusDays(5);
+        LocalDateTime inicioConsulta = inicioSemana.atTime(HORA_ABERTURA);
+        LocalDateTime fimConsulta = fimSemana.plusDays(1).atStartOfDay();
+
+        List<Agendamento> agendamentosSemana =
+                repository.findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                        inicioConsulta,
+                        fimConsulta
+                );
+
+        Map<Long, Integer> contagem = new LinkedHashMap<>();
+        for (Agendamento agendamento : agendamentosSemana) {
+            if (agendamento.getSala() == null) {
+                continue;
+            }
+            contagem.merge(agendamento.getSala().getId(), 1, Integer::sum);
+        }
+        return contagem;
+    }
+
+    public Optional<String> mensagemAgendamentosEmOutraSala(Long salaIdAtual, LocalDate referencia) {
+        Map<Long, Integer> contagem = contarAgendamentosPorSalaNaSemana(referencia);
+        if (contagem.isEmpty() || contagem.getOrDefault(salaIdAtual, 0) > 0) {
+            return Optional.empty();
+        }
+
+        StringBuilder salasComHorario = new StringBuilder();
+        for (Sala item : listarSalas()) {
+            int total = contagem.getOrDefault(item.getId(), 0);
+            if (total > 0 && !item.getId().equals(salaIdAtual)) {
+                if (salasComHorario.length() > 0) {
+                    salasComHorario.append(", ");
+                }
+                salasComHorario.append(item.getNome()).append(" (").append(total).append(")");
+            }
+        }
+
+        if (salasComHorario.length() == 0) {
+            return Optional.empty();
+        }
+
+        return Optional.of(
+                "Nesta semana ha agendamentos em: "
+                        + salasComHorario
+                        + ". Selecione a sala acima para ver na grade."
+        );
+    }
+
+    private Agendamento buscarAgendamentoNaCelula(
+            List<Agendamento> agendamentosSemana,
+            LocalDate dia,
+            LocalTime horario
+    ) {
+        LocalDateTime inicioCelula = LocalDateTime.of(dia, horario);
+        return agendamentosSemana.stream()
+                .filter(agendamento -> inicioHoraCheia(agendamento.getDataHoraInicio()).equals(inicioCelula))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private LocalDateTime inicioHoraCheia(LocalDateTime dataHora) {
+        return dataHora.withMinute(0).withSecond(0).withNano(0);
     }
 
     private LocalDate obterInicioSemana(LocalDate referencia) {

@@ -68,6 +68,21 @@
             color: #fff;
         }
 
+        .room-pill-count {
+            display: inline-block;
+            margin-left: 6px;
+            min-width: 1.25rem;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.35);
+            font-size: 0.75rem;
+            line-height: 1.2;
+        }
+
+        .room-pill.active .room-pill-count {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
         .grade-scroll-wrap {
             position: relative;
             -webkit-overflow-scrolling: touch;
@@ -834,12 +849,20 @@
                         De dois cliques no <strong>seu</strong> horario na grade para cancelar ou encerrar serie (sem rolar ate Meus agendamentos).
                     </p>
 
+                    <div th:if="${avisoAgendamentoOutraSala}" class="alert alert-warning py-2 small mb-3" th:text="${avisoAgendamentoOutraSala}">
+                        Ha agendamentos em outra sala.
+                    </div>
+
                     <div class="d-flex flex-wrap gap-2 mb-4">
                         <a th:each="sala : ${salas}"
                            th:href="@{/agendamentos/dashboard(salaId=${sala.id}, semana=${agendaSala.inicioSemana})}"
                            th:classappend="${sala.id == agendaSala.sala.id ? ' active' : ''}"
-                           class="room-pill"
-                           th:text="${sala.nome}">Sala</a>
+                           class="room-pill">
+                            <span th:text="${sala.nome}">Sala</span>
+                            <span th:if="${salasOcupadasNaSemana != null and salasOcupadasNaSemana.containsKey(sala.id)}"
+                                  class="room-pill-count"
+                                  th:text="${salasOcupadasNaSemana.get(sala.id)}">0</span>
+                        </a>
                     </div>
 
                     <p class="grade-scroll-hint small text-muted">Deslize a grade para o lado para ver todos os dias da semana (segunda a sabado).</p>

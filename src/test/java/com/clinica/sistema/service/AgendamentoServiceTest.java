@@ -33,6 +33,7 @@ import org.mockito.ArgumentMatchers;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -285,6 +286,69 @@ class AgendamentoServiceTest {
         assertEquals(primeiro, lista.get(0).getDataHoraInicio());
         assertEquals(terceiro, lista.get(2).getDataHoraInicio());
         assertEquals(3, agendamentoService.contarOcorrencias(List.of(ocorrencia1, ocorrencia2, ocorrencia3), Agendamento::isFixoSemanal));
+    }
+
+    @Test
+    void devePreferirSalaComAgendamentosQuandoNenhumaSalaFoiInformada() {
+        Sala sala1 = new Sala();
+        sala1.setId(1L);
+        sala1.setNome("Sala 1");
+
+        Sala sala2 = new Sala();
+        sala2.setId(2L);
+        sala2.setNome("Sala 2");
+
+        LocalDate sabado = LocalDate.of(2026, 5, 23);
+
+        when(salaRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(sala1, sala2));
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(1L);
+        agendamento.setSala(sala2);
+        agendamento.setDataHoraInicio(LocalDateTime.of(2026, 5, 23, 17, 0));
+
+        when(agendamentoRepository.findByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(agendamento));
+
+        Long salaResolvida = agendamentoService.resolverSalaIdParaGrade(null, sabado);
+
+        assertEquals(2L, salaResolvida);
+    }
+
+    @Test
+    void deveExibirAgendamentoNaGradeMesmoComSegundosNoHorario() {
+        LocalDate sabado = LocalDate.of(2026, 5, 23);
+        LocalDate inicioSemana = sabado.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        when(salaRepository.findAllByOrderByNomeAsc()).thenReturn(List.of(sala));
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setId(99L);
+        agendamento.setSala(sala);
+        agendamento.setProfissional(profissional);
+        agendamento.setNomeCliente("gdsr");
+        agendamento.setDataHoraInicio(LocalDateTime.of(2026, 5, 23, 17, 0, 45));
+        agendamento.setFixo(true);
+
+        when(agendamentoRepository.findBySalaIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                eq(sala.getId()),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(agendamento));
+
+        AgendaSalaView view = agendamentoService.montarAgendaSala(sala.getId(), sabado);
+
+        int indiceSabado = view.getDiasSemana().indexOf(sabado);
+        AgendaSalaLinha linha17 = view.getLinhas().stream()
+                .filter(linha -> linha.getHorario().equals(LocalTime.of(17, 0)))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(inicioSemana, view.getInicioSemana());
+        assertNotNull(linha17.getAgendamentos().get(indiceSabado));
+        assertEquals("gdsr", linha17.getAgendamentos().get(indiceSabado).getNomeCliente());
     }
 
     @Test

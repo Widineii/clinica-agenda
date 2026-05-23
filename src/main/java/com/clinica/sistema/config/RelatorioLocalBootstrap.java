@@ -3,6 +3,7 @@ package com.clinica.sistema.config;
 import com.clinica.sistema.service.RelatorioMensalService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
@@ -21,12 +22,19 @@ public class RelatorioLocalBootstrap implements CommandLineRunner {
 
     private final RelatorioMensalService relatorioMensalService;
 
+    @Value("${app.relatorio-mensal.auto-fechamento-local:true}")
+    private boolean autoFechamentoLocal;
+
     public RelatorioLocalBootstrap(RelatorioMensalService relatorioMensalService) {
         this.relatorioMensalService = relatorioMensalService;
     }
 
     @Override
     public void run(String... args) {
+        if (!autoFechamentoLocal) {
+            log.info("Relatorio local: fechamento automatico desligado (agenda limpa).");
+            return;
+        }
         if (!relatorioMensalService.podeExecutarFechamentoAutomatico()) {
             log.info(
                     "Relatorio local: fechamento do mes passado so apos o dia {} do mes atual.",

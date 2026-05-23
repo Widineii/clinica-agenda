@@ -134,13 +134,18 @@ public class RelatorioController {
         model.addAttribute("mesPassadoLabel", relatorio.getMesReferenciaLabel());
         model.addAttribute("relatorioArquivado", relatorioArquivado);
         boolean podeBaixarPdf = relatorioArquivado && !aguardandoDia3;
+        boolean relatorioGeradoAguardando = podeBaixarPdf;
+        boolean pdfJaBaixado = relatorioMensalService.notificacaoMensalJaFoiAtendida(session, mesPassado);
         model.addAttribute("podeBaixarPdf", podeBaixarPdf);
+        model.addAttribute("relatorioGeradoAguardando", relatorioGeradoAguardando);
+        model.addAttribute("pdfJaBaixado", pdfJaBaixado);
         model.addAttribute("pdfRemovido", relatorioArquivado && !temPdfSalvo);
         model.addAttribute("diaRemocaoPdf", relatorioMensalService.getDiaRemocaoPdf());
         model.addAttribute("aguardandoDia3", aguardandoDia3);
         model.addAttribute("aguardandoProcessamentoAutomatico",
                 relatorioMensalService.podeExecutarFechamentoAutomatico() && !relatorioArquivado);
-        model.addAttribute("diaFechamento", 3);
+        int diaFechamento = 3;
+        model.addAttribute("diaFechamento", diaFechamento);
         model.addAttribute("historico", historico);
         model.addAttribute("mesAtualLabel", relatorioMensalService.formatarMesReferencia(YearMonth.now()));
         model.addAttribute("versaoDownload", System.currentTimeMillis());
@@ -148,24 +153,23 @@ public class RelatorioController {
             model.addAttribute("geradoEm", cabecalho.getGeradoEm());
             model.addAttribute("agendamentosRemovidos", cabecalho.getAgendamentosRemovidos());
         });
-        if (viaNotificacao && !aguardandoDia3 && relatorioArquivado && podeBaixarPdf) {
+        if (viaNotificacao && relatorioGeradoAguardando) {
             model.addAttribute(
                     "sucessoNotificacao",
-                    "O relatorio de " + relatorio.getMesReferenciaLabel()
-                            + " esta pronto. Clique em Baixar PDF oficial (mensal) para o ponto laranja do sino sumir."
-                            + " O relatorio semanal nao altera o sino."
+                    "Relatorio do mes passado (" + relatorio.getMesReferenciaLabel() + ") gerado no dia "
+                            + diaFechamento
+                            + " e aguardando. Baixe o PDF mensal abaixo para o sino sumir."
             );
         } else if (viaNotificacao && !aguardandoDia3 && fechamentoNestaVisita) {
             model.addAttribute(
                     "sucessoNotificacao",
-                    "O relatorio de " + relatorio.getMesReferenciaLabel()
-                            + " foi gerado agora. Clique em Baixar PDF oficial (mensal) para o ponto laranja do sino sumir."
+                    "Relatorio de " + relatorio.getMesReferenciaLabel()
+                            + " gerado agora (PDF salvo; avulsos do mes passado removidos). Baixe o PDF mensal abaixo."
             );
         } else if (viaNotificacao && !aguardandoDia3) {
             model.addAttribute(
                     "sucessoNotificacao",
-                    "Abrindo o relatorio de " + relatorio.getMesReferenciaLabel()
-                            + ". Quando o fechamento terminar, o botao Baixar PDF ficara disponivel."
+                    "Abrindo o relatorio do mes passado (" + relatorio.getMesReferenciaLabel() + ")."
             );
         }
         return "relatorio-mensal";

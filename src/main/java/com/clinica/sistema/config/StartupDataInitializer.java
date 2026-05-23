@@ -48,6 +48,9 @@ public class StartupDataInitializer implements CommandLineRunner {
     @Value("${app.seed-demo-data:false}")
     private boolean seedDemoData;
 
+    @Value("${app.seed-carga-inicial-fixos:true}")
+    private boolean seedCargaInicialFixos;
+
     @Value("${app.seed-admin-login:}")
     private String adminLogin;
 
@@ -95,7 +98,9 @@ public class StartupDataInitializer implements CommandLineRunner {
     public void sincronizarCargaInicialClinica() {
         sincronizarUsuariosPadrao();
         garantirAdmin();
-        sincronizarAgendamentosFixosPadrao();
+        if (seedCargaInicialFixos) {
+            sincronizarAgendamentosFixosPadrao();
+        }
     }
 
     @Transactional
@@ -129,7 +134,9 @@ public class StartupDataInitializer implements CommandLineRunner {
         }
         sincronizarUsuariosPadrao();
         garantirAdmin();
-        sincronizarAgendamentosFixosPadrao();
+        if (seedCargaInicialFixos) {
+            sincronizarAgendamentosFixosPadrao();
+        }
 
         String loginAdmin = adminPreservado != null ? adminPreservado.getLogin() : (adminLogin != null && !adminLogin.isBlank() ? adminLogin : "admin");
         return usuarioRepository.findByLogin(loginAdmin)

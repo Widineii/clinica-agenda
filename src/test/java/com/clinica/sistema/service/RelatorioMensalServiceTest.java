@@ -94,13 +94,26 @@ class RelatorioMensalServiceTest {
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
         )).thenReturn(false);
+        when(agendamentoService.contarAgendamentosNoMes(mesPassado)).thenReturn(5L);
 
         Optional<RelatorioMensalNotificacaoView> notificacao =
                 relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(3));
 
         assertTrue(notificacao.isPresent());
         assertTrue(notificacao.get().isPendenteArquivamento());
-        assertTrue(notificacao.get().getMensagemPainel().contains("pronto para gerar"));
+        assertTrue(notificacao.get().getMensagemPainel().contains("sera gerado no dia"));
+    }
+
+    @Test
+    void notificacaoOcultaSemAgendamentosNoMesPassado() {
+        YearMonth mesPassado = YearMonth.now().minusMonths(1);
+        when(relatorioMensalArquivadoRepository.existsByAnoAndMes(
+                mesPassado.getYear(),
+                mesPassado.getMonthValue()
+        )).thenReturn(false);
+        when(agendamentoService.contarAgendamentosNoMes(mesPassado)).thenReturn(0L);
+
+        assertTrue(relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(5)).isEmpty());
     }
 
     @Test
@@ -125,7 +138,7 @@ class RelatorioMensalServiceTest {
 
         assertTrue(notificacao.isPresent());
         assertFalse(notificacao.get().isPendenteArquivamento());
-        assertTrue(notificacao.get().getMensagemPainel().contains("ja foi gerado"));
+        assertTrue(notificacao.get().getMensagemPainel().contains("foi gerado no dia"));
     }
 
     @Test
@@ -171,7 +184,7 @@ class RelatorioMensalServiceTest {
     }
 
     @Test
-    void notificacaoOcultaQuandoArquivadoSemPdfDisponivel() {
+    void notificacaoAtivaComJsonMesmoSemPdfNoBanco() {
         YearMonth mesPassado = YearMonth.now().minusMonths(1);
         when(relatorioMensalArquivadoRepository.existsByAnoAndMes(
                 mesPassado.getYear(),
@@ -186,7 +199,7 @@ class RelatorioMensalServiceTest {
                 mesPassado.getMonthValue()
         )).thenReturn(Optional.of(false));
 
-        assertTrue(relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(5)).isEmpty());
+        assertTrue(relatorioMensalService.avaliarNotificacaoMensal(YearMonth.now().atDay(5)).isPresent());
     }
 
     @Test

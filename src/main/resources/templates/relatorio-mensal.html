@@ -351,6 +351,78 @@
             color: #64748B;
         }
 
+        .mes-passado-panel {
+            border: 2px solid #E2E8F0;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 24px;
+            background: #F8FAFC;
+        }
+
+        .mes-passado-panel--ready {
+            border-color: #F59E0B;
+            background: #FFFBEB;
+        }
+
+        .mes-passado-panel__tab {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px;
+            background: var(--primary-teal);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .mes-passado-panel--ready .mes-passado-panel__tab {
+            background: #D97706;
+        }
+
+        .mes-passado-panel__body {
+            padding: 20px;
+        }
+
+        .mes-passado-status {
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            color: var(--text-dark);
+        }
+
+        .mes-passado-status strong {
+            color: var(--primary-teal);
+        }
+
+        .mes-passado-panel--ready .mes-passado-status strong {
+            color: #B45309;
+        }
+
+        .badge-aguardando {
+            display: inline-block;
+            background: #FEF3C7;
+            color: #92400E;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .badge-baixado {
+            display: inline-block;
+            background: #D1FAE5;
+            color: #065F46;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
         .historico {
             margin-top: 28px;
             padding-top: 24px;
@@ -418,7 +490,7 @@
                    class="btn-export btn-export-header"
                    download>
                     <i class="fa-solid fa-file-pdf"></i>
-                    <span th:text="${pdfRemovido} ? 'Baixar PDF' : 'Baixar PDF oficial'">Baixar PDF</span>
+                    <span th:text="${pdfRemovido} ? 'Baixar PDF mensal' : 'Baixar PDF oficial (mensal)'">Baixar PDF</span>
                 </a>
                 <a th:href="@{/agendamentos/dashboard}" class="btn-link">
                     <i class="fa-solid fa-arrow-left"></i> Voltar para agenda
@@ -429,28 +501,42 @@
         <div th:if="${sucessoNotificacao}" class="alert-box alert-success">
             <span th:text="${sucessoNotificacao}">Relatorio pronto.</span>
         </div>
-        <div th:if="${aguardandoDia3}" class="alert-box alert-warning">
-            Previa do mes passado (<span th:text="${mesPassadoLabel}">mes</span>).
-            A partir do dia <span th:text="${diaFechamento}">3</span> de
-            <span th:text="${mesAtualLabel}">mes atual</span> o sistema fecha o periodo e gera o PDF.
-        </div>
-        <div th:if="${aguardandoProcessamentoAutomatico}" class="alert-box alert-warning">
-            O fechamento automatico do dia 3 ainda nao rodou. Abra esta pagina de novo em alguns minutos.
-        </div>
-        <div th:if="${pdfRemovido}" class="alert-box alert-muted">
-            O arquivo PDF foi removido do banco no dia <span th:text="${diaRemocaoPdf}">10</span> para economizar espaco.
-            Voce ainda pode baixar uma copia: o sistema gera o PDF na hora com os dados salvos.
-        </div>
-        <div th:if="${relatorioArquivado and !aguardandoDia3 and podeBaixarPdf}" class="alert-box alert-info">
-            PDF compacto (1 ou 2 paginas no maximo), gerado de novo ao abrir esta pagina ou ao baixar.
-            <span th:if="${geradoEm != null}">
-                Arquivado em
-                <strong th:text="${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')}">data</strong>.
-            </span>
-            <span th:if="${agendamentosRemovidos != null and agendamentosRemovidos > 0}">
-                <span th:text="${agendamentosRemovidos}">0</span> agendamento(s) avulso(s) do mes passado foram removidos.
-            </span>
-        </div>
+
+        <section class="mes-passado-panel"
+                 th:classappend="${relatorioGeradoAguardando} ? 'mes-passado-panel--ready' : ''">
+            <div class="mes-passado-panel__tab">
+                <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+                <span>Relatorio do mes passado — <span th:text="${mesPassadoLabel}">Abril de 2026</span></span>
+                <span th:if="${relatorioGeradoAguardando and !pdfJaBaixado}" class="badge-aguardando">Aguardando download</span>
+                <span th:if="${pdfJaBaixado}" class="badge-baixado">PDF baixado</span>
+            </div>
+            <div class="mes-passado-panel__body">
+                <p class="mes-passado-status" th:if="${aguardandoDia3}">
+                    A partir do dia <strong th:text="${diaFechamento}">3</strong> de
+                    <strong th:text="${mesAtualLabel}">maio</strong> o sistema gera o PDF de
+                    <strong th:text="${mesPassadoLabel}">abril</strong>, guarda o relatorio aqui e so depois
+                    remove os agendamentos <strong>avulsos</strong> daquele mes.
+                </p>
+                <p class="mes-passado-status" th:if="${aguardandoProcessamentoAutomatico}">
+                    Ja passou do dia <strong th:text="${diaFechamento}">3</strong>. O fechamento automatico vai gerar o PDF
+                    e limpar os avulsos de <strong th:text="${mesPassadoLabel}">abril</strong> em breve
+                    (ao abrir esta pagina ou no proximo reinicio do servidor local).
+                </p>
+                <p class="mes-passado-status" th:if="${relatorioGeradoAguardando}">
+                    Fechamento do dia <strong th:text="${diaFechamento}">3</strong> concluido para
+                    <strong th:text="${mesPassadoLabel}">abril</strong>.
+                    <span th:if="${geradoEm != null}">
+                        Gerado em <strong th:text="${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')}">data</strong>.
+                    </span>
+                    <span th:if="${agendamentosRemovidos != null and agendamentosRemovidos > 0}">
+                        <strong th:text="${agendamentosRemovidos}">0</strong> avulso(s) do mes passado ja foram removidos da agenda.
+                    </span>
+                    Use o botao <strong>Baixar PDF oficial (mensal)</strong> abaixo. O relatorio semanal nao altera o sino.
+                </p>
+                <p class="mes-passado-status" th:if="${pdfRemovido and relatorioArquivado and !aguardandoDia3}">
+                    O PDF foi removido do banco no dia <strong th:text="${diaRemocaoPdf}">10</strong> para economizar espaco.
+                    Voce ainda pode baixar: o sistema gera o PDF na hora com os dados salvos.
+                </p>
 
         <div class="cards-container">
             <div class="card">
@@ -528,7 +614,7 @@
         <div class="btn-container" th:if="${podeBaixarPdf}">
             <a th:href="@{/agendamentos/relatorio/mensal/download(v=${versaoDownload})}" class="btn-export">
                 <i class="fa-solid fa-file-pdf"></i>
-                <span th:text="${pdfRemovido} ? 'Baixar PDF (gerado na hora)' : 'Exportar PDF Oficial'">Exportar PDF</span>
+                <span th:text="${pdfRemovido} ? 'Baixar PDF mensal (gerado na hora)' : 'Baixar PDF oficial (mensal)'">Baixar PDF</span>
             </a>
         </div>
         <div class="btn-container" th:if="${!podeBaixarPdf and relatorioArquivado and !aguardandoDia3}">
@@ -536,6 +622,8 @@
                 <i class="fa-solid fa-file-pdf"></i> PDF indisponivel
             </span>
         </div>
+            </div>
+        </section>
 
         <div class="historico" th:if="${!#lists.isEmpty(historico) and historico.size() > 1}">
             <h3>Historico de relatorios</h3>

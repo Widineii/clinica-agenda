@@ -141,8 +141,14 @@ public class AgendamentoController {
                         .toList()
                 : java.util.List.of(usuarioLogado));
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
-        var agendaSala = service.montarAgendaSala(salaId, semana);
+        LocalDate referenciaSemana = agendaDataSugerida(semana);
+        Long salaIdGrade = service.resolverSalaIdParaGrade(salaId, referenciaSemana);
+        var agendaSala = service.montarAgendaSala(salaIdGrade, referenciaSemana);
         Map<Long, String> gradeAcoesPorId = service.montarAcoesGradePorId(agendaSala, usuarioLogado);
+        java.util.Map<Long, Integer> salasOcupadasNaSemana = service.contarAgendamentosPorSalaNaSemana(referenciaSemana);
+        service.mensagemAgendamentosEmOutraSala(agendaSala.getSala().getId(), referenciaSemana)
+                .ifPresent(msg -> model.addAttribute("avisoAgendamentoOutraSala", msg));
+        model.addAttribute("salasOcupadasNaSemana", salasOcupadasNaSemana);
         List<com.clinica.sistema.model.Agendamento> agendamentosDoDia =
                 service.listarAgendamentosDoDia(usuarioLogado, podeGerenciarEquipe);
         model.addAttribute("agendaSala", agendaSala);

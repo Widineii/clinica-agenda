@@ -117,21 +117,30 @@ public class RelatorioMensalService {
         }
 
         boolean pendente = !arquivadoExiste;
-        boolean pdfDisponivel = temPdfSalvoNoBanco(mesPassado);
+        boolean temDadosSalvos = arquivadoExiste
+                && relatorioMensalArquivadoRepository.existsComDadosJson(ano, mes);
+        boolean pdfNoBanco = temPdfSalvoNoBanco(mesPassado);
+        boolean pdfDisponivel = pdfNoBanco
+                || (temDadosSalvos && !pdfExpiradoParaRelatorio(ano, mes, referencia));
 
         if (!pendente && !pdfDisponivel) {
             return Optional.empty();
         }
 
+        if (pendente && agendamentoService.contarAgendamentosNoMes(mesPassado) == 0) {
+            return Optional.empty();
+        }
+
         String mensagemPainel = pendente
-                ? "O relatorio de " + mesLabel + " ja esta pronto para gerar. "
-                        + "Ao abrir, o sistema fecha o mes passado e voce pode baixar o PDF."
-                : "O relatorio de " + mesLabel + " ja foi gerado. "
-                        + "Abra para conferir os numeros e baixar o PDF.";
+                ? "O relatorio de " + mesLabel + " sera gerado no dia " + diaFechamento
+                        + " deste mes. Ate la, a agenda do mes passado permanece como esta."
+                : "O relatorio de " + mesLabel + " foi gerado no dia " + diaFechamento
+                        + " (fechamento automatico). Confira os numeros e baixe o PDF mensal. "
+                        + "Os avulsos daquele mes ja foram removidos da agenda.";
 
         String mensagemResumo = pendente
-                ? "Relatorio de " + mesLabel + " pronto para gerar"
-                : "Relatorio de " + mesLabel + " pronto para baixar";
+                ? "Relatorio de " + mesLabel + " aguarda o dia " + diaFechamento
+                : "Relatorio de " + mesLabel + " gerado — aguardando download";
 
         return Optional.of(new RelatorioMensalNotificacaoView(
                 mesLabel,
