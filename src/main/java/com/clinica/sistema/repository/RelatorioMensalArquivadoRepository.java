@@ -1,5 +1,6 @@
 package com.clinica.sistema.repository;
 
+import com.clinica.sistema.dto.RelatorioArquivadoCabecalhoProjection;
 import com.clinica.sistema.dto.RelatorioHistoricoMetadadosProjection;
 import com.clinica.sistema.model.RelatorioMensalArquivado;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +15,30 @@ import java.util.Optional;
 public interface RelatorioMensalArquivadoRepository extends JpaRepository<RelatorioMensalArquivado, Long> {
 
     Optional<RelatorioMensalArquivado> findByAnoAndMes(int ano, int mes);
+
+    @Query("""
+            SELECT r.dadosJson
+            FROM RelatorioMensalArquivado r
+            WHERE r.ano = :ano AND r.mes = :mes
+            """)
+    Optional<String> findDadosJsonByAnoAndMes(@Param("ano") int ano, @Param("mes") int mes);
+
+    @Query("""
+            SELECT CASE WHEN r.pdf IS NOT NULL THEN true ELSE false END
+            FROM RelatorioMensalArquivado r
+            WHERE r.ano = :ano AND r.mes = :mes
+            """)
+    Optional<Boolean> temPdfByAnoAndMes(@Param("ano") int ano, @Param("mes") int mes);
+
+    @Query("""
+            SELECT r.geradoEm AS geradoEm, r.agendamentosRemovidos AS agendamentosRemovidos
+            FROM RelatorioMensalArquivado r
+            WHERE r.ano = :ano AND r.mes = :mes
+            """)
+    Optional<RelatorioArquivadoCabecalhoProjection> findCabecalhoByAnoAndMes(
+            @Param("ano") int ano,
+            @Param("mes") int mes
+    );
 
     boolean existsByAnoAndMes(int ano, int mes);
 

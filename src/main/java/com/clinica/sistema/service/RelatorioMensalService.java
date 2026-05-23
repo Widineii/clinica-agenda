@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.dto.RelatorioArquivadoCabecalhoProjection;
 import com.clinica.sistema.dto.RelatorioHistoricoResumo;
 import com.clinica.sistema.dto.RelatorioMensalNotificacaoView;
 import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
@@ -307,10 +308,14 @@ public class RelatorioMensalService {
     }
 
     public RelatorioMensalUsoSalasView carregarRelatorioParaExibicao(YearMonth mesReferencia) {
-        return buscarArquivado(mesReferencia)
-                .map(arquivado -> {
+        return relatorioMensalArquivadoRepository.findDadosJsonByAnoAndMes(
+                        mesReferencia.getYear(),
+                        mesReferencia.getMonthValue()
+                )
+                .filter(json -> json != null && !json.isBlank())
+                .map(json -> {
                     try {
-                        return desserializarRelatorio(arquivado.getDadosJson());
+                        return desserializarRelatorio(json);
                     } catch (RuntimeException e) {
                         log.warn(
                                 "Relatorio arquivado de {} com JSON invalido; remontando a partir dos agendamentos.",
@@ -321,6 +326,38 @@ public class RelatorioMensalService {
                     }
                 })
                 .orElseGet(() -> agendamentoService.montarRelatorioMensalUsoSalas(mesReferencia));
+    }
+
+    public boolean temPdfSalvoNoBanco(YearMonth mesReferencia) {
+        return relatorioMensalArquivadoRepository.temPdfByAnoAndMes(
+                mesReferencia.getYear(),
+                mesReferencia.getMonthValue()
+        ).orElse(false);
+    }
+
+    public boolean temDadosArquivados(YearMonth mesReferencia) {
+        return relatorioMensalArquivadoRepository.existsComDadosJson(
+                mesReferencia.getYear(),
+                mesReferencia.getMonthValue()
+        );
+    }
+
+    public Optional<RelatorioArquivadoCabecalhoProjection> buscarCabecalhoArquivado(
+            YearMonth mesReferencia
+    ) {
+        return relatorioMensalArquivadoRepository.findCabecalhoByAnoAndMes(
+                mesReferencia.getYear(),
+                mesReferencia.getMonthValue()
+        );
+    }
+
+    @Transactional
+    public void regenerarPdfDoMesSePossivel(YearMonth mesReferencia) {
+        Optional<RelatorioMensalArquivado> arquivado = buscarArquivado(mesReferencia);
+        if (arquivado.isEmpty() || !podeExportarPdf(arquivado.get())) {
+            return;
+        }
+        regenerarESalvarPdf(arquivado.get());
     }
 
     public String nomeArquivoPdf(YearMonth mesReferencia) {

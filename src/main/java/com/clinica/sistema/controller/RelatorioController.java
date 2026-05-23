@@ -82,20 +82,16 @@ public class RelatorioController {
         }
 
         YearMonth mesPassado = relatorioMensalService.mesPassadoReferencia();
-        Optional<RelatorioMensalArquivado> arquivado = Optional.empty();
         RelatorioMensalUsoSalasView relatorio;
         List<RelatorioHistoricoResumo> historico = Collections.emptyList();
 
         boolean fechamentoNestaVisita = false;
         try {
             fechamentoNestaVisita = relatorioMensalService.executarFechamentoAutomaticoSeDevido();
-            relatorioMensalService.removerPdfsExpiradosSeDevido();
-            arquivado = relatorioMensalService.buscarArquivado(mesPassado);
-            if (arquivado.isPresent()
-                    && relatorioMensalService.pdfRemovidoDoBanco(arquivado.get())) {
+            if (relatorioMensalService.temDadosArquivados(mesPassado)
+                    && !relatorioMensalService.temPdfSalvoNoBanco(mesPassado)) {
                 try {
-                    relatorioMensalService.regenerarESalvarPdf(arquivado.get());
-                    arquivado = relatorioMensalService.buscarArquivado(mesPassado);
+                    relatorioMensalService.regenerarPdfDoMesSePossivel(mesPassado);
                 } catch (RuntimeException e) {
                     log.warn("Falha ao regenerar PDF de {}; exibindo relatorio na tela.", mesPassado, e);
                 }
@@ -126,6 +122,9 @@ public class RelatorioController {
         }
 
         boolean aguardandoDia3 = !relatorioMensalService.podeExecutarFechamentoAutomatico();
+        boolean relatorioArquivado = relatorioMensalService.temDadosArquivados(mesPassado);
+        boolean temPdfSalvo = relatorioMensalService.temPdfSalvoNoBanco(mesPassado);
+        var cabecalhoArquivado = relatorioMensalService.buscarCabecalhoArquivado(mesPassado);
 
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", authService.isAdmin(usuarioLogado));
@@ -133,26 +132,23 @@ public class RelatorioController {
         model.addAttribute("linhas", montarLinhasRelatorio(relatorio));
         model.addAttribute("totalProfissionais", relatorio.getProfissionais().size());
         model.addAttribute("mesPassadoLabel", relatorio.getMesReferenciaLabel());
-        model.addAttribute("relatorioArquivado", arquivado.isPresent());
-        boolean podeBaixarPdf = arquivado.isPresent()
-                && !aguardandoDia3
-                && relatorioMensalService.podeExportarPdf(arquivado.orElse(null));
+        model.addAttribute("relatorioArquivado", relatorioArquivado);
+        boolean podeBaixarPdf = relatorioArquivado && !aguardandoDia3;
         model.addAttribute("podeBaixarPdf", podeBaixarPdf);
-        model.addAttribute("pdfRemovido",
-                arquivado.isPresent() && relatorioMensalService.pdfRemovidoDoBanco(arquivado.orElse(null)));
+        model.addAttribute("pdfRemovido", relatorioArquivado && !temPdfSalvo);
         model.addAttribute("diaRemocaoPdf", relatorioMensalService.getDiaRemocaoPdf());
         model.addAttribute("aguardandoDia3", aguardandoDia3);
         model.addAttribute("aguardandoProcessamentoAutomatico",
-                relatorioMensalService.podeExecutarFechamentoAutomatico() && arquivado.isEmpty());
+                relatorioMensalService.podeExecutarFechamentoAutomatico() && !relatorioArquivado);
         model.addAttribute("diaFechamento", 3);
         model.addAttribute("historico", historico);
         model.addAttribute("mesAtualLabel", relatorioMensalService.formatarMesReferencia(YearMonth.now()));
         model.addAttribute("versaoDownload", System.currentTimeMillis());
-        if (arquivado.isPresent()) {
-            model.addAttribute("geradoEm", arquivado.get().getGeradoEm());
-            model.addAttribute("agendamentosRemovidos", arquivado.get().getAgendamentosRemovidos());
-        }
-        if (viaNotificacao && !aguardandoDia3 && arquivado.isPresent() && podeBaixarPdf) {
+        cabecalhoArquivado.ifPresent(cabecalho -> {
+            model.addAttribute("geradoEm", cabecalho.getGeradoEm());
+            model.addAttribute("agendamentosRemovidos", cabecalho.getAgendamentosRemovidos());
+        });
+        if (viaNotificacao && !aguardandoDia3 && relatorioArquivado && podeBaixarPdf) {
             model.addAttribute(
                     "sucessoNotificacao",
                     "O relatorio de " + relatorio.getMesReferenciaLabel()
