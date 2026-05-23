@@ -152,13 +152,14 @@ public class RelatorioController {
             model.addAttribute(
                     "sucessoNotificacao",
                     "O relatorio de " + relatorio.getMesReferenciaLabel()
-                            + " esta pronto. Use o botao Baixar PDF no topo da pagina."
+                            + " esta pronto. Clique em Baixar PDF oficial (mensal) para o ponto laranja do sino sumir."
+                            + " O relatorio semanal nao altera o sino."
             );
         } else if (viaNotificacao && !aguardandoDia3 && fechamentoNestaVisita) {
             model.addAttribute(
                     "sucessoNotificacao",
                     "O relatorio de " + relatorio.getMesReferenciaLabel()
-                            + " foi gerado agora. Use o botao Baixar PDF no topo da pagina."
+                            + " foi gerado agora. Clique em Baixar PDF oficial (mensal) para o ponto laranja do sino sumir."
             );
         } else if (viaNotificacao && !aguardandoDia3) {
             model.addAttribute(
@@ -174,7 +175,8 @@ public class RelatorioController {
     public ResponseEntity<byte[]> baixarPdf(
             @RequestParam(required = false) Integer ano,
             @RequestParam(required = false) Integer mes,
-            RedirectAttributes redirectAttributes
+            RedirectAttributes redirectAttributes,
+            HttpSession session
     ) {
         Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
         if (!podeVerRelatorio(usuarioLogado)) {
@@ -198,6 +200,12 @@ public class RelatorioController {
             return ResponseEntity.notFound().build();
         }
         String nomeArquivo = relatorioMensalService.nomeArquivoPdf(mesReferencia);
+
+        if (mesReferencia.equals(relatorioMensalService.mesPassadoReferencia())) {
+            relatorioMensalService.executarFechamentoAutomaticoSeDevido();
+            relatorioMensalService.garantirRemocaoAvulsosDoMesArquivado(mesReferencia);
+            relatorioMensalService.marcarPdfMensalBaixadoNaNotificacao(session, mesReferencia);
+        }
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nomeArquivo + "\"")

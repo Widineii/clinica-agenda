@@ -3,8 +3,24 @@
 <head>
     <th:block th:fragment="css">
         <style>
+            .hero-band {
+                overflow: visible;
+            }
+
+            .hero-band .top-actions {
+                overflow: visible;
+            }
+
+            .notif-bell-wrap {
+                position: relative;
+            }
+
             .notif-bell-wrap .dropdown-toggle::after {
                 display: none;
+            }
+
+            .notif-bell-wrap .dropdown-menu {
+                z-index: 1080;
             }
 
             .btn-notif-bell {
@@ -55,6 +71,12 @@
                 color: #475569;
                 line-height: 1.45;
                 margin-bottom: 0;
+            }
+
+            .notif-bell-empty {
+                font-size: 0.95rem;
+                color: #64748b;
+                line-height: 1.45;
             }
         </style>
     </th:block>

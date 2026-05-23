@@ -59,6 +59,24 @@ public class AgendamentoController {
         return Collections.emptyMap();
     }
 
+    @ModelAttribute
+    public void prepararNotificacaoRelatorioMensal(Model model, HttpSession session) {
+        authService.buscarUsuarioLogado().ifPresentOrElse(
+                usuario -> {
+                    if (authService.podeGerenciarEquipe(usuario)) {
+                        relatorioMensalService.adicionarNotificacaoAoModelSeAplicavel(model, session);
+                    } else {
+                        model.addAttribute("notificacaoRelatorioMensal", null);
+                        model.addAttribute("exibirBolinhaNotificacaoRelatorio", false);
+                    }
+                },
+                () -> {
+                    model.addAttribute("notificacaoRelatorioMensal", null);
+                    model.addAttribute("exibirBolinhaNotificacaoRelatorio", false);
+                }
+        );
+    }
+
     @GetMapping("/dashboard")
     public String abrirDashboard(
             Model model,
@@ -132,9 +150,6 @@ public class AgendamentoController {
         model.addAttribute("dataAgendaDia", LocalDate.now());
         model.addAttribute("totalAgendamentosDoDia", agendamentosDoDia.size());
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
-        if (podeGerenciarEquipe) {
-            relatorioMensalService.adicionarNotificacaoAoModelSeAplicavel(model);
-        }
         return "agenda";
     }
 
@@ -157,7 +172,6 @@ public class AgendamentoController {
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
         model.addAttribute("profissionais", usuarioService.listarProfissionaisDaEquipe());
         model.addAttribute("usuariosSenha", usuarioService.listarUsuariosParaTrocaSenha());
-        relatorioMensalService.adicionarNotificacaoAoModelSeAplicavel(model);
         return "central-profissionais";
     }
 

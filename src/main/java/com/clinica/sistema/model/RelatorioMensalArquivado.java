@@ -43,6 +43,9 @@ public class RelatorioMensalArquivado {
 
     private LocalDateTime pdfRemovidoEm;
 
+    /** Admin/dona baixou o PDF mensal pelo sino; some o aviso ate o proximo mes. */
+    private LocalDateTime pdfNotificacaoBaixadoEm;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String dadosJson;
 

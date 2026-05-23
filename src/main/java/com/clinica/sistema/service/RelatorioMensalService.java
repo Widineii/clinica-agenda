@@ -83,15 +83,25 @@ public class RelatorioMensalService {
     public static final String URL_RELATORIO_VIA_NOTIFICACAO =
             "/agendamentos/relatorio/mensal?viaNotificacao=1";
 
+    public static final String SESSAO_NOTIFICACAO_PDF_MENSAL_BAIXADO =
+            "notificacaoRelatorioPdfMensalBaixado";
+
     /**
      * Sino na agenda: a partir do dia de fechamento, enquanto o relatorio do mes passado
      * ainda pode ser gerado ou baixado em PDF.
      */
     public Optional<RelatorioMensalNotificacaoView> avaliarNotificacaoMensal() {
-        return avaliarNotificacaoMensal(LocalDate.now());
+        return avaliarNotificacaoMensal(LocalDate.now(), null);
     }
 
     Optional<RelatorioMensalNotificacaoView> avaliarNotificacaoMensal(LocalDate referencia) {
+        return avaliarNotificacaoMensal(referencia, null);
+    }
+
+    Optional<RelatorioMensalNotificacaoView> avaliarNotificacaoMensal(
+            LocalDate referencia,
+            jakarta.servlet.http.HttpSession session
+    ) {
         if (!podeExecutarFechamentoAutomatico(referencia)) {
             return Optional.empty();
         }
@@ -107,6 +117,12 @@ public class RelatorioMensalService {
         }
 
         boolean pendente = !arquivadoExiste;
+        boolean pdfDisponivel = temPdfSalvoNoBanco(mesPassado);
+
+        if (!pendente && !pdfDisponivel) {
+            return Optional.empty();
+        }
+
         String mensagemPainel = pendente
                 ? "O relatorio de " + mesLabel + " ja esta pronto para gerar. "
                         + "Ao abrir, o sistema fecha o mes passado e voce pode baixar o PDF."
@@ -126,10 +142,72 @@ public class RelatorioMensalService {
         ));
     }
 
-    public void adicionarNotificacaoAoModelSeAplicavel(org.springframework.ui.Model model) {
-        avaliarNotificacaoMensal().ifPresent(notificacao ->
-                model.addAttribute("notificacaoRelatorioMensal", notificacao)
-        );
+    public static String chaveMesReferencia(YearMonth mesReferencia) {
+        return mesReferencia.getYear() + "-" + mesReferencia.getMonthValue();
+    }
+
+    public boolean jaBaixouPdfMensalDaNotificacao(
+            jakarta.servlet.http.HttpSession session,
+            YearMonth mesReferencia
+    ) {
+        if (session == null) {
+            return false;
+        }
+        Object valor = session.getAttribute(SESSAO_NOTIFICACAO_PDF_MENSAL_BAIXADO);
+        return valor != null && chaveMesReferencia(mesReferencia).equals(valor.toString());
+    }
+
+    public void marcarPdfMensalBaixadoNaNotificacao(
+            jakarta.servlet.http.HttpSession session,
+            YearMonth mesReferencia
+    ) {
+        if (session != null) {
+            session.setAttribute(SESSAO_NOTIFICACAO_PDF_MENSAL_BAIXADO, chaveMesReferencia(mesReferencia));
+        }
+        relatorioMensalArquivadoRepository.findByAnoAndMes(
+                mesReferencia.getYear(),
+                mesReferencia.getMonthValue()
+        ).ifPresent(arquivado -> {
+            if (arquivado.getPdfNotificacaoBaixadoEm() == null) {
+                arquivado.setPdfNotificacaoBaixadoEm(LocalDateTime.now());
+                relatorioMensalArquivadoRepository.save(arquivado);
+            }
+        });
+    }
+
+    public boolean notificacaoMensalJaFoiAtendida(
+            jakarta.servlet.http.HttpSession session,
+            YearMonth mesReferencia
+    ) {
+        if (jaBaixouPdfMensalDaNotificacao(session, mesReferencia)) {
+            return true;
+        }
+        return relatorioMensalArquivadoRepository.findByAnoAndMes(
+                mesReferencia.getYear(),
+                mesReferencia.getMonthValue()
+        )
+                .map(arquivado -> arquivado.getPdfNotificacaoBaixadoEm() != null)
+                .orElse(false);
+    }
+
+    public boolean deveExibirBolinhaNotificacao(jakarta.servlet.http.HttpSession session) {
+        YearMonth mesPassado = mesPassadoReferencia();
+        return avaliarNotificacaoMensal(LocalDate.now()).isPresent()
+                && !notificacaoMensalJaFoiAtendida(session, mesPassado);
+    }
+
+    public void adicionarNotificacaoAoModelSeAplicavel(
+            org.springframework.ui.Model model,
+            jakarta.servlet.http.HttpSession session
+    ) {
+        Optional<RelatorioMensalNotificacaoView> notificacao =
+                avaliarNotificacaoMensal(LocalDate.now());
+        YearMonth mesPassado = mesPassadoReferencia();
+        boolean exibirBolinha = notificacao.isPresent()
+                && !notificacaoMensalJaFoiAtendida(session, mesPassado);
+
+        model.addAttribute("notificacaoRelatorioMensal", exibirBolinha ? notificacao.orElse(null) : null);
+        model.addAttribute("exibirBolinhaNotificacaoRelatorio", exibirBolinha);
     }
 
     public int getDiaRemocaoPdf() {
@@ -159,10 +237,7 @@ public class RelatorioMensalService {
             throw new RuntimeException("Nao ha dados para gerar o PDF deste relatorio.");
         }
 
-        if (arquivado.temPdfDisponivel()) {
-            return arquivado.getPdf();
-        }
-
+        // Sempre gera de novo a partir do JSON para refletir layout e numeros atuais.
         return regenerarESalvarPdf(arquivado);
     }
 
@@ -239,6 +314,7 @@ public class RelatorioMensalService {
                     mesReferencia.getYear(),
                     mesReferencia.getMonthValue()
             );
+            existente.ifPresent(ignored -> garantirRemocaoAvulsosDoMesArquivado(mesReferencia));
             existente.filter(this::pdfRemovidoDoBanco).ifPresent(this::regenerarESalvarPdf);
             return existente;
         }
@@ -268,6 +344,35 @@ public class RelatorioMensalService {
                 removidos
         );
         return Optional.of(salvo);
+    }
+
+    /**
+     * Se o mes ja foi arquivado mas ainda restam avulsos no periodo (ex.: relatorio criado antes
+     * da limpeza ou falha parcial), remove agora. Idempotente quando nao ha mais avulsos.
+     */
+    @Transactional
+    public long garantirRemocaoAvulsosDoMesArquivado(YearMonth mesReferencia) {
+        Optional<RelatorioMensalArquivado> arquivado = buscarArquivado(mesReferencia);
+        if (arquivado.isEmpty()) {
+            return 0;
+        }
+
+        LocalDateTime inicio = mesReferencia.atDay(1).atStartOfDay();
+        LocalDateTime fim = mesReferencia.plusMonths(1).atDay(1).atStartOfDay();
+        long removidosAgora = agendamentoService.limparAgendamentosNoPeriodo(inicio, fim);
+        if (removidosAgora <= 0) {
+            return 0;
+        }
+
+        RelatorioMensalArquivado registro = arquivado.get();
+        registro.setAgendamentosRemovidos(registro.getAgendamentosRemovidos() + removidosAgora);
+        relatorioMensalArquivadoRepository.save(registro);
+        log.info(
+                "Limpeza de avulsos do mes {}: {} removido(s) (relatorio ja estava arquivado).",
+                formatarMesReferencia(mesReferencia),
+                removidosAgora
+        );
+        return removidosAgora;
     }
 
     public Optional<RelatorioMensalArquivado> buscarArquivado(YearMonth mesReferencia) {
