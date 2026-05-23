@@ -182,12 +182,10 @@ public class RelatorioMensalService {
         if (jaBaixouPdfMensalDaNotificacao(session, mesReferencia)) {
             return true;
         }
-        return relatorioMensalArquivadoRepository.findByAnoAndMes(
+        return relatorioMensalArquivadoRepository.findPdfNotificacaoBaixadoEmByAnoAndMes(
                 mesReferencia.getYear(),
                 mesReferencia.getMonthValue()
-        )
-                .map(arquivado -> arquivado.getPdfNotificacaoBaixadoEm() != null)
-                .orElse(false);
+        ).isPresent();
     }
 
     public boolean deveExibirBolinhaNotificacao(jakarta.servlet.http.HttpSession session) {

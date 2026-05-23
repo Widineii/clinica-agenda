@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,4 +63,14 @@ public interface RelatorioMensalArquivadoRepository extends JpaRepository<Relato
     boolean existsComDadosJson(@Param("ano") int ano, @Param("mes") int mes);
 
     List<RelatorioMensalArquivado> findByPdfIsNotNull();
+
+    @Query("""
+            SELECT r.pdfNotificacaoBaixadoEm
+            FROM RelatorioMensalArquivado r
+            WHERE r.ano = :ano AND r.mes = :mes
+            """)
+    Optional<LocalDateTime> findPdfNotificacaoBaixadoEmByAnoAndMes(
+            @Param("ano") int ano,
+            @Param("mes") int mes
+    );
 }

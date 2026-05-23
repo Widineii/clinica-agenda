@@ -161,10 +161,10 @@ class RelatorioMensalServiceTest {
         arquivado.setAno(mesPassado.getYear());
         arquivado.setMes(mesPassado.getMonthValue());
         arquivado.setPdfNotificacaoBaixadoEm(java.time.LocalDateTime.now());
-        when(relatorioMensalArquivadoRepository.findByAnoAndMes(
+        when(relatorioMensalArquivadoRepository.findPdfNotificacaoBaixadoEmByAnoAndMes(
                 mesPassado.getYear(),
                 mesPassado.getMonthValue()
-        )).thenReturn(Optional.of(arquivado));
+        )).thenReturn(Optional.of(java.time.LocalDateTime.now()));
 
         jakarta.servlet.http.HttpSession sessaoNova = org.mockito.Mockito.mock(jakarta.servlet.http.HttpSession.class);
         assertFalse(relatorioMensalService.deveExibirBolinhaNotificacao(sessaoNova));

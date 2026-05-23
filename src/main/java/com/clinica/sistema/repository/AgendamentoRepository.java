@@ -123,15 +123,6 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
               AND a.dataHoraInicio < :fim
               AND (a.fixo IS NULL OR a.fixo = false)
               AND (a.tipoRecorrencia IS NULL OR UPPER(a.tipoRecorrencia) NOT IN ('SEMANAL', 'QUINZENAL'))
-              AND (
-                    a.serieFixaId IS NULL
-                    OR (
-                        LOWER(a.serieFixaId) NOT LIKE 'semanal-%'
-                        AND LOWER(a.serieFixaId) NOT LIKE '%-semanal-%'
-                        AND LOWER(a.serieFixaId) NOT LIKE 'quinzenal-%'
-                        AND LOWER(a.serieFixaId) NOT LIKE '%-quinzenal-%'
-                    )
-              )
             """)
     int deleteAvulsosByDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThan(
             @Param("inicio") LocalDateTime inicio,

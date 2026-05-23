@@ -443,9 +443,11 @@
         </div>
         <div th:if="${relatorioArquivado and !aguardandoDia3 and podeBaixarPdf}" class="alert-box alert-info">
             PDF compacto (1 ou 2 paginas no maximo), gerado de novo ao abrir esta pagina ou ao baixar.
-            Arquivado em
-            <strong th:text="${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')}">data</strong>.
-            <span th:if="${agendamentosRemovidos > 0}">
+            <span th:if="${geradoEm != null}">
+                Arquivado em
+                <strong th:text="${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')}">data</strong>.
+            </span>
+            <span th:if="${agendamentosRemovidos != null and agendamentosRemovidos > 0}">
                 <span th:text="${agendamentosRemovidos}">0</span> agendamento(s) avulso(s) do mes passado foram removidos.
             </span>
         </div>
