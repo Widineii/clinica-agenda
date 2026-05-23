@@ -22,6 +22,6 @@ class AdminUsoBancoTemplateIntegracaoTest {
         UsoBancoView resumo = usoBancoService.montarResumo();
 
         assertNotNull(resumo);
-        assertFalse(resumo.postgresComTamanhoReal());
+        assertFalse(resumo.isPostgresComTamanhoReal());
     }
 }

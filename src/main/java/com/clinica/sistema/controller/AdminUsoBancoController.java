@@ -28,6 +28,11 @@ public class AdminUsoBancoController {
     public String usoBanco(Model model, RedirectAttributes redirectAttributes) {
         var usuario = authService.buscarUsuarioLogadoObrigatorio();
         if (!authService.isAdmin(usuario)) {
+            redirectAttributes.addFlashAttribute(
+                    "erro",
+                    "Somente o usuario administrador pode ver o uso do banco."
+            );
+            redirectAttributes.addFlashAttribute("erroContexto", "uso-banco");
             return "redirect:/agendamentos/dashboard";
         }
 
@@ -42,6 +47,7 @@ public class AdminUsoBancoController {
                     "erro",
                     "Nao foi possivel abrir o painel de uso do banco. Tente novamente em alguns minutos."
             );
+            redirectAttributes.addFlashAttribute("erroContexto", "uso-banco");
             return "redirect:/agendamentos/dashboard";
         }
     }

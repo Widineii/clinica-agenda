@@ -546,7 +546,7 @@
                           th:replace="~{fragments/notificacao-relatorio-mensal :: sino}"></th:block>
                 <a th:if="${isAdmin}"
                    th:href="@{/agendamentos/admin/uso-banco}"
-                   class="btn btn-outline-light">Uso do banco</a>
+                   class="btn btn-warning">Uso do banco</a>
                 <a th:if="${isAdmin or isDonaClinica}"
                    th:href="@{/agendamentos/central-profissionais}"
                    class="btn btn-warning">Central dos profissionais</a>
@@ -565,6 +565,7 @@
     </div>
 
     <div th:if="${sucesso}" class="alert alert-success shell-card" th:text="${sucesso}"></div>
+    <div th:if="${erro != null and erroContexto == 'uso-banco'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
 
     <nav class="agenda-quick-nav mb-4" aria-label="Atalhos da agenda">
         <a href="#grade-semanal" class="btn btn-sm btn-primary">Grade semanal</a>
@@ -960,7 +961,7 @@
 </div>
 <div id="agendamentoErroAviso" class="agendamento-erro-aviso" hidden
      role="alertdialog" aria-modal="true" aria-labelledby="agendamentoErroTitulo"
-     th:attr="data-erro-msg=${erro != null and erroSenha == null and erroContexto != 'senha' and (erroContexto == 'agendamento' or erroContexto == 'relatorio') ? erro : null},data-erro-contexto=${erroContexto}">
+     th:attr="data-erro-msg=${erro != null and erroSenha == null and erroContexto != 'senha' and (erroContexto == 'agendamento' or erroContexto == 'relatorio' or erroContexto == 'uso-banco') ? erro : null},data-erro-contexto=${erroContexto}">
     <div class="agendamento-erro-aviso__painel">
         <div class="agendamento-erro-aviso__cabecalho d-flex justify-content-between align-items-start gap-3">
             <div>
@@ -1062,7 +1063,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
-    var mensagemErroAgendamento = /*[[${erro != null and erroSenha == null and erroContexto != 'senha' and (erroContexto == 'agendamento' or erroContexto == 'relatorio') ? erro : null}]]*/ null;
+    var mensagemErroAgendamento = /*[[${erro != null and erroSenha == null and erroContexto != 'senha' and (erroContexto == 'agendamento' or erroContexto == 'relatorio' or erroContexto == 'uso-banco') ? erro : null}]]*/ null;
     var contextoErroAgendamento = /*[[${erroContexto}]]*/ null;
     var erroSenhaModal = /*[[${erroSenha != null ? erroSenha : (erro != null and erroContexto == 'senha' ? erro : null)}]]*/ null;
 

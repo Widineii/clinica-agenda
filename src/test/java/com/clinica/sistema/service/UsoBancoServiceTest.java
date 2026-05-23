@@ -72,12 +72,12 @@ class UsoBancoServiceTest {
 
         UsoBancoView resumo = usoBancoService.montarResumo();
 
-        assertEquals(12_500L, resumo.totalAgendamentos());
-        assertEquals(20L, resumo.totalProfissionais());
-        assertEquals(52L, resumo.agendamentosHoje());
-        assertFalse(resumo.postgresComTamanhoReal());
-        assertEquals("ok", resumo.nivelAlerta());
-        assertEquals("117,2 KB", resumo.bytesJsonLabel());
+        assertEquals(12_500L, resumo.getTotalAgendamentos());
+        assertEquals(20L, resumo.getTotalProfissionais());
+        assertEquals(52L, resumo.getAgendamentosHoje());
+        assertFalse(resumo.isPostgresComTamanhoReal());
+        assertEquals("ok", resumo.getNivelAlerta());
+        assertEquals("117,2 KB", resumo.getBytesJsonLabel());
     }
 
     @Test

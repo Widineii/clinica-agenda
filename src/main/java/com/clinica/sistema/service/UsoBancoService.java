@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
@@ -56,7 +57,6 @@ public class UsoBancoService {
         this.dataSource = dataSource;
     }
 
-    @Transactional(readOnly = true)
     public UsoBancoView montarResumo() {
         LocalDateTime agora = LocalDateTime.now();
         YearMonth mesAtual = YearMonth.now();
@@ -76,14 +76,14 @@ public class UsoBancoService {
         long relatoriosComPdf = relatorioMensalArquivadoRepository.countComPdfLegado();
         long bytesJson = somarBytesJsonRelatorios();
         boolean postgres = isPostgresql();
-        long bytesPdf = postgres ? somarBytesPdfLegado() : 0L;
+        long bytesPdf = postgres ? somarBytesPdfLegadoForaDaTransacaoPrincipal() : 0L;
 
         long bytesEstimados = BYTES_ESTIMADOS_OVERHEAD
                 + totalAgendamentos * BYTES_ESTIMADOS_POR_AGENDAMENTO
                 + bytesJson
                 + bytesPdf;
 
-        Long bytesBancoReal = postgres ? consultarTamanhoBancoPostgres().orElse(null) : null;
+        Long bytesBancoReal = postgres ? consultarTamanhoBancoPostgresForaDaTransacaoPrincipal().orElse(null) : null;
         long bytesReferencia = bytesBancoReal != null ? bytesBancoReal : bytesEstimados;
         long limiteBytes = (long) limiteNeonMb * 1024L * 1024L;
         double percentual = limiteBytes > 0
@@ -125,12 +125,13 @@ public class UsoBancoService {
         }
     }
 
-    private long somarBytesPdfLegado() {
+    @Transactional(propagation = Propagation.NOT_SUPPORTED, readOnly = true)
+    public long somarBytesPdfLegadoForaDaTransacaoPrincipal() {
         try {
             Long soma = relatorioMensalArquivadoRepository.somaBytesPdfLegado();
             return soma != null ? soma : 0L;
         } catch (RuntimeException e) {
-            log.debug("Soma de PDF legado indisponivel neste banco: {}", e.getMessage());
+            log.warn("Soma de PDF legado indisponivel: {}", e.getMessage());
             return 0L;
         }
     }
@@ -145,7 +146,8 @@ public class UsoBancoService {
         }
     }
 
-    private java.util.Optional<Long> consultarTamanhoBancoPostgres() {
+    @Transactional(propagation = Propagation.NOT_SUPPORTED, readOnly = true)
+    public java.util.Optional<Long> consultarTamanhoBancoPostgresForaDaTransacaoPrincipal() {
         if (entityManager == null) {
             return java.util.Optional.empty();
         }
