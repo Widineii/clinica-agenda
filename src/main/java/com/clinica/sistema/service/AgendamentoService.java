@@ -3,6 +3,7 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.AgendaSalaLinha;
 import com.clinica.sistema.dto.AgendaSalaView;
+import com.clinica.sistema.dto.ProfissionalAgendamentosResumo;
 import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
 import com.clinica.sistema.dto.RelatorioUsoSalaItem;
 import com.clinica.sistema.dto.RelatorioUsoSalaProfissional;
@@ -62,6 +63,33 @@ public class AgendamentoService {
 
     public List<Agendamento> buscarParaUsuario(Usuario usuarioLogado) {
         return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId());
+    }
+
+    public List<Agendamento> buscarPorProfissional(Long profissionalId) {
+        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissionalId);
+    }
+
+    public ProfissionalAgendamentosResumo montarResumoAgendamentos(Usuario profissional) {
+        List<Agendamento> agendamentos = buscarPorProfissional(profissional.getId());
+        List<Agendamento> avulsos = listarProximosPorSerie(agendamentos, Agendamento::isAvulso);
+        List<Agendamento> fixos = listarProximasOcorrencias(agendamentos, Agendamento::isFixoSemanal);
+        List<Agendamento> quinzenais = listarProximasOcorrencias(agendamentos, Agendamento::isQuinzenal);
+        return new ProfissionalAgendamentosResumo(
+                profissional.getId(),
+                profissional.getNome(),
+                avulsos,
+                fixos,
+                quinzenais,
+                contarSeries(agendamentos, Agendamento::isAvulso),
+                contarOcorrencias(agendamentos, Agendamento::isFixoSemanal),
+                contarOcorrencias(agendamentos, Agendamento::isQuinzenal)
+        );
+    }
+
+    public List<ProfissionalAgendamentosResumo> montarResumosProfissionais(List<Usuario> profissionais) {
+        return profissionais.stream()
+                .map(this::montarResumoAgendamentos)
+                .toList();
     }
 
     public List<Agendamento> listarProximosPorSerie(List<Agendamento> agendamentos, Predicate<Agendamento> filtro) {

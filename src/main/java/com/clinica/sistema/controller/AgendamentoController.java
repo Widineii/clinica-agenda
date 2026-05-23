@@ -134,11 +134,15 @@ public class AgendamentoController {
                 service.contarOcorrencias(agendamentos, com.clinica.sistema.model.Agendamento::isFixoSemanal));
         model.addAttribute("totalAgendamentosQuinzenais",
                 service.contarOcorrencias(agendamentos, com.clinica.sistema.model.Agendamento::isQuinzenal));
+        if (podeGerenciarEquipe) {
+            var equipe = usuarioService.listarProfissionaisDaEquipe();
+            model.addAttribute("resumosProfissionais", service.montarResumosProfissionais(equipe));
+        } else {
+            model.addAttribute("resumosProfissionais", java.util.Collections.emptyList());
+        }
         model.addAttribute("salas", service.listarSalas());
         model.addAttribute("profissionais", podeGerenciarEquipe
-                ? service.listarProfissionais().stream()
-                        .filter(profissional -> !authService.isAdmin(profissional))
-                        .toList()
+                ? usuarioService.listarProfissionaisDaEquipe()
                 : java.util.List.of(usuarioLogado));
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
         LocalDate referenciaSemana = agendaDataSugerida(semana);
