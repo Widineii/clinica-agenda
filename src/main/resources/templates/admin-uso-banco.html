@@ -108,13 +108,12 @@
             </span>
         </p>
         <div class="progress mb-2" role="progressbar"
-             th:attr="aria-valuenow=${resumo.percentualDoLimite},aria-valuemin=0,aria-valuemax=100">
-            <div class="progress-bar"
-                 th:classappend="' ' + ${resumo.nivelAlerta}"
-                 th:style="|width: ${resumo.percentualDoLimite > 100 ? 100 : resumo.percentualDoLimite}%|"></div>
+             th:attr="aria-valuenow=${resumo.barraPercentual},aria-valuemin=0,aria-valuemax=100">
+            <div th:class="|progress-bar ${resumo.nivelAlerta}|"
+                 th:style="|width: ${resumo.barraPercentual}%|"></div>
         </div>
         <p class="mb-0">
-            <strong th:text="|${#numbers.formatDecimal(resumo.percentualDoLimite, 1, 1)}%|">0%</strong>
+            <strong th:text="${resumo.percentualLabel}">0%</strong>
             do limite
             <span th:if="${resumo.nivelAlerta == 'ok'}" class="text-success">— tranquilo</span>
             <span th:if="${resumo.nivelAlerta == 'atencao'}" class="text-warning">— atencao</span>
@@ -162,11 +161,11 @@
             <dt class="col-sm-6">Meses arquivados (JSON)</dt>
             <dd class="col-sm-6" th:text="${resumo.relatoriosMensaisArquivados}">0</dd>
             <dt class="col-sm-6">Tamanho do JSON arquivado</dt>
-            <dd class="col-sm-6" th:text="${T(com.clinica.sistema.service.UsoBancoService).formatarBytes(resumo.bytesJsonRelatorios)}">0</dd>
+            <dd class="col-sm-6" th:text="${resumo.bytesJsonLabel}">0</dd>
             <dt class="col-sm-6">PDF legado ainda no banco</dt>
             <dd class="col-sm-6">
                 <span th:text="${resumo.relatoriosComPdfLegado}">0</span> arquivo(s),
-                <span th:text="${T(com.clinica.sistema.service.UsoBancoService).formatarBytes(resumo.bytesPdfLegado)}">0</span>
+                <span th:text="${resumo.bytesPdfLegadoLabel}">0</span>
             </dd>
             <dt class="col-sm-6">Usuarios / salas</dt>
             <dd class="col-sm-6" th:text="|${resumo.totalUsuarios} / ${resumo.totalSalas}|">0 / 4</dd>

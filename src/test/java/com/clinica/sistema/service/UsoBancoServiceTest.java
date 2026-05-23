@@ -64,6 +64,7 @@ class UsoBancoServiceTest {
         assertEquals(52L, resumo.agendamentosHoje());
         assertFalse(resumo.postgresComTamanhoReal());
         assertEquals("ok", resumo.nivelAlerta());
+        assertEquals("117,2 KB", resumo.bytesJsonLabel());
     }
 
     @Test

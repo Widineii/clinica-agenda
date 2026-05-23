@@ -68,7 +68,7 @@ public class UsoBancoService {
 
         long relatorios = relatorioMensalArquivadoRepository.count();
         long relatoriosComPdf = relatorioMensalArquivadoRepository.countComPdfLegado();
-        long bytesJson = relatorioMensalArquivadoRepository.somaBytesJson();
+        long bytesJson = somarBytesJsonRelatorios();
         long bytesPdf = somarBytesPdfLegado();
 
         long bytesEstimados = BYTES_ESTIMADOS_OVERHEAD
@@ -82,6 +82,7 @@ public class UsoBancoService {
         double percentual = limiteBytes > 0
                 ? Math.min(100.0, (bytesReferencia * 100.0) / limiteBytes)
                 : 0.0;
+        int barraPercentual = (int) Math.round(Math.min(100.0, percentual));
 
         return new UsoBancoView(
                 totalAgendamentos,
@@ -95,17 +96,26 @@ public class UsoBancoService {
                 salaRepository.count(),
                 relatorios,
                 relatoriosComPdf,
-                bytesJson,
-                bytesPdf,
+                formatarBytes(bytesJson),
+                formatarBytes(bytesPdf),
                 bytesBancoReal,
                 bytesBancoReal != null ? formatarBytes(bytesBancoReal) : null,
-                bytesEstimados,
                 formatarBytes(bytesEstimados),
                 limiteNeonMb,
-                percentual,
+                formatarPercentual(percentual),
+                barraPercentual,
                 classificarAlerta(percentual),
                 bytesBancoReal != null
         );
+    }
+
+    private long somarBytesJsonRelatorios() {
+        try {
+            return relatorioMensalArquivadoRepository.somaBytesJson();
+        } catch (RuntimeException e) {
+            log.warn("Nao foi possivel somar bytes do JSON dos relatorios: {}", e.getMessage());
+            return 0L;
+        }
     }
 
     private long somarBytesPdfLegado() {
@@ -135,7 +145,11 @@ public class UsoBancoService {
         return java.util.Optional.empty();
     }
 
-    static String formatarBytes(long bytes) {
+    static String formatarPercentual(double percentual) {
+        return String.format(Locale.forLanguageTag("pt-BR"), "%.1f%%", percentual);
+    }
+
+    public static String formatarBytes(long bytes) {
         if (bytes < 0) {
             return "0 B";
         }

@@ -15,14 +15,14 @@ public record UsoBancoView(
         long totalSalas,
         long relatoriosMensaisArquivados,
         long relatoriosComPdfLegado,
-        long bytesJsonRelatorios,
-        long bytesPdfLegado,
+        String bytesJsonLabel,
+        String bytesPdfLegadoLabel,
         Long bytesBancoReal,
         String tamanhoBancoRealLabel,
-        long bytesEstimados,
         String tamanhoEstimadoLabel,
         int limiteNeonMb,
-        double percentualDoLimite,
+        String percentualLabel,
+        int barraPercentual,
         String nivelAlerta,
         boolean postgresComTamanhoReal
 ) {
