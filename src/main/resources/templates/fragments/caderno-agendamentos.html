@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="avulso-lista (agendamentos)">
+    <p th:if="${#lists.isEmpty(agendamentos)}" class="text-muted small mb-0 py-1">Nenhum agendamento avulso.</p>
+    <div th:each="agendamento : ${agendamentos}" class="meus-agendamentos-avulso-linha">
+        <span class="meus-agendamentos-avulso-linha__texto"
+              th:text="${(agendamento.nomeCliente ?: '-') + ' - ' + (agendamento.sala?.nome ?: '-') + (agendamento.dataHoraInicio != null ? ' - ' + #temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm') : '')}">Cliente</span>
+        <div class="meus-agendamentos-avulso-linha__acoes">
+            <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
+                    Cancelar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div th:fragment="series-lista (series, radioPrefix)">
+    <p th:if="${#lists.isEmpty(series)}" class="text-muted small mb-0 py-1">Nenhuma serie nesta categoria.</p>
+    <div th:each="serie : ${series}" class="meus-agendamentos-serie-linha">
+        <div class="meus-agendamentos-serie-linha__titulo" th:text="${serie.rotuloCabecalho}">Cliente - Sala</div>
+        <p class="meus-agendamentos-serie-linha__dica mb-2">Selecione uma data e clique em Cancelar data.</p>
+        <div class="meus-agendamentos-serie-linha__datas" th:attr="data-serie-id=${serie.agendamentoReferenciaId}">
+            <label th:each="ocorrencia : ${serie.proximasOcorrencias}"
+                   class="meus-agendamentos-data-badge meus-agendamentos-data-badge--selectable">
+                <input type="radio"
+                       class="meus-agendamentos-data-radio"
+                       th:name="${radioPrefix + serie.agendamentoReferenciaId}"
+                       th:value="${ocorrencia.agendamentoId}"
+                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo}">
+                <span th:text="${ocorrencia.dataRotulo}">25/05</span>
+            </label>
+        </div>
+        <div class="meus-agendamentos-serie-linha__acoes">
+            <form class="meus-agendamentos-cancelar-data-form" method="post">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit"
+                        class="btn btn-sm btn-outline-danger meus-agendamentos-cancelar-data-btn"
+                        disabled>
+                    Cancelar data
+                </button>
+            </form>
+            <form th:action="@{/agendamentos/{id}/encerrar-fixo(id=${serie.agendamentoReferenciaId})}" method="post">
+                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                <button type="submit" class="btn btn-sm btn-outline-primary"
+                        onclick="return confirm('Isso vai encerrar esta serie desta data em diante. Deseja continuar?');">
+                    Encerrar serie
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

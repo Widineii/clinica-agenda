@@ -419,6 +419,104 @@
             overflow-y: auto;
         }
 
+        .meus-agendamentos-serie-linha {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px 14px;
+            margin-top: 8px;
+            border-radius: 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+        }
+
+        .meus-agendamentos-serie-linha__titulo {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .meus-agendamentos-serie-linha__datas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .meus-agendamentos-data-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 3rem;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid #94a3b8;
+            background: #ffffff;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .meus-agendamentos-data-badge--selectable {
+            cursor: pointer;
+            user-select: none;
+            transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .meus-agendamentos-data-badge--selectable:hover {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .meus-agendamentos-data-badge--selectable.is-selected {
+            border-color: #2563eb;
+            background: #dbeafe;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+            color: #1d4ed8;
+        }
+
+        .meus-agendamentos-data-radio {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .meus-agendamentos-serie-linha__dica {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .meus-agendamentos-serie-linha__acoes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .meus-agendamentos-avulso-linha {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 10px 14px;
+            margin-top: 8px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            font-size: 0.86rem;
+        }
+
+        .meus-agendamentos-avulso-linha__texto {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .meus-agendamentos-avulso-linha__acoes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
         .top-actions {
             display: flex;
             flex-wrap: wrap;
@@ -786,7 +884,7 @@
                                 <option value="SEMANAL">Fixo semanal</option>
                                 <option value="QUINZENAL">Quinzenal</option>
                             </select>
-                            <div class="form-text">Semanal repete por 12 semanas. Quinzenal repete a cada 15 dias.</div>
+                            <div class="form-text">Fixo semanal renova com 12 datas; quinzenal com 6. Ao passar ou cancelar um dia, entra o proximo.</div>
                         </div>
 
                         <div class="col-12 d-grid">
@@ -805,165 +903,41 @@
 
             <div th:if="${!isAdmin}" class="card shell-card mt-4" id="meus-agendamentos">
                 <div class="card-body p-4">
-                    <h2 class="h5 mb-3">Meus agendamentos</h2>
-                    <p class="small text-muted mb-3">Somente os agendamentos do usuario logado. A grade da sala mostra todos os profissionais.</p>
-                    <details class="agenda-section" th:open="${!#lists.isEmpty(agendamentosAvulsos)}">
-                        <summary class="agenda-toggle">
-                            <span>Avulso</span>
-                            <span class="agenda-count" th:text="${totalAgendamentosAvulsos}">0</span>
-                        </summary>
-                        <div class="small text-muted mt-2">Um registro por agendamento avulso (ate 24).</div>
-                        <div th:if="${#lists.isEmpty(agendamentosAvulsos)}" class="text-muted py-3 px-2">
-                            Nenhum agendamento avulso.
-                        </div>
-                        <div th:if="${!#lists.isEmpty(agendamentosAvulsos)}" class="agenda-panel table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead>
-                                <tr>
-                                    <th>Profissional</th>
-                                    <th>Inicio</th>
-                                    <th class="text-end">Acao</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:each="agendamento : ${agendamentosAvulsos}">
-                                    <td>
-                                        <div class="fw-semibold" th:text="${agendamento.profissional.nome}">Profissional</div>
-                                        <div class="small text-muted" th:text="${agendamento.nomeCliente + ' - ' + agendamento.sala.nome}">Detalhes</div>
-                                    </td>
-                                    <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
-                                    <td class="text-end">
-                                        <div class="action-stack">
-                                            <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
-                                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                                                <button type="submit"
-                                                        class="btn btn-sm btn-outline-danger"
-                                                        title="Cancela somente este agendamento"
-                                                        onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
-                                                    Cancelar somente este
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </details>
+                    <h2 class="h5 mb-3 d-flex align-items-center gap-2 flex-wrap">
+                        Meus agendamentos
+                        <span class="badge rounded-pill text-bg-success">Layout caderno</span>
+                    </h2>
+                    <p class="small text-muted mb-3">Somente os agendamentos do usuario logado. Fixo mostra 12 datas; quinzenal mostra 6.</p>
 
-                    <details class="agenda-section" th:open="${!#lists.isEmpty(agendamentosFixos)}">
-                        <summary class="agenda-toggle">
-                            <span>Fixo</span>
-                            <span class="agenda-count" th:text="${totalAgendamentosFixos}">0</span>
-                        </summary>
-                        <div class="small text-muted mt-2">Todos os dias da serie fixa semanal (ate 12 semanas). Ao cancelar um dia, ele some da lista.</div>
-                        <div th:if="${#lists.isEmpty(agendamentosFixos)}" class="text-muted py-3 px-2">
-                            Nenhum agendamento fixo.
-                        </div>
-                        <div th:if="${!#lists.isEmpty(agendamentosFixos)}" class="agenda-panel table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead>
-                                <tr>
-                                    <th>Profissional</th>
-                                    <th>Inicio</th>
-                                    <th class="text-end">Acao</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:each="agendamento : ${agendamentosFixos}">
-                                    <td>
-                                        <div class="fw-semibold" th:text="${agendamento.profissional.nome}">Profissional</div>
-                                        <div class="small text-muted" th:text="${agendamento.nomeCliente + ' - ' + agendamento.sala.nome}">Detalhes</div>
-                                        <span class="fixed-badge" th:text="${agendamento.recorrenciaLabel}">Fixo</span>
-                                    </td>
-                                    <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
-                                    <td class="text-end">
-                                        <div class="action-stack">
-                                            <form th:action="@{/agendamentos/{id}/encerrar-fixo(id=${agendamento.id})}"
-                                                  method="post">
-                                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                                                <button type="submit"
-                                                        class="btn btn-sm btn-outline-primary"
-                                                        title="Remove este horario fixo desta data em diante"
-                                                        onclick="return confirm('Isso vai encerrar esta serie fixa desta data em diante. Os horarios passados continuam no historico. Deseja continuar?');">
-                                                    Encerrar serie fixa
-                                                </button>
-                                            </form>
-                                            <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
-                                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                                                <button type="submit"
-                                                        class="btn btn-sm btn-outline-danger"
-                                                        title="Cancela somente este agendamento"
-                                                        onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
-                                                    Cancelar somente este
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </details>
+                        <details class="agenda-section" th:open="${totalAgendamentosAvulsos > 0}">
+                            <summary class="agenda-toggle">
+                                <span>Avulso</span>
+                                <span class="agenda-count" th:text="${totalAgendamentosAvulsos}">0</span>
+                            </summary>
+                            <div th:replace="~{fragments/caderno-agendamentos :: avulso-lista(agendamentos=${agendamentosAvulsos})}"></div>
+                        </details>
 
-                    <details class="agenda-section" th:open="${!#lists.isEmpty(agendamentosQuinzenais)}">
-                        <summary class="agenda-toggle">
-                            <span>Quinzenal</span>
-                            <span class="agenda-count" th:text="${totalAgendamentosQuinzenais}">0</span>
-                        </summary>
-                        <div class="small text-muted mt-2">Todos os dias da serie quinzenal (ate 6 ocorrencias). Ao cancelar um dia, ele some da lista.</div>
-                        <div th:if="${#lists.isEmpty(agendamentosQuinzenais)}" class="text-muted py-3 px-2">
-                            Nenhum agendamento quinzenal.
-                        </div>
-                        <div th:if="${!#lists.isEmpty(agendamentosQuinzenais)}" class="agenda-panel table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead>
-                                <tr>
-                                    <th>Profissional</th>
-                                    <th>Inicio</th>
-                                    <th class="text-end">Acao</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:each="agendamento : ${agendamentosQuinzenais}">
-                                    <td>
-                                        <div class="fw-semibold" th:text="${agendamento.profissional.nome}">Profissional</div>
-                                        <div class="small text-muted" th:text="${agendamento.nomeCliente + ' - ' + agendamento.sala.nome}">Detalhes</div>
-                                        <span class="fixed-badge" th:text="${agendamento.recorrenciaLabel}">Quinzenal</span>
-                                    </td>
-                                    <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
-                                    <td class="text-end">
-                                        <div class="action-stack">
-                                            <form th:action="@{/agendamentos/{id}/encerrar-fixo(id=${agendamento.id})}"
-                                                  method="post">
-                                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                                                <button type="submit"
-                                                        class="btn btn-sm btn-outline-primary"
-                                                        title="Remove este horario quinzenal desta data em diante"
-                                                        onclick="return confirm('Isso vai encerrar esta serie quinzenal desta data em diante. Os horarios passados continuam no historico. Deseja continuar?');">
-                                                    Encerrar serie quinzenal
-                                                </button>
-                                            </form>
-                                            <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
-                                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-                                                <button type="submit"
-                                                        class="btn btn-sm btn-outline-danger"
-                                                        title="Cancela somente este agendamento"
-                                                        onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
-                                                    Cancelar somente este
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </details>
+                        <details class="agenda-section" th:open="${totalFixosResumo > 0}">
+                            <summary class="agenda-toggle">
+                                <span>Fixo</span>
+                                <span class="agenda-count" th:text="${totalFixosResumo}">0</span>
+                            </summary>
+                            <div th:replace="~{fragments/caderno-agendamentos :: series-lista(series=${seriesFixasResumo}, radioPrefix='data-serie-')}"></div>
+                        </details>
+
+                        <details class="agenda-section" th:open="${totalQuinzenaisResumo > 0}">
+                            <summary class="agenda-toggle">
+                                <span>Quinzenal</span>
+                                <span class="agenda-count" th:text="${totalQuinzenaisResumo}">0</span>
+                            </summary>
+                            <div th:replace="~{fragments/caderno-agendamentos :: series-lista(series=${seriesQuinzenaisResumo}, radioPrefix='data-serie-')}"></div>
+                        </details>
                 </div>
             </div>
 
-            <th:block th:if="${isAdmin}" th:replace="~{fragments/admin-agendamentos-profissionais :: painel}"></th:block>
+            <div th:if="${isAdmin}">
+                <div th:replace="~{fragments/admin-agendamentos-profissionais :: painel(resumosProfissionais=${resumosProfissionais}, profissionaisEquipe=${profissionais})}"></div>
+            </div>
         </div>
 
         <div class="col-12 col-xl-8 order-1 order-xl-2" id="grade-semanal">
@@ -1319,6 +1293,49 @@
         }
 
         var basePath = /*[[@{/}]]*/ '/';
+
+        document.querySelectorAll('.meus-agendamentos-serie-linha').forEach(function (card) {
+            var cancelForm = card.querySelector('.meus-agendamentos-cancelar-data-form');
+            var cancelBtn = cancelForm ? cancelForm.querySelector('.meus-agendamentos-cancelar-data-btn') : null;
+            var radios = card.querySelectorAll('.meus-agendamentos-data-radio');
+            if (!cancelForm || !cancelBtn || radios.length === 0) {
+                return;
+            }
+
+            function atualizarSelecao() {
+                var selecionado = card.querySelector('.meus-agendamentos-data-radio:checked');
+                card.querySelectorAll('.meus-agendamentos-data-badge--selectable').forEach(function (badge) {
+                    badge.classList.toggle('is-selected', !!(selecionado && badge.contains(selecionado)));
+                });
+                if (selecionado && selecionado.value) {
+                    cancelForm.action = basePath + 'agendamentos/' + selecionado.value + '/cancelar';
+                    cancelBtn.disabled = false;
+                } else {
+                    cancelForm.removeAttribute('action');
+                    cancelBtn.disabled = true;
+                }
+            }
+
+            radios.forEach(function (radio) {
+                radio.addEventListener('change', atualizarSelecao);
+                radio.closest('.meus-agendamentos-data-badge--selectable').addEventListener('click', function () {
+                    window.setTimeout(atualizarSelecao, 0);
+                });
+            });
+
+            cancelForm.addEventListener('submit', function (evento) {
+                var selecionado = card.querySelector('.meus-agendamentos-data-radio:checked');
+                if (!selecionado || !selecionado.value || !cancelForm.action || cancelForm.action.indexOf('/cancelar') === -1) {
+                    evento.preventDefault();
+                    return;
+                }
+                var rotulo = selecionado.getAttribute('data-data-rotulo') || selecionado.value;
+                if (!window.confirm('Cancelar somente o atendimento do dia ' + rotulo + '?')) {
+                    evento.preventDefault();
+                }
+            });
+        });
+
         var modalElement = document.getElementById('gradeAgendamentoModal');
         var formEncerrar = document.getElementById('gradeFormEncerrar');
         var formCancelar = document.getElementById('gradeFormCancelar');

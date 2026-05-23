@@ -44,4 +44,9 @@ public class AuthService {
     public boolean podeGerenciarEquipe(Usuario usuario) {
         return isAdmin(usuario) || isDonaClinica(usuario);
     }
+
+    /** Layout caderno (Avulso / Fixo / Quinzenal) para profissionais e dona da clinica; admin mantem a grade completa. */
+    public boolean deveUsarMeusAgendamentosResumido(Usuario usuario) {
+        return usuario != null && !isAdmin(usuario);
+    }
 }

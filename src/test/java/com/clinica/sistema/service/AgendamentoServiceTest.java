@@ -3,6 +3,7 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.dto.AgendaSalaLinha;
 import com.clinica.sistema.dto.AgendaSalaView;
 import com.clinica.sistema.dto.AgendamentoForm;
+import com.clinica.sistema.dto.SerieAgendamentoLinha;
 import com.clinica.sistema.dto.RelatorioMensalUsoSalasView;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.Sala;
@@ -590,6 +591,227 @@ class AgendamentoServiceTest {
         assertEquals(false, semanal.isQuinzenal());
         assertEquals(false, quinzenal.isFixoSemanal());
         assertEquals(true, quinzenal.isQuinzenal());
+    }
+
+    @Test
+    void deveEstenderSerieFixaAtivaAteHorizonteDeDozeSemanas() {
+        String serieId = "semanal-renovacao";
+        LocalDateTime ultimoHorario = LocalDateTime.now().plusWeeks(2);
+        Agendamento ultimo = agendamentoSerie(serieId, ultimoHorario);
+        ultimo.setNomeCliente("Cliente fixo");
+        ultimo.setSala(sala);
+        ultimo.setProfissional(profissional);
+
+        when(agendamentoRepository.findSerieFixaIdsComOcorrenciasFuturas(any(LocalDateTime.class)))
+                .thenReturn(List.of(serieId));
+        when(agendamentoRepository.countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(eq(serieId), any(LocalDateTime.class)))
+                .thenReturn(2L);
+        when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioDesc(serieId))
+                .thenReturn(Optional.of(ultimo));
+        when(agendamentoRepository.existsBySerieFixaIdAndDataHoraInicio(eq(serieId), any(LocalDateTime.class)))
+                .thenReturn(false);
+        when(agendamentoRepository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(false);
+        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(Optional.empty());
+        when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertDoesNotThrow(() -> agendamentoService.renovarSeriesRecorrentesAtivas());
+
+        verify(agendamentoRepository).saveAll(any());
+    }
+
+    @Test
+    void deveAdicionarProximaDataQuandoSerieFixaFicaComMenosDeDozeFuturas() {
+        String serieId = "semanal-rolagem";
+        LocalDateTime ultimoHorario = LocalDateTime.now().plusWeeks(10);
+        Agendamento ultimo = agendamentoSerie(serieId, ultimoHorario);
+        ultimo.setId(50L);
+        ultimo.setNomeCliente("Cliente");
+        ultimo.setSala(sala);
+        ultimo.setProfissional(profissional);
+
+        when(agendamentoRepository.findSerieFixaIdsComOcorrenciasFuturas(any(LocalDateTime.class)))
+                .thenReturn(List.of(serieId));
+        when(agendamentoRepository.countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(eq(serieId), any(LocalDateTime.class)))
+                .thenReturn(11L);
+        when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioDesc(serieId))
+                .thenReturn(Optional.of(ultimo));
+        when(agendamentoRepository.existsBySerieFixaIdAndDataHoraInicio(eq(serieId), any(LocalDateTime.class)))
+                .thenReturn(false);
+        when(agendamentoRepository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(false);
+        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(Optional.empty());
+        when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        agendamentoService.renovarSeriesRecorrentesAtivas();
+
+        verify(agendamentoRepository).saveAll(any());
+    }
+
+    @Test
+    void naoDeveRenovarSerieSemOcorrenciasFuturas() {
+        when(agendamentoRepository.findSerieFixaIdsComOcorrenciasFuturas(any(LocalDateTime.class)))
+                .thenReturn(List.of());
+
+        agendamentoService.renovarSeriesRecorrentesAtivas();
+
+        verify(agendamentoRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void deveAgruparSeriesFixasPorClienteESala() {
+        Agendamento bernardo = agendamentoSerie("semanal-bernardo", LocalDateTime.now().plusDays(2));
+        bernardo.setNomeCliente("Bernardo");
+        bernardo.setSala(sala);
+
+        Agendamento pedro = agendamentoSerie("semanal-pedro", LocalDateTime.now().plusDays(3));
+        pedro.setNomeCliente("Pedro");
+        Sala sala2 = new Sala();
+        sala2.setId(2L);
+        sala2.setNome("Sala 2");
+        pedro.setSala(sala2);
+
+        List<SerieAgendamentoLinha> linhas = agendamentoService.agruparSeriesAtivas(
+                List.of(bernardo, pedro),
+                Agendamento::isFixoSemanal
+        );
+
+        assertEquals(2, linhas.size());
+        assertTrue(linhas.stream().anyMatch(l -> l.getRotuloCabecalho().contains("Bernardo - Sala 3")));
+        assertTrue(linhas.stream().anyMatch(l -> l.getRotuloCabecalho().contains("Pedro - Sala 2")));
+    }
+
+    @Test
+    void deveListarProximasDatasDaMesmaSerieFixa() {
+        LocalDateTime primeiro = LocalDateTime.now().plusWeeks(1);
+        LocalDateTime segundo = primeiro.plusWeeks(1);
+        LocalDateTime terceiro = primeiro.plusWeeks(2);
+
+        Agendamento ocorrencia1 = agendamentoSerie("semanal-bernardo", primeiro);
+        ocorrencia1.setId(101L);
+        ocorrencia1.setNomeCliente("Bernardo");
+        ocorrencia1.setSala(sala);
+        Agendamento ocorrencia2 = agendamentoSerie("semanal-bernardo", segundo);
+        ocorrencia2.setId(102L);
+        ocorrencia2.setNomeCliente("Bernardo");
+        ocorrencia2.setSala(sala);
+        Agendamento ocorrencia3 = agendamentoSerie("semanal-bernardo", terceiro);
+        ocorrencia3.setId(103L);
+        ocorrencia3.setNomeCliente("Bernardo");
+        ocorrencia3.setSala(sala);
+
+        List<SerieAgendamentoLinha> linhas = agendamentoService.agruparSeriesAtivas(
+                List.of(ocorrencia1, ocorrencia2, ocorrencia3),
+                Agendamento::isFixoSemanal
+        );
+
+        assertEquals(1, linhas.size());
+        assertEquals(3, linhas.get(0).getProximasOcorrencias().size());
+        assertEquals(
+                primeiro.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM")),
+                linhas.get(0).getProximasOcorrencias().get(0).getDataRotulo()
+        );
+        assertEquals(101L, linhas.get(0).getProximasOcorrencias().get(0).getAgendamentoId());
+    }
+
+    @Test
+    void deveLimitarQuinzenalASeisDatasMesmoSemTipoRecorrenciaNoBanco() {
+        LocalDateTime primeiro = LocalDateTime.now().plusWeeks(1);
+        List<Agendamento> ocorrencias = new java.util.ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            Agendamento o = agendamentoSerie("quinzenal-rolagem", primeiro.plusWeeks(2L * i));
+            o.setTipoRecorrencia(null);
+            o.setId(300L + i);
+            o.setNomeCliente("Cliente quinzenal");
+            o.setSala(sala);
+            ocorrencias.add(o);
+        }
+
+        List<SerieAgendamentoLinha> linhas = agendamentoService.agruparSeriesAtivas(
+                ocorrencias,
+                Agendamento::isQuinzenal
+        );
+
+        assertEquals(1, linhas.size());
+        assertEquals(6, linhas.get(0).getProximasOcorrencias().size());
+    }
+
+    @Test
+    void deveLimitarQuinzenalASeisDatasNaListagem() {
+        LocalDateTime primeiro = LocalDateTime.now().plusWeeks(1);
+        List<Agendamento> ocorrencias = new java.util.ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            Agendamento o = agendamentoSerie("quinzenal-rolagem", primeiro.plusWeeks(2L * i));
+            o.setId(200L + i);
+            o.setNomeCliente("Cliente quinzenal");
+            o.setSala(sala);
+            ocorrencias.add(o);
+        }
+
+        List<SerieAgendamentoLinha> linhas = agendamentoService.agruparSeriesAtivas(
+                ocorrencias,
+                Agendamento::isQuinzenal
+        );
+
+        assertEquals(1, linhas.size());
+        assertEquals(6, linhas.get(0).getProximasOcorrencias().size());
+    }
+
+    @Test
+    void deveAdicionarProximaDataQuinzenalQuandoFicaComMenosDeSeisFuturas() {
+        String serieId = "quinzenal-renovacao";
+        LocalDateTime ultimoHorario = LocalDateTime.now().plusWeeks(8);
+        Agendamento ultimo = agendamentoSerie(serieId, ultimoHorario);
+        ultimo.setId(60L);
+        ultimo.setNomeCliente("Cliente");
+        ultimo.setSala(sala);
+        ultimo.setProfissional(profissional);
+
+        when(agendamentoRepository.findSerieFixaIdsComOcorrenciasFuturas(any(LocalDateTime.class)))
+                .thenReturn(List.of(serieId));
+        when(agendamentoRepository.countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(eq(serieId), any(LocalDateTime.class)))
+                .thenReturn(5L);
+        when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioDesc(serieId))
+                .thenReturn(Optional.of(ultimo));
+        when(agendamentoRepository.existsBySerieFixaIdAndDataHoraInicio(eq(serieId), any(LocalDateTime.class)))
+                .thenReturn(false);
+        when(agendamentoRepository.existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(false);
+        when(agendamentoRepository.findFirstByProfissionalIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
+                eq(profissional.getId()), any(LocalDateTime.class), any(LocalDateTime.class))
+        ).thenReturn(Optional.empty());
+        when(agendamentoRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        agendamentoService.renovarSeriesRecorrentesAtivas();
+
+        verify(agendamentoRepository).saveAll(any());
+    }
+
+    @Test
+    void naoDeveAdicionarQuinzenalQuandoJaTemSeisFuturas() {
+        String serieId = "quinzenal-cheio";
+        LocalDateTime ultimoHorario = LocalDateTime.now().plusWeeks(10);
+        Agendamento ultimo = agendamentoSerie(serieId, ultimoHorario);
+        ultimo.setSala(sala);
+        ultimo.setProfissional(profissional);
+
+        when(agendamentoRepository.findSerieFixaIdsComOcorrenciasFuturas(any(LocalDateTime.class)))
+                .thenReturn(List.of(serieId));
+        when(agendamentoRepository.countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(eq(serieId), any(LocalDateTime.class)))
+                .thenReturn(6L);
+        when(agendamentoRepository.findFirstBySerieFixaIdOrderByDataHoraInicioDesc(serieId))
+                .thenReturn(Optional.of(ultimo));
+
+        agendamentoService.renovarSeriesRecorrentesAtivas();
+
+        verify(agendamentoRepository, never()).saveAll(any());
     }
 
     private AgendamentoForm novoForm(LocalDateTime dataHoraInicio) {

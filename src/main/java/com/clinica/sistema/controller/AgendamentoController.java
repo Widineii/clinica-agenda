@@ -90,6 +90,8 @@ public class AgendamentoController {
             return "redirect:/login";
         }
 
+        service.renovarSeriesRecorrentesAtivas();
+
         boolean isAdmin = authService.isAdmin(usuarioLogado);
 
         if (!model.containsAttribute("agendamentoForm")) {
@@ -134,16 +136,35 @@ public class AgendamentoController {
                 service.contarOcorrencias(agendamentos, com.clinica.sistema.model.Agendamento::isFixoSemanal));
         model.addAttribute("totalAgendamentosQuinzenais",
                 service.contarOcorrencias(agendamentos, com.clinica.sistema.model.Agendamento::isQuinzenal));
-        if (isAdmin) {
-            var equipe = usuarioService.listarProfissionaisDaEquipe();
-            model.addAttribute("resumosProfissionais", service.montarResumosProfissionais(equipe));
+
+        boolean meusAgendamentosResumido = !isAdmin;
+        model.addAttribute("meusAgendamentosResumido", meusAgendamentosResumido);
+        if (meusAgendamentosResumido) {
+            var seriesFixas = service.agruparSeriesAtivas(
+                    agendamentos, com.clinica.sistema.model.Agendamento::isFixoSemanal);
+            var seriesQuinzenais = service.agruparSeriesAtivas(
+                    agendamentos, com.clinica.sistema.model.Agendamento::isQuinzenal);
+            model.addAttribute("seriesFixasResumo", seriesFixas);
+            model.addAttribute("seriesQuinzenaisResumo", seriesQuinzenais);
+            model.addAttribute("totalFixosResumo", seriesFixas.size());
+            model.addAttribute("totalQuinzenaisResumo", seriesQuinzenais.size());
         } else {
-            model.addAttribute("resumosProfissionais", java.util.Collections.emptyList());
+            model.addAttribute("seriesFixasResumo", Collections.emptyList());
+            model.addAttribute("seriesQuinzenaisResumo", Collections.emptyList());
+            model.addAttribute("totalFixosResumo", 0);
+            model.addAttribute("totalQuinzenaisResumo", 0);
+        }
+
+        List<Usuario> equipeProfissionais = usuarioService.listarProfissionaisDaEquipe();
+        if (isAdmin) {
+            model.addAttribute("resumosProfissionais", service.montarResumosProfissionais(equipeProfissionais));
+        } else {
+            model.addAttribute("resumosProfissionais", Collections.emptyList());
         }
         model.addAttribute("salas", service.listarSalas());
         model.addAttribute("profissionais", podeGerenciarEquipe
-                ? usuarioService.listarProfissionaisDaEquipe()
-                : java.util.List.of(usuarioLogado));
+                ? equipeProfissionais
+                : List.of(usuarioLogado));
         model.addAttribute("horariosDisponiveis", service.listarHorariosDisponiveis());
         LocalDate referenciaSemana = agendaDataSugerida(semana);
         Long salaIdGrade = service.resolverSalaIdParaGrade(salaId, referenciaSemana);
@@ -245,9 +266,9 @@ public class AgendamentoController {
             redirectAttributes.addFlashAttribute(
                     "sucesso",
                     "QUINZENAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
-                            ? "Agendamento quinzenal cadastrado com sucesso."
+                            ? "Agendamento quinzenal cadastrado. A serie continua automaticamente ate encerrar."
                             : "SEMANAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
-                                    ? "Agendamento fixo cadastrado para as proximas 12 semanas."
+                                    ? "Agendamento fixo cadastrado. A serie continua automaticamente ate encerrar."
                                     : "Agendamento cadastrado com sucesso."
             );
         } catch (RuntimeException e) {

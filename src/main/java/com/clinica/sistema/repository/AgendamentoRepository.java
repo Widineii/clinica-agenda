@@ -72,6 +72,22 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             LocalDateTime dataHoraInicio
     );
 
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    Optional<Agendamento> findFirstBySerieFixaIdOrderByDataHoraInicioDesc(String serieFixaId);
+
+    boolean existsBySerieFixaIdAndDataHoraInicio(String serieFixaId, LocalDateTime dataHoraInicio);
+
+    long countBySerieFixaIdAndDataHoraInicioGreaterThanEqual(String serieFixaId, LocalDateTime dataHoraInicio);
+
+    @Query("""
+            SELECT DISTINCT a.serieFixaId
+            FROM Agendamento a
+            WHERE a.serieFixaId IS NOT NULL
+              AND a.serieFixaId NOT LIKE 'seed-fixo-%'
+              AND a.dataHoraInicio >= :agora
+            """)
+    List<String> findSerieFixaIdsComOcorrenciasFuturas(@Param("agora") LocalDateTime agora);
+
     @Transactional
     @Modifying
     void deleteBySerieFixaIdStartingWith(String prefix);

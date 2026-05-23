@@ -11,8 +11,8 @@ public class ProfissionalAgendamentosResumo {
     private final Long profissionalId;
     private final String profissionalNome;
     private final List<Agendamento> agendamentosAvulsos;
-    private final List<Agendamento> agendamentosFixos;
-    private final List<Agendamento> agendamentosQuinzenais;
+    private final List<SerieAgendamentoLinha> seriesFixas;
+    private final List<SerieAgendamentoLinha> seriesQuinzenais;
     private final long totalAvulsos;
     private final long totalFixos;
     private final long totalQuinzenais;
@@ -21,8 +21,8 @@ public class ProfissionalAgendamentosResumo {
             Long profissionalId,
             String profissionalNome,
             List<Agendamento> agendamentosAvulsos,
-            List<Agendamento> agendamentosFixos,
-            List<Agendamento> agendamentosQuinzenais,
+            List<SerieAgendamentoLinha> seriesFixas,
+            List<SerieAgendamentoLinha> seriesQuinzenais,
             long totalAvulsos,
             long totalFixos,
             long totalQuinzenais
@@ -30,8 +30,8 @@ public class ProfissionalAgendamentosResumo {
         this.profissionalId = profissionalId;
         this.profissionalNome = profissionalNome;
         this.agendamentosAvulsos = agendamentosAvulsos;
-        this.agendamentosFixos = agendamentosFixos;
-        this.agendamentosQuinzenais = agendamentosQuinzenais;
+        this.seriesFixas = seriesFixas;
+        this.seriesQuinzenais = seriesQuinzenais;
         this.totalAvulsos = totalAvulsos;
         this.totalFixos = totalFixos;
         this.totalQuinzenais = totalQuinzenais;
