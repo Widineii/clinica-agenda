@@ -267,6 +267,152 @@
             line-height: 1;
         }
 
+        .profissional-section > .agenda-panel-wrap {
+            margin-top: 12px;
+            padding-left: 4px;
+        }
+
+        .profissional-section .agenda-section + .agenda-section {
+            margin-top: 12px;
+        }
+
+        #agendamentos-profissionais .profissionais-lista {
+            max-height: 360px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__item + .accordion-profissionais__item {
+            margin-top: 8px;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__item > summary.accordion-profissionais__trigger {
+            list-style: none;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__item > summary.accordion-profissionais__trigger::-webkit-details-marker {
+            display: none;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__trigger {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #0f172a;
+            font-weight: 600;
+            font-size: 0.84rem;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__trigger:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__item[open] > summary.accordion-profissionais__trigger {
+            border-color: #94a3b8;
+            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__nome {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__trigger .agenda-count {
+            min-width: 1.35rem;
+            padding: 2px 7px;
+            font-size: 0.72rem;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__chevron {
+            width: 10px;
+            height: 10px;
+            border-right: 2px solid #64748b;
+            border-bottom: 2px solid #64748b;
+            transform: rotate(45deg);
+            transition: transform 0.25s ease;
+            margin-top: -2px;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__item[open] .accordion-profissionais__chevron {
+            transform: rotate(225deg);
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__panel {
+            padding-top: 4px;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__filhos {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 0 2px 14px;
+            border-left: 2px solid #e2e8f0;
+            margin: 6px 0 0 8px;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__filho {
+            border: none;
+            margin: 0;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__filho-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            list-style: none;
+            cursor: pointer;
+            padding: 7px 10px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px dashed #dbe7f0;
+            font-weight: 600;
+            font-size: 0.82rem;
+            color: #334155;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__filho-trigger::-webkit-details-marker {
+            display: none;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__filho-trigger::marker {
+            content: "";
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__filho-trigger .agenda-count {
+            min-width: 1.35rem;
+            padding: 2px 7px;
+            font-size: 0.72rem;
+        }
+
+        #agendamentos-profissionais .accordion-profissionais__filho-body {
+            padding: 8px 4px 4px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #agendamentos-profissionais .accordion-profissionais__chevron,
+            #agendamentos-profissionais .accordion-profissionais__trigger {
+                transition: none;
+            }
+        }
+
         .agenda-panel {
             margin-top: 12px;
             max-height: 340px;
@@ -570,7 +716,8 @@
     <nav class="agenda-quick-nav mb-4" aria-label="Atalhos da agenda">
         <a href="#grade-semanal" class="btn btn-sm btn-primary">Grade semanal</a>
         <a href="#novo-agendamento" class="btn btn-sm btn-outline-secondary">Novo agendamento</a>
-        <a href="#meus-agendamentos" class="btn btn-sm btn-outline-secondary">Meus agendamentos</a>
+        <a th:if="${isAdmin}" href="#agendamentos-profissionais" class="btn btn-sm btn-outline-secondary">Agendamentos por profissional</a>
+        <a th:unless="${isAdmin}" href="#meus-agendamentos" class="btn btn-sm btn-outline-secondary">Meus agendamentos</a>
         <a href="#agenda-do-dia" class="btn btn-sm btn-outline-secondary">Agenda do dia</a>
     </nav>
 
@@ -656,7 +803,7 @@
                 </div>
             </div>
 
-            <div class="card shell-card mt-4" id="meus-agendamentos">
+            <div th:if="${!isAdmin}" class="card shell-card mt-4" id="meus-agendamentos">
                 <div class="card-body p-4">
                     <h2 class="h5 mb-3">Meus agendamentos</h2>
                     <p class="small text-muted mb-3">Somente os agendamentos do usuario logado. A grade da sala mostra todos os profissionais.</p>
@@ -815,6 +962,8 @@
                     </details>
                 </div>
             </div>
+
+            <th:block th:if="${isAdmin}" th:replace="~{fragments/admin-agendamentos-profissionais :: painel}"></th:block>
         </div>
 
         <div class="col-12 col-xl-8 order-1 order-xl-2" id="grade-semanal">

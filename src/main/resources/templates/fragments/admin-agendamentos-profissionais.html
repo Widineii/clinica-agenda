@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="painel" class="card shell-card mt-4" id="agendamentos-profissionais">
+    <div class="card-body p-3">
+        <h2 class="h6 mb-2">Agendamentos por profissional</h2>
+        <p class="small text-muted mb-2">Clique no nome para ver avulso, fixo e quinzenal.</p>
+
+        <p th:if="${#lists.isEmpty(resumosProfissionais)}"
+           class="text-muted py-2 px-1 small mb-0">
+            Nenhum profissional cadastrado.
+        </p>
+
+        <div th:unless="${#lists.isEmpty(resumosProfissionais)}"
+             class="accordion-profissionais profissionais-lista">
+            <details th:each="resumo : ${resumosProfissionais}"
+                     name="equipe-profissionais"
+                     class="accordion-profissionais__item"
+                     th:id="|profissional-${resumo.profissionalId}|">
+                <summary class="accordion-profissionais__trigger">
+                    <span class="accordion-profissionais__nome" th:text="${resumo.profissionalNome}">Profissional</span>
+                    <span class="accordion-profissionais__meta">
+                        <span class="agenda-count" th:text="${resumo.totalGeral}">0</span>
+                        <span class="accordion-profissionais__chevron" aria-hidden="true"></span>
+                    </span>
+                </summary>
+                <div class="accordion-profissionais__panel">
+                    <div th:replace="~{fragments/admin-agendamentos-profissionais :: tipos(resumo=${resumo})}"></div>
+                </div>
+            </details>
+        </div>
+    </div>
+</div>
+
+<div th:fragment="tipos (resumo)" class="accordion-profissionais__filhos">
+    <details class="accordion-profissionais__filho">
+        <summary class="accordion-profissionais__filho-trigger">
+            <span>Avulso</span>
+            <span class="agenda-count" th:text="${resumo.totalAvulsos}">0</span>
+        </summary>
+        <div class="accordion-profissionais__filho-body">
+            <p class="small text-muted mb-2">Um registro por agendamento avulso (ate 24).</p>
+            <p th:if="${#lists.isEmpty(resumo.agendamentosAvulsos)}" class="text-muted small mb-0">Nenhum agendamento avulso.</p>
+            <div th:if="${!#lists.isEmpty(resumo.agendamentosAvulsos)}" class="agenda-panel table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Cliente / Sala</th>
+                        <th>Inicio</th>
+                        <th class="text-end">Acao</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="agendamento : ${resumo.agendamentosAvulsos}">
+                        <td>
+                            <div class="fw-semibold" th:text="${agendamento.nomeCliente}">Cliente</div>
+                            <div class="small text-muted" th:text="${agendamento.sala.nome}">Sala</div>
+                        </td>
+                        <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
+                        <td class="text-end">
+                            <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
+                                <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
+                                    Cancelar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+
+    <details class="accordion-profissionais__filho">
+        <summary class="accordion-profissionais__filho-trigger">
+            <span>Fixo</span>
+            <span class="agenda-count" th:text="${resumo.totalFixos}">0</span>
+        </summary>
+        <div class="accordion-profissionais__filho-body">
+            <p class="small text-muted mb-2">Serie fixa semanal (ate 12 semanas).</p>
+            <p th:if="${#lists.isEmpty(resumo.agendamentosFixos)}" class="text-muted small mb-0">Nenhum agendamento fixo.</p>
+            <div th:if="${!#lists.isEmpty(resumo.agendamentosFixos)}" class="agenda-panel table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Cliente / Sala</th>
+                        <th>Inicio</th>
+                        <th class="text-end">Acao</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="agendamento : ${resumo.agendamentosFixos}">
+                        <td>
+                            <div class="fw-semibold" th:text="${agendamento.nomeCliente}">Cliente</div>
+                            <div class="small text-muted" th:text="${agendamento.sala.nome}">Sala</div>
+                            <span class="fixed-badge" th:text="${agendamento.recorrenciaLabel}">Fixo</span>
+                        </td>
+                        <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
+                        <td class="text-end">
+                            <div class="action-stack">
+                                <form th:action="@{/agendamentos/{id}/encerrar-fixo(id=${agendamento.id})}" method="post">
+                                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary"
+                                            onclick="return confirm('Isso vai encerrar esta serie fixa desta data em diante. Deseja continuar?');">
+                                        Encerrar serie
+                                    </button>
+                                </form>
+                                <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
+                                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
+                                        Cancelar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+
+    <details class="accordion-profissionais__filho">
+        <summary class="accordion-profissionais__filho-trigger">
+            <span>Quinzenal</span>
+            <span class="agenda-count" th:text="${resumo.totalQuinzenais}">0</span>
+        </summary>
+        <div class="accordion-profissionais__filho-body">
+            <p class="small text-muted mb-2">Serie quinzenal (ate 6 ocorrencias).</p>
+            <p th:if="${#lists.isEmpty(resumo.agendamentosQuinzenais)}" class="text-muted small mb-0">Nenhum agendamento quinzenal.</p>
+            <div th:if="${!#lists.isEmpty(resumo.agendamentosQuinzenais)}" class="agenda-panel table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Cliente / Sala</th>
+                        <th>Inicio</th>
+                        <th class="text-end">Acao</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="agendamento : ${resumo.agendamentosQuinzenais}">
+                        <td>
+                            <div class="fw-semibold" th:text="${agendamento.nomeCliente}">Cliente</div>
+                            <div class="small text-muted" th:text="${agendamento.sala.nome}">Sala</div>
+                            <span class="fixed-badge" th:text="${agendamento.recorrenciaLabel}">Quinzenal</span>
+                        </td>
+                        <td th:text="${#temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm')}">Inicio</td>
+                        <td class="text-end">
+                            <div class="action-stack">
+                                <form th:action="@{/agendamentos/{id}/encerrar-fixo(id=${agendamento.id})}" method="post">
+                                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary"
+                                            onclick="return confirm('Isso vai encerrar esta serie quinzenal desta data em diante. Deseja continuar?');">
+                                        Encerrar serie
+                                    </button>
+                                </form>
+                                <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
+                                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Isso vai cancelar somente este agendamento. Deseja continuar?');">
+                                        Cancelar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+</div>
+</body>
+</html>
