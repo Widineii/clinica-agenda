@@ -30,6 +30,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -106,7 +108,9 @@ class RelatorioMensalFluxoIntegracaoTest {
 
         Optional<RelatorioMensalArquivado> arquivado = relatorioMensalService.arquivarMesSeNecessario(mesPassado);
         assertTrue(arquivado.isPresent());
-        assertTrue(arquivado.get().getPdf().length > 500);
+        assertNull(arquivado.get().getPdf(), "PDF nao deve ser gravado no banco");
+        assertNotNull(arquivado.get().getDadosJson());
+        assertFalse(arquivado.get().getDadosJson().isBlank());
         assertEquals(15, arquivado.get().getAgendamentosRemovidos());
 
         long noBancoDepois = contarAgendamentosNoMes(mesPassado);
@@ -116,10 +120,13 @@ class RelatorioMensalFluxoIntegracaoTest {
         assertEquals(15, relatorioDepois.getTotalGeral());
         imprimirRelatorio("DEPOIS DE ARQUIVAR (salvo no sistema)", relatorioDepois);
 
+        byte[] pdfGerado = relatorioMensalService.gerarPdfDoArquivado(arquivado.get());
+        assertTrue(pdfGerado.length > 500);
+
         System.out.println();
         System.out.println("PDF gerado: " + relatorioMensalService.nomeArquivoPdf(mesPassado));
-        System.out.println("Tamanho do PDF: " + arquivado.get().getPdf().length + " bytes");
-        PdfReader leitorPdf = new PdfReader(arquivado.get().getPdf());
+        System.out.println("Tamanho do PDF: " + pdfGerado.length + " bytes");
+        PdfReader leitorPdf = new PdfReader(pdfGerado);
         int paginas = leitorPdf.getNumberOfPages();
         leitorPdf.close();
         System.out.println("Paginas no PDF: " + paginas);
