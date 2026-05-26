@@ -1558,12 +1558,18 @@
                 }
                 if (painel) {
                     painel.classList.toggle('d-none', semValores);
-                    painel.querySelectorAll('input').forEach(function (input) {
+                    painel.querySelectorAll('input.valor-moeda-brl').forEach(function (input) {
                         input.required = !semValores;
                         if (semValores) {
                             input.value = '';
                         }
                     });
+                    if (semValores) {
+                        var indicacaoCheckbox = painel.querySelector('input[type="checkbox"]');
+                        if (indicacaoCheckbox) {
+                            indicacaoCheckbox.checked = false;
+                        }
+                    }
                 }
                 if (hintPagamento) {
                     hintPagamento.classList.toggle('d-none', semValores);
