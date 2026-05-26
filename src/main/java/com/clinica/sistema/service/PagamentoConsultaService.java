@@ -79,14 +79,20 @@ public class PagamentoConsultaService {
 
     @Transactional
     public Agendamento gerarLinkPagamento(Long agendamentoId, Usuario usuarioLogado) {
+        return pagarAgora(agendamentoId, usuarioLogado);
+    }
+
+    @Transactional
+    public Agendamento pagarAgora(Long agendamentoId, Usuario usuarioLogado) {
         Agendamento agendamento = buscarComPermissao(agendamentoId, usuarioLogado);
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             throw new RuntimeException("Esta consulta ja esta paga.");
         }
-        if (!deveAbrirPagamentoAgora(agendamento)
-                && !PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(agendamento.getStatusPagamento())
-                && !PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
-            throw new RuntimeException("Pagamento disponivel somente a partir de 1 dia antes da consulta.");
+        if (!podePagarAgora(agendamento) && !agendamento.possuiQrPagamentoAtivo()) {
+            throw new RuntimeException("Esta consulta nao esta disponivel para pagamento.");
+        }
+        if (agendamento.possuiQrPagamentoAtivo()) {
+            return agendamento;
         }
         iniciarConfirmacaoPagamento(agendamento);
         return repository.save(agendamento);
@@ -135,18 +141,55 @@ public class PagamentoConsultaService {
         return !LocalDate.now().isBefore(diaLimitePagamento);
     }
 
-    public boolean exibirBotaoPagar(Agendamento agendamento) {
+    public List<Agendamento> listarDisponiveisParaPagarAntecipado(Usuario usuarioLogado, boolean verTodos) {
+        LocalDateTime agora = LocalDateTime.now();
+        List<Agendamento> candidatos;
+        if (verTodos && (authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado))) {
+            candidatos = repository.findByDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(agora);
+        } else {
+            candidatos = repository.findByProfissionalIdAndDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(
+                    usuarioLogado.getId(),
+                    agora
+            );
+        }
+        return candidatos.stream()
+                .filter(this::podePagarAgora)
+                .limit(16)
+                .toList();
+    }
+
+    public boolean podePagarAgora(Agendamento agendamento) {
         if (agendamento == null || PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             return false;
         }
-        if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
-            return agendamento.possuiQrPagamentoAtivo();
+        if (agendamento.possuiQrPagamentoAtivo()) {
+            return false;
         }
-        if (PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(agendamento.getStatusPagamento())) {
+        if (agendamento.getDataHoraInicio() == null) {
+            return false;
+        }
+        if (!agendamento.getDataHoraInicio().isAfter(LocalDateTime.now())) {
+            return false;
+        }
+        PagamentoStatus status = agendamento.getStatusPagamento();
+        return status == null
+                || status == PagamentoStatus.PAGAMENTO_FUTURO
+                || status == PagamentoStatus.AGUARDANDO_PAGAMENTO;
+    }
+
+    public boolean podeVerPagamento(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null || usuarioLogado == null) {
+            return false;
+        }
+        if (authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado)) {
             return true;
         }
-        return PagamentoStatus.PAGAMENTO_FUTURO.equals(agendamento.getStatusPagamento())
-                && deveAbrirPagamentoAgora(agendamento);
+        return agendamento.getProfissional() != null
+                && agendamento.getProfissional().getId().equals(usuarioLogado.getId());
+    }
+
+    public boolean exibirBotaoPagar(Agendamento agendamento) {
+        return podePagarAgora(agendamento);
     }
 
     public String rotuloStatusPagamento(Agendamento agendamento) {

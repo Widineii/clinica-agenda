@@ -214,4 +214,13 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     int deleteBySerieFixaIdAndStatusPagamentoNot(String serieFixaId, PagamentoStatus statusPagamento);
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    List<Agendamento> findByProfissionalIdAndDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(
+            Long profissionalId,
+            LocalDateTime dataHoraInicio
+    );
+
+    @EntityGraph(attributePaths = {"profissional", "sala"})
+    List<Agendamento> findByDataHoraInicioGreaterThanOrderByDataHoraInicioAsc(LocalDateTime dataHoraInicio);
 }

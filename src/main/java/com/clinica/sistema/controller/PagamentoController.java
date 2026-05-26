@@ -1,6 +1,7 @@
 package com.clinica.sistema.controller;
 
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
 import com.clinica.sistema.service.AuthService;
@@ -89,6 +90,27 @@ public class PagamentoController {
         model.addAttribute("agendamento", registro);
         model.addAttribute("orderNsu", order);
         return "pagamento-checkout-teste";
+    }
+
+    @GetMapping("/{id}/pagar-agora")
+    public String pagarAgoraGet(
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+            Agendamento agendamento = pagamentoConsultaService.pagarAgora(id, usuarioLogado);
+            if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
+                redirectAttributes.addFlashAttribute(
+                        "sucesso",
+                        "Pagamento gerado. Escaneie o QR ou abra o link PIX (5 min para confirmar)."
+                );
+            }
+            return "redirect:/pagamentos/" + agendamento.getId();
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute("erro", ex.getMessage());
+            return "redirect:/agendamentos/dashboard";
+        }
     }
 
     @PostMapping("/{id}/gerar-link")
