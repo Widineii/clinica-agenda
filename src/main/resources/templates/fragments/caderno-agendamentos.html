@@ -44,20 +44,12 @@
                        class="meus-agendamentos-data-radio"
                        th:name="${radioPrefix + serie.agendamentoReferenciaId}"
                        th:value="${ocorrencia.agendamentoId}"
-                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pode-pagar=${ocorrencia.exibirBotaoPagar},data-pago=${ocorrencia.pagamentoPago}">
+                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pago=${ocorrencia.pagamentoPago}">
                 <span th:text="${ocorrencia.dataRotulo}">25/05</span>
                 <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
-                <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}" class="ms-1 text-warning" title="Pagar">$</span>
             </label>
         </div>
         <div class="meus-agendamentos-serie-linha__acoes">
-            <form class="meus-agendamentos-pagar-data-form d-inline" method="get">
-                <a href="#"
-                   class="btn btn-sm btn-outline-warning meus-agendamentos-pagar-data-btn disabled"
-                   aria-disabled="true">
-                    Pagar esta data
-                </a>
-            </form>
             <form class="meus-agendamentos-cancelar-data-form d-inline" method="post">
                 <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                 <button type="submit"
