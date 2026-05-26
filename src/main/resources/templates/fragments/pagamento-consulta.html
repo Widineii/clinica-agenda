@@ -61,7 +61,7 @@
                     <div>
                         <strong th:text="${item.nomeCliente}">Cliente</strong>
                         <span class="small text-muted d-block"
-                              th:text="${item.dataHoraInicio != null ? #temporals.format(item.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''} + ' · ' + (item.sala?.nome ?: '-')">28/05 10:00</span>
+                              th:text="${item.dataHoraInicio != null ? #temporals.format(item.dataHoraInicio, 'dd/MM/yyyy HH:mm') + ' · ' + (item.sala != null ? item.sala.nome : '-') : '-'}">28/05 10:00</span>
                     </div>
                     <span class="badge text-bg-warning pagamento-countdown"
                           th:attr="data-expira-em=${item.pagamentoExpiraEm != null ? #temporals.format(item.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
