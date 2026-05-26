@@ -36,7 +36,7 @@
         <p th:if="${serie.valoresConsultaResumo != null}"
            class="agendamento-valores small text-muted mb-2"
            th:text="${serie.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</p>
-        <p class="meus-agendamentos-serie-linha__dica mb-2">Selecione uma data e clique em Cancelar data.</p>
+        <p class="meus-agendamentos-serie-linha__dica mb-2">Selecione uma data e use Cancelar data ou Pagar data.</p>
         <div class="meus-agendamentos-serie-linha__datas" th:attr="data-serie-id=${serie.agendamentoReferenciaId}">
             <label th:each="ocorrencia : ${serie.proximasOcorrencias}"
                    class="meus-agendamentos-data-badge meus-agendamentos-data-badge--selectable">
@@ -44,12 +44,19 @@
                        class="meus-agendamentos-data-radio"
                        th:name="${radioPrefix + serie.agendamentoReferenciaId}"
                        th:value="${ocorrencia.agendamentoId}"
-                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pago=${ocorrencia.pagamentoPago}">
+                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pode-pagar=${ocorrencia.exibirBotaoPagar},data-aguardando-qr=${ocorrencia.statusPagamento != null and ocorrencia.statusPagamento.name() == 'ESPERANDO_CONFIRMACAO'},data-pago=${ocorrencia.pagamentoPago}">
                 <span th:text="${ocorrencia.dataRotulo}">25/05</span>
                 <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
+                <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}" class="ms-1 text-warning" title="Pagar">$</span>
             </label>
         </div>
         <div class="meus-agendamentos-serie-linha__acoes">
+            <a href="#"
+               th:unless="${isDonaClinica}"
+               class="btn btn-sm btn-warning meus-agendamentos-pagar-data-btn disabled me-2"
+               aria-disabled="true">
+                Pagar data
+            </a>
             <form class="meus-agendamentos-cancelar-data-form d-inline" method="post">
                 <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                 <button type="submit"

@@ -27,6 +27,12 @@
             Voltar ao QR
         </a>
 
+        <a th:if="${pagamentoService.exibirBotaoPagar(agendamento) and !agendamento.possuiQrPagamentoAtivo() and agendamento.id != null}"
+           th:href="@{/pagamentos/{id}/pagar-agora(id=${agendamento.id})}"
+           class="btn btn-sm btn-warning">
+            Pagar
+        </a>
+
         <form th:if="${agendamento.possuiQrPagamentoAtivo()}"
               th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}"
               method="post"

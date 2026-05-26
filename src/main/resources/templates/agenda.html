@@ -1823,9 +1823,20 @@
         document.querySelectorAll('.meus-agendamentos-serie-linha').forEach(function (card) {
             var cancelForm = card.querySelector('.meus-agendamentos-cancelar-data-form');
             var cancelBtn = cancelForm ? cancelForm.querySelector('.meus-agendamentos-cancelar-data-btn') : null;
+            var payBtn = card.querySelector('.meus-agendamentos-pagar-data-btn');
             var radios = card.querySelectorAll('.meus-agendamentos-data-radio');
             if (!cancelForm || !cancelBtn || radios.length === 0) {
                 return;
+            }
+
+            function desabilitarPagamento() {
+                if (!payBtn) {
+                    return;
+                }
+                payBtn.href = '#';
+                payBtn.textContent = 'Pagar data';
+                payBtn.classList.add('disabled');
+                payBtn.setAttribute('aria-disabled', 'true');
             }
 
             function atualizarSelecao() {
@@ -1836,9 +1847,30 @@
                 if (selecionado && selecionado.value) {
                     cancelForm.action = basePath + 'agendamentos/' + selecionado.value + '/cancelar';
                     cancelBtn.disabled = false;
+                    if (payBtn) {
+                        var podePagar = selecionado.getAttribute('data-pode-pagar') === 'true';
+                        var aguardandoQr = selecionado.getAttribute('data-aguardando-qr') === 'true';
+                        var pago = selecionado.getAttribute('data-pago') === 'true';
+                        if (pago) {
+                            desabilitarPagamento();
+                        } else if (aguardandoQr) {
+                            payBtn.href = basePath + 'pagamentos/' + selecionado.value;
+                            payBtn.textContent = 'Ver QR';
+                            payBtn.classList.remove('disabled');
+                            payBtn.removeAttribute('aria-disabled');
+                        } else if (podePagar) {
+                            payBtn.href = basePath + 'pagamentos/' + selecionado.value + '/pagar-agora';
+                            payBtn.textContent = 'Pagar data';
+                            payBtn.classList.remove('disabled');
+                            payBtn.removeAttribute('aria-disabled');
+                        } else {
+                            desabilitarPagamento();
+                        }
+                    }
                 } else {
                     cancelForm.removeAttribute('action');
                     cancelBtn.disabled = true;
+                    desabilitarPagamento();
                 }
             }
 
