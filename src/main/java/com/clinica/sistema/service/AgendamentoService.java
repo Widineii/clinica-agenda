@@ -51,21 +51,31 @@ public class AgendamentoService {
     private final UsuarioRepository usuarioRepository;
     private final SalaRepository salaRepository;
     private final AuthService authService;
+    private final ValorConsultaService valorConsultaService;
+    private final PagamentoConsultaService pagamentoConsultaService;
 
     public AgendamentoService(
             AgendamentoRepository repository,
             UsuarioRepository usuarioRepository,
             SalaRepository salaRepository,
-            AuthService authService
+            AuthService authService,
+            ValorConsultaService valorConsultaService,
+            PagamentoConsultaService pagamentoConsultaService
     ) {
         this.repository = repository;
         this.usuarioRepository = usuarioRepository;
         this.salaRepository = salaRepository;
         this.authService = authService;
+        this.valorConsultaService = valorConsultaService;
+        this.pagamentoConsultaService = pagamentoConsultaService;
     }
 
     public List<Agendamento> buscarParaUsuario(Usuario usuarioLogado) {
         return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId());
+    }
+
+    public Optional<Agendamento> buscarPorId(Long id) {
+        return repository.findById(id);
     }
 
     public List<Agendamento> buscarPorProfissional(Long profissionalId) {
@@ -139,7 +149,10 @@ public class AgendamentoService {
                 .sorted(Comparator.comparing(Agendamento::getDataHoraInicio))
                 .map(agendamento -> new SerieAgendamentoOcorrencia(
                         agendamento.getId(),
-                        agendamento.getDataHoraInicio().format(formatoData)
+                        agendamento.getDataHoraInicio().format(formatoData),
+                        agendamento.getStatusPagamento(),
+                        pagamentoConsultaService.exibirBotaoPagar(agendamento),
+                        agendamento.isPagamentoPago()
                 ))
                 .limit(obterLimiteOcorrenciasFuturas(recorrenciaDoAgendamento(representante)))
                 .toList();
@@ -154,7 +167,8 @@ public class AgendamentoService {
                 representante.getId(),
                 recorrenciaDoAgendamento(representante),
                 diaSemanaRotulo,
-                proximasOcorrencias != null ? proximasOcorrencias : List.of()
+                proximasOcorrencias != null ? proximasOcorrencias : List.of(),
+                representante.getValoresConsultaResumo()
         );
     }
 
@@ -519,9 +533,12 @@ public class AgendamentoService {
             novo.setSerieFixaId(serieFixaId);
             novo.setTipoRecorrencia(recorrencia);
             novo.setRecorrencia(recorrencia);
+            valorConsultaService.aplicarValores(novo, form, sala, recorrencia);
             novosAgendamentos.add(novo);
         }
 
+        repository.saveAll(novosAgendamentos);
+        pagamentoConsultaService.configurarPagamentosAoSalvar(novosAgendamentos);
         repository.saveAll(novosAgendamentos);
         if (!RECORRENCIA_AVULSO.equals(recorrencia)) {
             renovarSeriesRecorrentesAtivas();
@@ -608,6 +625,9 @@ public class AgendamentoService {
         }
 
         if (!novos.isEmpty()) {
+            for (Agendamento novo : novos) {
+                pagamentoConsultaService.configurarPagamentoNovaOcorrenciaSerie(novo);
+            }
             repository.saveAll(novos);
         }
     }
@@ -617,6 +637,16 @@ public class AgendamentoService {
             return false;
         }
         return agendamento.getProfissional().getId().equals(usuarioLogado.getId());
+    }
+
+    public boolean podeVerValoresConsulta(Agendamento agendamento, Usuario usuarioLogado) {
+        if (agendamento == null || !agendamento.possuiValoresConsulta()) {
+            return false;
+        }
+        if (podeGerenciarAgendamentoDeOutros(usuarioLogado)) {
+            return true;
+        }
+        return isAgendamentoDoUsuario(agendamento, usuarioLogado);
     }
 
     public boolean podeCancelarAgendamento(Agendamento agendamento, Usuario usuarioLogado) {
@@ -784,6 +814,7 @@ public class AgendamentoService {
         String recorrencia = recorrenciaDoAgendamento(modelo);
         novo.setTipoRecorrencia(recorrencia);
         novo.setRecorrencia(recorrencia);
+        valorConsultaService.copiarValores(novo, modelo);
         return novo;
     }
 

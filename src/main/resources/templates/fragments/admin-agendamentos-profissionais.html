@@ -4,7 +4,7 @@
 <div th:fragment="painel (resumosProfissionais, profissionaisEquipe)" class="card shell-card mt-4" id="agendamentos-profissionais">
     <div class="card-body p-3">
         <h2 class="h6 mb-2">Agendamentos por profissional</h2>
-        <p class="small text-muted mb-2">Clique no nome para ver avulso, fixo e quinzenal (layout caderno).</p>
+        <p class="small text-muted mb-2">Clique no nome para ver avulso, fixo, quinzenal e valores de cada profissional.</p>
 
         <p th:if="${#lists.isEmpty(resumosProfissionais) and #lists.isEmpty(profissionaisEquipe)}"
            class="text-muted py-2 px-1 small mb-0">

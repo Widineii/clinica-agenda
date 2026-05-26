@@ -22,9 +22,14 @@ public class SecurityConfig {
                 .authenticationProvider(clinicaAuthenticationProvider)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login", "/error", "/actuator/health", "/css/**", "/js/**", "/images/**").permitAll()
-                        .requestMatchers("/agendamentos/**", "/conta/**").authenticated()
+                        .requestMatchers("/api/webhooks/**", "/pagamentos/checkout-teste", "/pagamentos/checkout-teste/**").permitAll()
+                        .requestMatchers("/agendamentos/**", "/conta/**", "/pagamentos/**").authenticated()
                         .anyRequest().authenticated()
                 )
+                .csrf(csrf -> csrf.ignoringRequestMatchers(
+                        "/api/webhooks/**",
+                        "/pagamentos/checkout-teste/**"
+                ))
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")

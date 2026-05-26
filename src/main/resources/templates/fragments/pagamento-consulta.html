@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="status-badge (agendamento)">
+    <span th:if="${agendamento != null and agendamento.statusPagamento != null}"
+          class="badge rounded-pill ms-1"
+          th:classappend="${agendamento.pagamentoPago ? ' text-bg-success' : (agendamento.pagamentoPendente ? ' text-bg-warning' : ' text-bg-secondary')}"
+          th:text="${pagamentoService.rotuloStatusPagamento(agendamento)}">Aguardando pagamento</span>
+</div>
+
+<div th:fragment="acoes (agendamento)">
+    <div th:if="${agendamento != null}" class="pagamento-acoes mt-2 d-flex flex-wrap gap-2 align-items-center">
+        <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${agendamento})}"></div>
+
+        <a th:if="${agendamento.pagamentoPendente and agendamento.pagamentoLink != null}"
+           th:href="${agendamento.pagamentoLink}"
+           class="btn btn-sm btn-outline-primary"
+           target="_blank"
+           rel="noopener">
+            Abrir link PIX
+        </a>
+
+        <a th:if="${agendamento.pagamentoPendente and agendamento.id != null}"
+           th:href="@{/pagamentos/{id}(id=${agendamento.id})}"
+           class="btn btn-sm btn-primary">
+            Ver QR Code
+        </a>
+
+        <form th:if="${pagamentoService.exibirBotaoPagar(agendamento) and (agendamento.pagamentoLink == null or agendamento.pagamentoLink.isBlank())}"
+              th:action="@{/pagamentos/{id}/gerar-link(id=${agendamento.id})}"
+              method="post"
+              class="d-inline">
+            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+            <button type="submit" class="btn btn-sm btn-warning">Gerar pagamento</button>
+        </form>
+
+        <form th:if="${agendamento.pagamentoPendente}"
+              th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}"
+              method="post"
+              class="d-inline">
+            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+            <button type="submit" class="btn btn-sm btn-success">Simular pagamento (teste)</button>
+        </form>
+    </div>
+</div>
+
+<div th:fragment="modal-pos-agendamento (agendamento)">
+    <div th:if="${agendamento != null}" class="modal fade admin-modal" id="pagamentoPosAgendamentoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header px-4 py-3">
+                    <div>
+                        <h2 class="modal-title h5 mb-1">Pagamento da consulta</h2>
+                        <p class="small text-muted mb-0">Pague 1 dia antes para usar a sala no dia da consulta.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body px-4 pb-4 text-center">
+                    <p class="mb-1"><strong th:text="${agendamento.nomeCliente}">Cliente</strong></p>
+                    <p class="small text-muted mb-3"
+                       th:text="${agendamento.dataHoraInicio != null ? #temporals.format(agendamento.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''}">28/05/2026 10:00</p>
+                    <p class="mb-3">Taxa da clinica: <strong th:text="${agendamento.valorPagamentoFormatado}">R$ 32,00</strong></p>
+
+                    <img th:if="${agendamento.pagamentoLink != null}"
+                         th:src="@{/pagamentos/{id}/qr.png(id=${agendamento.id})}"
+                         alt="QR Code PIX"
+                         class="img-fluid rounded border mb-3"
+                         width="240"
+                         height="240">
+
+                    <div class="d-grid gap-2">
+                        <a th:if="${agendamento.pagamentoLink != null}"
+                           th:href="${agendamento.pagamentoLink}"
+                           class="btn btn-primary"
+                           target="_blank"
+                           rel="noopener">
+                            Abrir link de pagamento
+                        </a>
+                        <form th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}" method="post">
+                            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                            <button type="submit" class="btn btn-outline-success w-100">Simular pagamento (teste)</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

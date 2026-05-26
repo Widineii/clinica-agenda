@@ -1,6 +1,7 @@
 package com.clinica.sistema.repository;
 
 import com.clinica.sistema.model.Agendamento;
+import com.clinica.sistema.model.PagamentoStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -186,4 +187,11 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
             WHERE a.nomeCliente LIKE :prefixo
             """)
     int deleteByNomeClienteLike(@Param("prefixo") String prefixo);
+
+    List<Agendamento> findByStatusPagamentoAndDataHoraInicioGreaterThanEqual(
+            PagamentoStatus statusPagamento,
+            LocalDateTime dataHoraInicio
+    );
+
+    Optional<Agendamento> findByPagamentoOrderNsu(String pagamentoOrderNsu);
 }

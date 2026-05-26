@@ -13,6 +13,7 @@ public class SerieAgendamentoLinha {
     private final String tipoRecorrencia;
     private final String diaSemanaRotulo;
     private final List<SerieAgendamentoOcorrencia> proximasOcorrencias;
+    private final String valoresConsultaResumo;
 
     public SerieAgendamentoLinha(
             String nomeCliente,
@@ -22,12 +23,25 @@ public class SerieAgendamentoLinha {
             String diaSemanaRotulo,
             List<SerieAgendamentoOcorrencia> proximasOcorrencias
     ) {
+        this(nomeCliente, salaNome, agendamentoReferenciaId, tipoRecorrencia, diaSemanaRotulo, proximasOcorrencias, null);
+    }
+
+    public SerieAgendamentoLinha(
+            String nomeCliente,
+            String salaNome,
+            Long agendamentoReferenciaId,
+            String tipoRecorrencia,
+            String diaSemanaRotulo,
+            List<SerieAgendamentoOcorrencia> proximasOcorrencias,
+            String valoresConsultaResumo
+    ) {
         this.nomeCliente = nomeCliente;
         this.salaNome = salaNome;
         this.agendamentoReferenciaId = agendamentoReferenciaId;
         this.tipoRecorrencia = tipoRecorrencia;
         this.diaSemanaRotulo = diaSemanaRotulo;
         this.proximasOcorrencias = proximasOcorrencias;
+        this.valoresConsultaResumo = valoresConsultaResumo;
     }
 
     public String getRotuloCabecalho() {

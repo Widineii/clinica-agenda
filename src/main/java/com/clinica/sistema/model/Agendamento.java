@@ -2,6 +2,8 @@ package com.clinica.sistema.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.Locale;
 
@@ -35,6 +37,37 @@ public class Agendamento {
 
     @Column(name = "tipo_recorrencia")
     private String tipoRecorrencia;
+
+    @Column(name = "valor_profissional_recebe", precision = 12, scale = 2)
+    private BigDecimal valorProfissionalRecebe;
+
+    @Column(name = "valor_clinica_cobra", precision = 12, scale = 2)
+    private BigDecimal valorClinicaCobra;
+
+    @Column(name = "valor_liquido_profissional", precision = 12, scale = 2)
+    private BigDecimal valorLiquidoProfissional;
+
+    @Column(name = "indicacao_dona")
+    private Boolean indicacaoDona;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_pagamento")
+    private PagamentoStatus statusPagamento;
+
+    @Column(name = "pagamento_order_nsu")
+    private String pagamentoOrderNsu;
+
+    @Column(name = "pagamento_link", length = 512)
+    private String pagamentoLink;
+
+    @Column(name = "pagamento_slug")
+    private String pagamentoSlug;
+
+    @Column(name = "valor_pagamento", precision = 12, scale = 2)
+    private BigDecimal valorPagamento;
+
+    @Column(name = "data_pagamento")
+    private LocalDateTime dataPagamento;
 
     @Transient
     private String recorrencia;
@@ -80,5 +113,62 @@ public class Agendamento {
             return "Fixo";
         }
         return "Avulso";
+    }
+
+    @Transient
+    public boolean possuiValoresConsulta() {
+        return valorProfissionalRecebe != null || valorClinicaCobra != null;
+    }
+
+    @Transient
+    public String getValorProfissionalRecebeFormatado() {
+        return formatarMoeda(valorProfissionalRecebe);
+    }
+
+    @Transient
+    public String getValorClinicaCobraFormatado() {
+        return formatarMoeda(valorClinicaCobra);
+    }
+
+    @Transient
+    public String getValorLiquidoProfissionalFormatado() {
+        return formatarMoeda(valorLiquidoProfissional);
+    }
+
+    @Transient
+    public String getValoresConsultaResumo() {
+        if (!possuiValoresConsulta()) {
+            return null;
+        }
+        String resumo = "Prof. " + getValorProfissionalRecebeFormatado()
+                + " | Clin. " + getValorClinicaCobraFormatado()
+                + " | Liq. " + getValorLiquidoProfissionalFormatado();
+        if (Boolean.TRUE.equals(indicacaoDona)) {
+            resumo += " | Indicacao 30%";
+        }
+        return resumo;
+    }
+
+    @Transient
+    public String getValorPagamentoFormatado() {
+        return formatarMoeda(valorPagamento);
+    }
+
+    @Transient
+    public boolean isPagamentoPendente() {
+        return statusPagamento == PagamentoStatus.AGUARDANDO_PAGAMENTO;
+    }
+
+    @Transient
+    public boolean isPagamentoPago() {
+        return statusPagamento == PagamentoStatus.PAGO;
+    }
+
+    private String formatarMoeda(BigDecimal valor) {
+        if (valor == null) {
+            return "—";
+        }
+        NumberFormat formato = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
+        return formato.format(valor);
     }
 }

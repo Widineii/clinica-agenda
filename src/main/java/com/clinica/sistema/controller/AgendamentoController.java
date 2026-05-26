@@ -4,9 +4,11 @@ import com.clinica.sistema.config.StartupDataInitializer;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
 import com.clinica.sistema.dto.TrocarSenhaAdminForm;
+import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.RelatorioMensalService;
 import com.clinica.sistema.service.RelatorioSemanalService;
 import com.clinica.sistema.service.UsuarioService;
@@ -37,6 +39,7 @@ public class AgendamentoController {
     private final UsuarioService usuarioService;
     private final RelatorioSemanalService relatorioSemanalService;
     private final RelatorioMensalService relatorioMensalService;
+    private final PagamentoConsultaService pagamentoConsultaService;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -44,7 +47,8 @@ public class AgendamentoController {
             StartupDataInitializer startupDataInitializer,
             UsuarioService usuarioService,
             RelatorioSemanalService relatorioSemanalService,
-            RelatorioMensalService relatorioMensalService
+            RelatorioMensalService relatorioMensalService,
+            PagamentoConsultaService pagamentoConsultaService
     ) {
         this.service = service;
         this.authService = authService;
@@ -52,6 +56,7 @@ public class AgendamentoController {
         this.usuarioService = usuarioService;
         this.relatorioSemanalService = relatorioSemanalService;
         this.relatorioMensalService = relatorioMensalService;
+        this.pagamentoConsultaService = pagamentoConsultaService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -91,6 +96,7 @@ public class AgendamentoController {
         }
 
         service.renovarSeriesRecorrentesAtivas();
+        pagamentoConsultaService.atualizarJanelasDePagamento();
 
         boolean isAdmin = authService.isAdmin(usuarioLogado);
 
@@ -126,6 +132,7 @@ public class AgendamentoController {
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
         model.addAttribute("podeGerenciarEquipe", podeGerenciarEquipe);
+        model.addAttribute("podeVerValoresDeTodos", podeGerenciarEquipe);
         model.addAttribute("agendamentos", agendamentos);
         model.addAttribute("agendamentosAvulsos", agendamentosAvulsos);
         model.addAttribute("agendamentosFixos", agendamentosFixos);
@@ -156,7 +163,7 @@ public class AgendamentoController {
         }
 
         List<Usuario> equipeProfissionais = usuarioService.listarProfissionaisDaEquipe();
-        if (isAdmin) {
+        if (podeGerenciarEquipe) {
             model.addAttribute("resumosProfissionais", service.montarResumosProfissionais(equipeProfissionais));
         } else {
             model.addAttribute("resumosProfissionais", Collections.emptyList());
@@ -181,6 +188,13 @@ public class AgendamentoController {
         model.addAttribute("dataAgendaDia", LocalDate.now());
         model.addAttribute("totalAgendamentosDoDia", agendamentosDoDia.size());
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
+        Object pagamentoFlashId = model.containsAttribute("pagamentoAgendamentoId")
+                ? model.getAttribute("pagamentoAgendamentoId")
+                : null;
+        if (pagamentoFlashId instanceof Long pagamentoId) {
+            service.buscarPorId(pagamentoId).ifPresent(ag -> model.addAttribute("pagamentoAgendamento", ag));
+        }
         return "agenda";
     }
 
@@ -262,7 +276,7 @@ public class AgendamentoController {
     ) {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
-            service.salvar(agendamentoForm, usuarioLogado);
+            var criado = service.salvar(agendamentoForm, usuarioLogado);
             redirectAttributes.addFlashAttribute(
                     "sucesso",
                     "QUINZENAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
@@ -271,6 +285,9 @@ public class AgendamentoController {
                                     ? "Agendamento fixo cadastrado. A serie continua automaticamente ate encerrar."
                                     : "Agendamento cadastrado com sucesso."
             );
+            if (PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(criado.getStatusPagamento())) {
+                redirectAttributes.addFlashAttribute("pagamentoAgendamentoId", criado.getId());
+            }
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
             redirectAttributes.addFlashAttribute("erroContexto", "agendamento");

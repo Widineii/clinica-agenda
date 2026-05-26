@@ -16,8 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -58,6 +60,12 @@ class AgendamentoServiceTest {
 
     @Mock
     private AuthService authService;
+
+    @Mock
+    private PagamentoConsultaService pagamentoConsultaService;
+
+    @Spy
+    private ValorConsultaService valorConsultaService = new ValorConsultaService();
 
     @InjectMocks
     private AgendamentoService agendamentoService;
@@ -152,7 +160,7 @@ class AgendamentoServiceTest {
         Agendamento agendamento = assertDoesNotThrow(() -> agendamentoService.salvar(form, profissional));
 
         assertEquals(Boolean.TRUE, agendamento.getFixo());
-        verify(agendamentoRepository).saveAll(any());
+        verify(agendamentoRepository, times(2)).saveAll(any());
         verify(agendamentoRepository, times(12)).existsBySalaIdAndDataHoraInicioLessThanAndDataHoraFimGreaterThan(
                 eq(sala.getId()), any(LocalDateTime.class), any(LocalDateTime.class)
         );
@@ -814,6 +822,49 @@ class AgendamentoServiceTest {
         verify(agendamentoRepository, never()).saveAll(any());
     }
 
+    @Test
+    void polyanaDeveVerValoresDeQualquerProfissional() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        Usuario julia = new Usuario();
+        julia.setId(20L);
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setProfissional(julia);
+        agendamento.setValorProfissionalRecebe(new BigDecimal("150.00"));
+        agendamento.setValorClinicaCobra(new BigDecimal("35.00"));
+
+        when(authService.isAdmin(polyana)).thenReturn(false);
+        when(authService.isDonaClinica(polyana)).thenReturn(true);
+
+        assertTrue(agendamentoService.podeVerValoresConsulta(agendamento, polyana));
+    }
+
+    @Test
+    void juliaSoVeValoresDosPropriosAgendamentos() {
+        Usuario julia = new Usuario();
+        julia.setId(20L);
+
+        Usuario carol = new Usuario();
+        carol.setId(21L);
+
+        Agendamento proprio = new Agendamento();
+        proprio.setProfissional(julia);
+        proprio.setValorProfissionalRecebe(new BigDecimal("150.00"));
+
+        Agendamento deOutra = new Agendamento();
+        deOutra.setProfissional(carol);
+        deOutra.setValorProfissionalRecebe(new BigDecimal("200.00"));
+
+        when(authService.isAdmin(julia)).thenReturn(false);
+        when(authService.isDonaClinica(julia)).thenReturn(false);
+
+        assertTrue(agendamentoService.podeVerValoresConsulta(proprio, julia));
+        assertFalse(agendamentoService.podeVerValoresConsulta(deOutra, julia));
+    }
+
     private AgendamentoForm novoForm(LocalDateTime dataHoraInicio) {
         AgendamentoForm form = new AgendamentoForm();
         form.setProfissionalId(profissional.getId());
@@ -821,6 +872,8 @@ class AgendamentoServiceTest {
         form.setNomeCliente("Joao da Silva");
         form.setDataAtendimento(dataHoraInicio.toLocalDate());
         form.setHorarioAtendimento(dataHoraInicio.toLocalTime());
+        form.setValorProfissionalRecebe(new BigDecimal("150.00"));
+        form.setValorClinicaCobra(new BigDecimal("35.00"));
         return form;
     }
 

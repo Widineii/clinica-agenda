@@ -2,11 +2,21 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
+<div th:fragment="valores-linha (agendamento)">
+    <span th:if="${agendamento != null and agendamento.possuiValoresConsulta()}"
+          class="agendamento-valores small text-muted d-block mt-1"
+          th:text="${agendamento.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</span>
+</div>
+
 <div th:fragment="avulso-lista (agendamentos)">
     <p th:if="${#lists.isEmpty(agendamentos)}" class="text-muted small mb-0 py-1">Nenhum agendamento avulso.</p>
     <div th:each="agendamento : ${agendamentos}" class="meus-agendamentos-avulso-linha">
-        <span class="meus-agendamentos-avulso-linha__texto"
-              th:text="${(agendamento.nomeCliente ?: '-') + ' - ' + (agendamento.sala?.nome ?: '-') + (agendamento.dataHoraInicio != null ? ' - ' + #temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm') : '')}">Cliente</span>
+        <div>
+            <span class="meus-agendamentos-avulso-linha__texto"
+                  th:text="${(agendamento.nomeCliente ?: '-') + ' - ' + (agendamento.sala?.nome ?: '-') + (agendamento.dataHoraInicio != null ? ' - ' + #temporals.format(agendamento.dataHoraInicio, 'dd/MM HH:mm') : '')}">Cliente</span>
+            <div th:replace="~{fragments/caderno-agendamentos :: valores-linha(agendamento=${agendamento})}"></div>
+            <div th:replace="~{fragments/pagamento-consulta :: acoes(agendamento=${agendamento})}"></div>
+        </div>
         <div class="meus-agendamentos-avulso-linha__acoes">
             <form th:action="@{/agendamentos/{id}/cancelar(id=${agendamento.id})}" method="post">
                 <th:block th:replace="~{fragments/csrf :: token}"></th:block>
@@ -23,6 +33,9 @@
     <p th:if="${#lists.isEmpty(series)}" class="text-muted small mb-0 py-1">Nenhuma serie nesta categoria.</p>
     <div th:each="serie : ${series}" class="meus-agendamentos-serie-linha">
         <div class="meus-agendamentos-serie-linha__titulo" th:text="${serie.rotuloCabecalho}">Cliente - Sala</div>
+        <p th:if="${serie.valoresConsultaResumo != null}"
+           class="agendamento-valores small text-muted mb-2"
+           th:text="${serie.valoresConsultaResumo}">Prof. R$ 150,00 | Clin. R$ 35,00</p>
         <p class="meus-agendamentos-serie-linha__dica mb-2">Selecione uma data e clique em Cancelar data.</p>
         <div class="meus-agendamentos-serie-linha__datas" th:attr="data-serie-id=${serie.agendamentoReferenciaId}">
             <label th:each="ocorrencia : ${serie.proximasOcorrencias}"
@@ -31,12 +44,21 @@
                        class="meus-agendamentos-data-radio"
                        th:name="${radioPrefix + serie.agendamentoReferenciaId}"
                        th:value="${ocorrencia.agendamentoId}"
-                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo}">
+                       th:attr="data-data-rotulo=${ocorrencia.dataRotulo},data-pode-pagar=${ocorrencia.exibirBotaoPagar},data-pago=${ocorrencia.pagamentoPago}">
                 <span th:text="${ocorrencia.dataRotulo}">25/05</span>
+                <span th:if="${ocorrencia.pagamentoPago}" class="ms-1 text-success" title="Pago">✓</span>
+                <span th:if="${ocorrencia.exibirBotaoPagar and !ocorrencia.pagamentoPago}" class="ms-1 text-warning" title="Pagar">$</span>
             </label>
         </div>
         <div class="meus-agendamentos-serie-linha__acoes">
-            <form class="meus-agendamentos-cancelar-data-form" method="post">
+            <form class="meus-agendamentos-pagar-data-form d-inline" method="get">
+                <a href="#"
+                   class="btn btn-sm btn-outline-warning meus-agendamentos-pagar-data-btn disabled"
+                   aria-disabled="true">
+                    Pagar esta data
+                </a>
+            </form>
+            <form class="meus-agendamentos-cancelar-data-form d-inline" method="post">
                 <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                 <button type="submit"
                         class="btn btn-sm btn-outline-danger meus-agendamentos-cancelar-data-btn"

@@ -20,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.DayOfWeek;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -93,6 +94,8 @@ class RelatorioMensalFluxoIntegracaoTest {
             form.setHorarioAtendimento(horario);
             form.setRecorrencia("AVULSO");
             form.setFixo(false);
+            form.setValorProfissionalRecebe(new BigDecimal("150.00"));
+            form.setValorClinicaCobra(new BigDecimal("35.00"));
 
             agendamentoService.salvar(form, admin);
             criados++;
@@ -150,6 +153,8 @@ class RelatorioMensalFluxoIntegracaoTest {
         avulso.setDataAtendimento(dia);
         avulso.setHorarioAtendimento(LocalTime.of(7, 0));
         avulso.setRecorrencia("AVULSO");
+        avulso.setValorProfissionalRecebe(new BigDecimal("150.00"));
+        avulso.setValorClinicaCobra(new BigDecimal("35.00"));
         agendamentoService.salvar(avulso, admin);
 
         AgendamentoForm semanal = new AgendamentoForm();
@@ -159,6 +164,8 @@ class RelatorioMensalFluxoIntegracaoTest {
         semanal.setDataAtendimento(dia);
         semanal.setHorarioAtendimento(LocalTime.of(9, 0));
         semanal.setRecorrencia("SEMANAL");
+        semanal.setValorProfissionalRecebe(new BigDecimal("150.00"));
+        semanal.setValorClinicaCobra(new BigDecimal("32.00"));
         agendamentoService.salvar(semanal, admin);
 
         LocalDateTime inicioMes = mesPassado.atDay(1).atStartOfDay();

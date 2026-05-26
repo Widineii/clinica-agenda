@@ -2,6 +2,7 @@ package com.clinica.sistema.dto;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -14,4 +15,7 @@ public class AgendamentoForm {
     private LocalTime horarioAtendimento;
     private boolean fixo;
     private String recorrencia = "AVULSO";
+    private BigDecimal valorProfissionalRecebe;
+    private BigDecimal valorClinicaCobra;
+    private boolean indicacaoDona;
 }
