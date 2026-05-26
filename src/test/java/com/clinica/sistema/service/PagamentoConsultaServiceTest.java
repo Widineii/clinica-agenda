@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.config.PagamentoProperties;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,9 +16,9 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +32,9 @@ class PagamentoConsultaServiceTest {
 
     @Mock
     private AuthService authService;
+
+    @Mock
+    private PagamentoProperties pagamentoProperties;
 
     @InjectMocks
     private PagamentoConsultaService pagamentoConsultaService;
@@ -46,7 +50,8 @@ class PagamentoConsultaServiceTest {
     }
 
     @Test
-    void deveAbrirPagamentoImediatoNaPrimeiraConsultaDaSerie() {
+    void deveAbrirConfirmacaoImediataNaPrimeiraConsultaDaSerie() {
+        when(pagamentoProperties.getPrazoConfirmacaoMinutos()).thenReturn(5);
         when(infinitePayService.gerarLinkPagamento(any())).thenReturn(
                 new com.clinica.sistema.dto.LinkPagamentoGerado("ag-1-test", "http://localhost/link", "slug")
         );
@@ -54,12 +59,15 @@ class PagamentoConsultaServiceTest {
 
         pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento));
 
-        assertEquals(PagamentoStatus.AGUARDANDO_PAGAMENTO, agendamento.getStatusPagamento());
+        assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, agendamento.getStatusPagamento());
         assertEquals("http://localhost/link", agendamento.getPagamentoLink());
+        assertNotNull(agendamento.getPagamentoExpiraEm());
+        assertTrue(agendamento.getPagamentoExpiraEm().isAfter(LocalDateTime.now()));
     }
 
     @Test
     void consultasFuturasDaSerieFicamComPagamentoFuturo() {
+        when(pagamentoProperties.getPrazoConfirmacaoMinutos()).thenReturn(5);
         Agendamento segunda = new Agendamento();
         segunda.setId(2L);
         segunda.setDataHoraInicio(LocalDate.now().plusDays(10).atTime(10, 0));
@@ -71,7 +79,7 @@ class PagamentoConsultaServiceTest {
 
         pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento, segunda));
 
-        assertEquals(PagamentoStatus.AGUARDANDO_PAGAMENTO, agendamento.getStatusPagamento());
+        assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, agendamento.getStatusPagamento());
         assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, segunda.getStatusPagamento());
     }
 
@@ -89,6 +97,9 @@ class PagamentoConsultaServiceTest {
         agendamento.setDataHoraInicio(LocalDate.now().atTime(20, 0));
         agendamento.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
         assertTrue(pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
+
+        agendamento.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        assertFalse(pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
 
         agendamento.setStatusPagamento(PagamentoStatus.PAGO);
         assertFalse(pagamentoConsultaService.bloqueadoPorPagamento(agendamento));

@@ -5,15 +5,15 @@
 <div th:fragment="status-badge (agendamento)">
     <span th:if="${agendamento != null and agendamento.statusPagamento != null}"
           class="badge rounded-pill ms-1"
-          th:classappend="${agendamento.pagamentoPago ? ' text-bg-success' : (agendamento.pagamentoPendente ? ' text-bg-warning' : ' text-bg-secondary')}"
-          th:text="${pagamentoService.rotuloStatusPagamento(agendamento)}">Aguardando pagamento</span>
+          th:classappend="${agendamento.pagamentoPago ? ' text-bg-success' : (agendamento.esperandoConfirmacaoPagamento ? ' text-bg-warning' : (agendamento.pagamentoPendente ? ' text-bg-secondary' : ' text-bg-light text-dark'))}"
+          th:text="${pagamentoService.rotuloStatusPagamento(agendamento)}">Esperando confirmacao</span>
 </div>
 
 <div th:fragment="acoes (agendamento)">
     <div th:if="${agendamento != null}" class="pagamento-acoes mt-2 d-flex flex-wrap gap-2 align-items-center">
         <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${agendamento})}"></div>
 
-        <a th:if="${agendamento.pagamentoPendente and agendamento.pagamentoLink != null}"
+        <a th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.pagamentoLink != null}"
            th:href="${agendamento.pagamentoLink}"
            class="btn btn-sm btn-outline-primary"
            target="_blank"
@@ -21,21 +21,21 @@
             Abrir link PIX
         </a>
 
-        <a th:if="${agendamento.pagamentoPendente and agendamento.id != null}"
+        <a th:if="${agendamento.possuiQrPagamentoAtivo() and agendamento.id != null}"
            th:href="@{/pagamentos/{id}(id=${agendamento.id})}"
            class="btn btn-sm btn-primary">
-            Ver QR Code
+            Voltar ao QR
         </a>
 
-        <form th:if="${pagamentoService.exibirBotaoPagar(agendamento) and (agendamento.pagamentoLink == null or agendamento.pagamentoLink.isBlank())}"
+        <form th:if="${pagamentoService.exibirBotaoPagar(agendamento) and !agendamento.possuiQrPagamentoAtivo()}"
               th:action="@{/pagamentos/{id}/gerar-link(id=${agendamento.id})}"
               method="post"
               class="d-inline">
             <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-            <button type="submit" class="btn btn-sm btn-warning">Gerar pagamento</button>
+            <button type="submit" class="btn btn-sm btn-warning">Pagar esta consulta</button>
         </form>
 
-        <form th:if="${agendamento.pagamentoPendente}"
+        <form th:if="${agendamento.possuiQrPagamentoAtivo()}"
               th:action="@{/pagamentos/{id}/simular(id=${agendamento.id})}"
               method="post"
               class="d-inline">
@@ -45,14 +45,69 @@
     </div>
 </div>
 
+<div th:fragment="painel-pendentes (pagamentos)">
+    <div class="card shell-card mt-4" id="pagamentos-pendentes"
+         th:if="${pagamentos != null and !#lists.isEmpty(pagamentos)}">
+        <div class="card-body p-4">
+            <h2 class="h5 mb-2 d-flex align-items-center gap-2 flex-wrap">
+                Pagamentos pendentes
+                <span class="badge rounded-pill text-bg-warning">Voltar ao QR</span>
+            </h2>
+            <p class="small text-muted mb-3">
+                Consultas reservadas aguardando PIX. Tempo restante: 5 minutos — depois o horario e liberado automaticamente.
+            </p>
+            <div th:each="item : ${pagamentos}" class="pagamento-pendente-card mb-3 p-3 rounded border">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <strong th:text="${item.nomeCliente}">Cliente</strong>
+                        <span class="small text-muted d-block"
+                              th:text="${item.dataHoraInicio != null ? #temporals.format(item.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''} + ' · ' + (item.sala?.nome ?: '-')">28/05 10:00</span>
+                    </div>
+                    <span class="badge text-bg-warning pagamento-countdown"
+                          th:attr="data-expira-em=${item.pagamentoExpiraEm != null ? #temporals.format(item.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
+                          th:text="${item.tempoRestantePagamentoFormatado}">4:59</span>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <a th:href="@{/pagamentos/{id}(id=${item.id})}">
+                        <img th:src="@{/pagamentos/{id}/qr.png(id=${item.id})}"
+                             alt="QR Code"
+                             width="88"
+                             height="88"
+                             class="rounded border">
+                    </a>
+                    <div class="d-grid gap-2 flex-grow-1" style="min-width: 180px;">
+                        <a th:href="@{/pagamentos/{id}(id=${item.id})}"
+                           class="btn btn-sm btn-primary">Voltar ao QR Code</a>
+                        <a th:if="${item.pagamentoLink != null}"
+                           th:href="${item.pagamentoLink}"
+                           class="btn btn-sm btn-outline-primary"
+                           target="_blank"
+                           rel="noopener">Abrir link PIX</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div th:fragment="modal-pos-agendamento (agendamento)">
-    <div th:if="${agendamento != null}" class="modal fade admin-modal" id="pagamentoPosAgendamentoModal" tabindex="-1" aria-hidden="true">
+    <div th:if="${agendamento != null and agendamento.possuiQrPagamentoAtivo()}"
+         class="modal fade admin-modal"
+         id="pagamentoPosAgendamentoModal"
+         tabindex="-1"
+         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header px-4 py-3">
                     <div>
-                        <h2 class="modal-title h5 mb-1">Pagamento da consulta</h2>
-                        <p class="small text-muted mb-0">Pague 1 dia antes para usar a sala no dia da consulta.</p>
+                        <h2 class="modal-title h5 mb-1">Esperando confirmacao do pagamento</h2>
+                        <p class="small text-muted mb-0">
+                            Horario reservado na agenda. Pague em
+                            <strong class="pagamento-countdown"
+                                    th:attr="data-expira-em=${agendamento.pagamentoExpiraEm != null ? #temporals.format(agendamento.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
+                                    th:text="${agendamento.tempoRestantePagamentoFormatado}">5:00</strong>
+                            ou o agendamento sera cancelado.
+                        </p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
@@ -68,6 +123,8 @@
                          class="img-fluid rounded border mb-3"
                          width="240"
                          height="240">
+
+                    <p class="small text-muted mb-3">Fechou sem querer? Use a aba <a href="#pagamentos-pendentes">Pagamentos pendentes</a>.</p>
 
                     <div class="d-grid gap-2">
                         <a th:if="${agendamento.pagamentoLink != null}"

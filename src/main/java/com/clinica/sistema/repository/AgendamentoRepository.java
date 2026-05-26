@@ -194,4 +194,24 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     );
 
     Optional<Agendamento> findByPagamentoOrderNsu(String pagamentoOrderNsu);
+
+    List<Agendamento> findByStatusPagamentoAndPagamentoExpiraEmBefore(
+            PagamentoStatus statusPagamento,
+            LocalDateTime pagamentoExpiraEm
+    );
+
+    List<Agendamento> findByProfissionalIdAndStatusPagamentoAndPagamentoExpiraEmAfterOrderByPagamentoExpiraEmAsc(
+            Long profissionalId,
+            PagamentoStatus statusPagamento,
+            LocalDateTime pagamentoExpiraEm
+    );
+
+    List<Agendamento> findByStatusPagamentoAndPagamentoExpiraEmAfterOrderByPagamentoExpiraEmAsc(
+            PagamentoStatus statusPagamento,
+            LocalDateTime pagamentoExpiraEm
+    );
+
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    int deleteBySerieFixaIdAndStatusPagamentoNot(String serieFixaId, PagamentoStatus statusPagamento);
 }

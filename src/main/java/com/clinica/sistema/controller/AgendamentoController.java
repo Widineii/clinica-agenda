@@ -96,7 +96,7 @@ public class AgendamentoController {
         }
 
         service.renovarSeriesRecorrentesAtivas();
-        pagamentoConsultaService.atualizarJanelasDePagamento();
+        pagamentoConsultaService.processarPagamentosPendentes();
 
         boolean isAdmin = authService.isAdmin(usuarioLogado);
 
@@ -189,6 +189,10 @@ public class AgendamentoController {
         model.addAttribute("totalAgendamentosDoDia", agendamentosDoDia.size());
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
         model.addAttribute("pagamentoService", pagamentoConsultaService);
+        model.addAttribute(
+                "pagamentosAguardandoQr",
+                pagamentoConsultaService.listarAguardandoConfirmacao(usuarioLogado, podeGerenciarEquipe)
+        );
         Object pagamentoFlashId = model.containsAttribute("pagamentoAgendamentoId")
                 ? model.getAttribute("pagamentoAgendamentoId")
                 : null;
@@ -277,16 +281,22 @@ public class AgendamentoController {
         try {
             Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
             var criado = service.salvar(agendamentoForm, usuarioLogado);
-            redirectAttributes.addFlashAttribute(
-                    "sucesso",
-                    "QUINZENAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
-                            ? "Agendamento quinzenal cadastrado. A serie continua automaticamente ate encerrar."
-                            : "SEMANAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
-                                    ? "Agendamento fixo cadastrado. A serie continua automaticamente ate encerrar."
-                                    : "Agendamento cadastrado com sucesso."
-            );
-            if (PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(criado.getStatusPagamento())) {
+            if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(criado.getStatusPagamento())) {
+                redirectAttributes.addFlashAttribute(
+                        "sucesso",
+                        "Agendamento reservado na agenda. Esperando confirmacao do pagamento (5 min). "
+                                + "Se fechar o QR, use a aba Pagamentos pendentes para voltar."
+                );
                 redirectAttributes.addFlashAttribute("pagamentoAgendamentoId", criado.getId());
+            } else {
+                redirectAttributes.addFlashAttribute(
+                        "sucesso",
+                        "QUINZENAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
+                                ? "Agendamento quinzenal cadastrado. A serie continua automaticamente ate encerrar."
+                                : "SEMANAL".equalsIgnoreCase(agendamentoForm.getRecorrencia())
+                                        ? "Agendamento fixo cadastrado. A serie continua automaticamente ate encerrar."
+                                        : "Agendamento cadastrado com sucesso."
+                );
             }
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());

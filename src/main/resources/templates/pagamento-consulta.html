@@ -22,7 +22,13 @@
                 <span class="badge text-bg-secondary" th:text="${rotuloStatus}">Aguardando pagamento</span>
             </p>
 
-            <div th:if="${agendamento.pagamentoPendente}">
+            <div th:if="${agendamento.possuiQrPagamentoAtivo()}">
+                <p class="small text-warning mb-2">
+                    Tempo restante:
+                    <strong class="pagamento-countdown"
+                            th:attr="data-expira-em=${agendamento.pagamentoExpiraEm != null ? #temporals.format(agendamento.pagamentoExpiraEm, 'yyyy-MM-dd''T''HH:mm:ss') : ''}"
+                            th:text="${agendamento.tempoRestantePagamentoFormatado}">4:59</strong>
+                </p>
                 <img th:src="@{/pagamentos/{id}/qr.png(id=${agendamento.id})}"
                      alt="QR Code PIX"
                      class="img-fluid rounded border mb-3"

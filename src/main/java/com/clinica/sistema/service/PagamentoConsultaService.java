@@ -1,5 +1,6 @@
 package com.clinica.sistema.service;
 
+import com.clinica.sistema.config.PagamentoProperties;
 import com.clinica.sistema.dto.LinkPagamentoGerado;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
@@ -18,15 +19,18 @@ public class PagamentoConsultaService {
     private final AgendamentoRepository repository;
     private final InfinitePayService infinitePayService;
     private final AuthService authService;
+    private final PagamentoProperties pagamentoProperties;
 
     public PagamentoConsultaService(
             AgendamentoRepository repository,
             InfinitePayService infinitePayService,
-            AuthService authService
+            AuthService authService,
+            PagamentoProperties pagamentoProperties
     ) {
         this.repository = repository;
         this.infinitePayService = infinitePayService;
         this.authService = authService;
+        this.pagamentoProperties = pagamentoProperties;
     }
 
     public void configurarPagamentosAoSalvar(List<Agendamento> novosAgendamentos) {
@@ -36,7 +40,7 @@ public class PagamentoConsultaService {
         for (int i = 0; i < novosAgendamentos.size(); i++) {
             Agendamento agendamento = novosAgendamentos.get(i);
             if (i == 0) {
-                abrirPagamentoImediato(agendamento);
+                iniciarConfirmacaoPagamento(agendamento);
             } else {
                 agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
             }
@@ -48,25 +52,29 @@ public class PagamentoConsultaService {
             return;
         }
         if (deveAbrirPagamentoAgora(agendamento)) {
-            abrirPagamentoImediato(agendamento);
+            agendamento.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
         } else {
             agendamento.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
         }
     }
 
     @Transactional
-    public void atualizarJanelasDePagamento() {
-        LocalDate hoje = LocalDate.now();
-        List<Agendamento> futuros = repository.findByStatusPagamentoAndDataHoraInicioGreaterThanEqual(
-                PagamentoStatus.PAGAMENTO_FUTURO,
-                hoje.atStartOfDay()
+    public void processarPagamentosPendentes() {
+        expirarPagamentosVencidos();
+    }
+
+    @Transactional
+    public int expirarPagamentosVencidos() {
+        LocalDateTime agora = LocalDateTime.now();
+        List<Agendamento> expirados = repository.findByStatusPagamentoAndPagamentoExpiraEmBefore(
+                PagamentoStatus.ESPERANDO_CONFIRMACAO,
+                agora
         );
-        for (Agendamento agendamento : futuros) {
-            if (deveAbrirPagamentoAgora(agendamento)) {
-                abrirPagamentoImediato(agendamento);
-                repository.save(agendamento);
-            }
+        int removidos = 0;
+        for (Agendamento agendamento : expirados) {
+            removidos += removerAgendamentoExpirado(agendamento);
         }
+        return removidos;
     }
 
     @Transactional
@@ -75,10 +83,12 @@ public class PagamentoConsultaService {
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             throw new RuntimeException("Esta consulta ja esta paga.");
         }
-        if (!deveAbrirPagamentoAgora(agendamento) && !PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(agendamento.getStatusPagamento())) {
+        if (!deveAbrirPagamentoAgora(agendamento)
+                && !PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(agendamento.getStatusPagamento())
+                && !PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
             throw new RuntimeException("Pagamento disponivel somente a partir de 1 dia antes da consulta.");
         }
-        abrirPagamentoImediato(agendamento);
+        iniciarConfirmacaoPagamento(agendamento);
         return repository.save(agendamento);
     }
 
@@ -96,9 +106,24 @@ public class PagamentoConsultaService {
             return agendamento;
         }
         if (agendamento.getPagamentoOrderNsu() == null || agendamento.getPagamentoOrderNsu().isBlank()) {
-            abrirPagamentoImediato(agendamento);
+            iniciarConfirmacaoPagamento(agendamento);
         }
         return marcarComoPago(agendamento);
+    }
+
+    public List<Agendamento> listarAguardandoConfirmacao(Usuario usuarioLogado, boolean verTodos) {
+        LocalDateTime agora = LocalDateTime.now();
+        if (verTodos && (authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado))) {
+            return repository.findByStatusPagamentoAndPagamentoExpiraEmAfterOrderByPagamentoExpiraEmAsc(
+                    PagamentoStatus.ESPERANDO_CONFIRMACAO,
+                    agora
+            );
+        }
+        return repository.findByProfissionalIdAndStatusPagamentoAndPagamentoExpiraEmAfterOrderByPagamentoExpiraEmAsc(
+                usuarioLogado.getId(),
+                PagamentoStatus.ESPERANDO_CONFIRMACAO,
+                agora
+        );
     }
 
     public boolean deveAbrirPagamentoAgora(Agendamento agendamento) {
@@ -110,27 +135,12 @@ public class PagamentoConsultaService {
         return !LocalDate.now().isBefore(diaLimitePagamento);
     }
 
-    public boolean podeUsarSala(Agendamento agendamento) {
-        if (agendamento == null) {
-            return false;
-        }
-        if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
-            return true;
-        }
-        if (agendamento.getDataHoraInicio() == null) {
-            return true;
-        }
-        LocalDate consulta = agendamento.getDataHoraInicio().toLocalDate();
-        LocalDate hoje = LocalDate.now();
-        if (hoje.isBefore(consulta)) {
-            return true;
-        }
-        return false;
-    }
-
     public boolean exibirBotaoPagar(Agendamento agendamento) {
         if (agendamento == null || PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             return false;
+        }
+        if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
+            return agendamento.possuiQrPagamentoAtivo();
         }
         if (PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(agendamento.getStatusPagamento())) {
             return true;
@@ -146,7 +156,12 @@ public class PagamentoConsultaService {
         }
         return switch (status) {
             case PAGO -> "Pago";
-            case AGUARDANDO_PAGAMENTO -> bloqueadoPorPagamento(agendamento) ? "Nao pago - sala bloqueada" : "Aguardando pagamento";
+            case ESPERANDO_CONFIRMACAO -> agendamento.possuiQrPagamentoAtivo()
+                    ? "Esperando confirmacao (" + agendamento.getTempoRestantePagamentoFormatado() + ")"
+                    : "Confirmacao expirada";
+            case AGUARDANDO_PAGAMENTO -> bloqueadoPorPagamento(agendamento)
+                    ? "Nao pago - sala bloqueada"
+                    : "Aguardando pagamento";
             case PAGAMENTO_FUTURO -> "Pagamento em " + formatarDiaPagamento(agendamento);
         };
     }
@@ -158,9 +173,21 @@ public class PagamentoConsultaService {
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             return false;
         }
+        if (PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())) {
+            return false;
+        }
         LocalDate consulta = agendamento.getDataHoraInicio().toLocalDate();
-        return !LocalDate.now().isBefore(consulta)
-                && !PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento());
+        return !LocalDate.now().isBefore(consulta);
+    }
+
+    public boolean exibirNaGradeComoReservado(Agendamento agendamento) {
+        if (agendamento == null) {
+            return false;
+        }
+        return PagamentoStatus.ESPERANDO_CONFIRMACAO.equals(agendamento.getStatusPagamento())
+                || PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())
+                || PagamentoStatus.AGUARDANDO_PAGAMENTO.equals(agendamento.getStatusPagamento())
+                || PagamentoStatus.PAGAMENTO_FUTURO.equals(agendamento.getStatusPagamento());
     }
 
     private String formatarDiaPagamento(Agendamento agendamento) {
@@ -174,19 +201,34 @@ public class PagamentoConsultaService {
     private Agendamento marcarComoPago(Agendamento agendamento) {
         agendamento.setStatusPagamento(PagamentoStatus.PAGO);
         agendamento.setDataPagamento(LocalDateTime.now());
+        agendamento.setPagamentoExpiraEm(null);
         return repository.save(agendamento);
     }
 
-    private void abrirPagamentoImediato(Agendamento agendamento) {
+    private void iniciarConfirmacaoPagamento(Agendamento agendamento) {
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             return;
         }
         LinkPagamentoGerado link = infinitePayService.gerarLinkPagamento(agendamento);
-        agendamento.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+        LocalDateTime agora = LocalDateTime.now();
+        agendamento.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
         agendamento.setPagamentoOrderNsu(link.getOrderNsu());
         agendamento.setPagamentoLink(link.getLinkPagamento());
         agendamento.setPagamentoSlug(link.getSlug());
         agendamento.setValorPagamento(infinitePayService.valorPagamento(agendamento));
+        agendamento.setPagamentoIniciadoEm(agora);
+        agendamento.setPagamentoExpiraEm(agora.plusMinutes(pagamentoProperties.getPrazoConfirmacaoMinutos()));
+    }
+
+    private int removerAgendamentoExpirado(Agendamento agendamento) {
+        if (agendamento.getSerieFixaId() != null && !agendamento.getSerieFixaId().isBlank()) {
+            return repository.deleteBySerieFixaIdAndStatusPagamentoNot(
+                    agendamento.getSerieFixaId(),
+                    PagamentoStatus.PAGO
+            );
+        }
+        repository.delete(agendamento);
+        return 1;
     }
 
     private Agendamento buscarComPermissao(Long agendamentoId, Usuario usuarioLogado) {

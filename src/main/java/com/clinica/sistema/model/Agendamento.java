@@ -2,6 +2,8 @@ package com.clinica.sistema.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
@@ -51,7 +53,8 @@ public class Agendamento {
     private Boolean indicacaoDona;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status_pagamento")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "status_pagamento", length = 40)
     private PagamentoStatus statusPagamento;
 
     @Column(name = "pagamento_order_nsu")
@@ -68,6 +71,12 @@ public class Agendamento {
 
     @Column(name = "data_pagamento")
     private LocalDateTime dataPagamento;
+
+    @Column(name = "pagamento_iniciado_em")
+    private LocalDateTime pagamentoIniciadoEm;
+
+    @Column(name = "pagamento_expira_em")
+    private LocalDateTime pagamentoExpiraEm;
 
     @Transient
     private String recorrencia;
@@ -156,12 +165,44 @@ public class Agendamento {
 
     @Transient
     public boolean isPagamentoPendente() {
-        return statusPagamento == PagamentoStatus.AGUARDANDO_PAGAMENTO;
+        return statusPagamento == PagamentoStatus.AGUARDANDO_PAGAMENTO
+                || statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO;
+    }
+
+    @Transient
+    public boolean isEsperandoConfirmacaoPagamento() {
+        return statusPagamento == PagamentoStatus.ESPERANDO_CONFIRMACAO;
     }
 
     @Transient
     public boolean isPagamentoPago() {
         return statusPagamento == PagamentoStatus.PAGO;
+    }
+
+    @Transient
+    public boolean possuiQrPagamentoAtivo() {
+        return isEsperandoConfirmacaoPagamento()
+                && pagamentoLink != null
+                && !pagamentoLink.isBlank()
+                && pagamentoExpiraEm != null
+                && pagamentoExpiraEm.isAfter(LocalDateTime.now());
+    }
+
+    @Transient
+    public long getSegundosRestantesPagamento() {
+        if (pagamentoExpiraEm == null) {
+            return 0;
+        }
+        long segundos = java.time.Duration.between(LocalDateTime.now(), pagamentoExpiraEm).getSeconds();
+        return Math.max(0, segundos);
+    }
+
+    @Transient
+    public String getTempoRestantePagamentoFormatado() {
+        long segundos = getSegundosRestantesPagamento();
+        long minutos = segundos / 60;
+        long resto = segundos % 60;
+        return String.format("%d:%02d", minutos, resto);
     }
 
     private String formatarMoeda(BigDecimal valor) {

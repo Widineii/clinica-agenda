@@ -643,6 +643,30 @@
             gap: 6px;
         }
 
+        .slot-card--aguardando-pagamento {
+            border: 2px dashed #f5b000 !important;
+            background: linear-gradient(180deg, rgba(245, 176, 0, 0.12), rgba(255, 255, 255, 0.95)) !important;
+        }
+
+        .slot-waiting-payment {
+            box-shadow: inset 0 0 0 2px rgba(245, 176, 0, 0.45);
+        }
+
+        .slot-aguardando-pill {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            background: #f5b000;
+            color: #102027;
+            border-radius: 999px;
+            padding: 0.15rem 0.45rem;
+        }
+
+        .pagamento-pendente-card {
+            background: rgba(245, 176, 0, 0.08);
+        }
+
         .valores-consulta-panel {
             border: 1px solid rgba(16, 59, 76, 0.12);
             border-radius: 16px;
@@ -992,6 +1016,9 @@
         <a th:if="${isAdmin}" href="#agendamentos-profissionais" class="btn btn-sm btn-outline-secondary">Agendamentos por profissional</a>
         <a th:unless="${isAdmin}" href="#meus-agendamentos" class="btn btn-sm btn-outline-secondary">Meus agendamentos</a>
         <a href="#agenda-do-dia" class="btn btn-sm btn-outline-secondary">Agenda do dia</a>
+        <a th:if="${pagamentosAguardandoQr != null and !#lists.isEmpty(pagamentosAguardandoQr)}"
+           href="#pagamentos-pendentes"
+           class="btn btn-sm btn-warning">Pagamentos pendentes</a>
     </nav>
 
     <div class="row g-4 align-items-start agenda-main">
@@ -1131,6 +1158,8 @@
                 </div>
             </div>
 
+            <div th:replace="~{fragments/pagamento-consulta :: painel-pendentes(pagamentos=${pagamentosAguardandoQr})}"></div>
+
             <div th:if="${!isAdmin}" class="card shell-card mt-4" id="meus-agendamentos">
                 <div class="card-body p-4">
                     <h2 class="h5 mb-3 d-flex align-items-center gap-2 flex-wrap">
@@ -1239,14 +1268,14 @@
                                 <th class="time-col" th:text="${#temporals.format(linha.horario, 'HH:mm')}">08:00</th>
                                 <td th:each="item : ${linha.agendamentos}"
                                     th:with="tipoAcao=${item != null ? gradeAcoesPorId[item.id] : null}, podeAgir=${tipoAcao != null}"
-                                    th:class="${(item != null ? (item.fixo == true ? 'slot-booked fixed-slot' : 'slot-booked') : 'slot-empty') + (podeAgir ? ' slot-own-actionable' : '')}"
+                                    th:class="${(item != null ? ((item.esperandoConfirmacaoPagamento ? 'slot-booked slot-waiting-payment' : (item.fixo == true ? 'slot-booked fixed-slot' : 'slot-booked'))) : 'slot-empty') + (podeAgir ? ' slot-own-actionable' : '')}"
                                     th:data-agendamento-id="${podeAgir ? item.id : null}"
                                     th:data-tipo="${tipoAcao}"
                                     th:data-cliente="${podeAgir ? item.nomeCliente : null}"
                                     th:data-inicio="${podeAgir ? #temporals.format(item.dataHoraInicio, 'dd/MM/yyyy HH:mm') : null}"
                                     th:data-sala="${podeAgir and item.sala != null ? item.sala.nome : null}"
                                     th:data-valores="${podeAgir and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id)) ? 'Prof. ' + item.valorProfissionalRecebeFormatado + ' | Clin. ' + item.valorClinicaCobraFormatado + ' | Liq. ' + item.valorLiquidoProfissionalFormatado : null}">
-                                    <div th:if="${item != null}" class="slot-card">
+                                    <div th:if="${item != null}" class="slot-card" th:classappend="${item.esperandoConfirmacaoPagamento ? ' slot-card--aguardando-pagamento' : ''}">
                                         <div class="slot-card__head">
                                             <span class="slot-card__prof"
                                                   th:text="${item.profissional != null ? item.profissional.nome : 'Profissional'}">Profissional</span>
@@ -1270,7 +1299,9 @@
                                             </div>
                                         </div>
                                         <div class="slot-card__footer">
-                                            <span th:if="${item.fixo == true}" class="fixed-badge" th:text="${item.recorrenciaLabel}">Fixo</span>
+                                            <span th:if="${item.esperandoConfirmacaoPagamento}"
+                                                  class="slot-aguardando-pill">Esperando pagamento</span>
+                                            <span th:if="${item.fixo == true and !item.esperandoConfirmacaoPagamento}" class="fixed-badge" th:text="${item.recorrenciaLabel}">Fixo</span>
                                             <span th:if="${item.indicacaoDona == true and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id))}"
                                                   class="slot-indicacao-pill">Ind. 30%</span>
                                             <span th:if="${item.statusPagamento != null and pagamentoService.bloqueadoPorPagamento(item)}"
@@ -1868,6 +1899,27 @@
         if (pagamentoModalEl) {
             bootstrap.Modal.getOrCreateInstance(pagamentoModalEl).show();
         }
+
+        function atualizarCountdownsPagamento() {
+            var agora = Date.now();
+            document.querySelectorAll('.pagamento-countdown[data-expira-em]').forEach(function (el) {
+                var expira = el.getAttribute('data-expira-em');
+                if (!expira) {
+                    return;
+                }
+                var fim = new Date(expira).getTime();
+                var restante = Math.max(0, Math.floor((fim - agora) / 1000));
+                var minutos = Math.floor(restante / 60);
+                var segundos = restante % 60;
+                el.textContent = minutos + ':' + String(segundos).padStart(2, '0');
+                if (restante <= 0) {
+                    el.classList.add('text-bg-danger');
+                }
+            });
+        }
+
+        atualizarCountdownsPagamento();
+        window.setInterval(atualizarCountdownsPagamento, 1000);
     });
 </script>
 </body>
