@@ -533,12 +533,14 @@ public class AgendamentoService {
             novo.setSerieFixaId(serieFixaId);
             novo.setTipoRecorrencia(recorrencia);
             novo.setRecorrencia(recorrencia);
-            valorConsultaService.aplicarValores(novo, form, sala, recorrencia);
+            if (!authService.profissionalIgnoraValoresEPagamento(profissional)) {
+                valorConsultaService.aplicarValores(novo, form, sala, recorrencia);
+            }
             novosAgendamentos.add(novo);
         }
 
         repository.saveAll(novosAgendamentos);
-        pagamentoConsultaService.configurarPagamentosAoSalvar(novosAgendamentos);
+        pagamentoConsultaService.configurarPagamentosAoSalvar(novosAgendamentos, profissional);
         repository.saveAll(novosAgendamentos);
         if (!RECORRENCIA_AVULSO.equals(recorrencia)) {
             renovarSeriesRecorrentesAtivas();
@@ -641,6 +643,10 @@ public class AgendamentoService {
 
     public boolean podeVerValoresConsulta(Agendamento agendamento, Usuario usuarioLogado) {
         if (agendamento == null || !agendamento.possuiValoresConsulta()) {
+            return false;
+        }
+        if (agendamento.getProfissional() != null
+                && authService.profissionalIgnoraValoresEPagamento(agendamento.getProfissional())) {
             return false;
         }
         if (podeGerenciarAgendamentoDeOutros(usuarioLogado)) {

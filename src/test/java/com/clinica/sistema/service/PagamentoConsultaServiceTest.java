@@ -3,6 +3,7 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.config.PagamentoProperties;
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
+import com.clinica.sistema.model.Usuario;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,13 +52,18 @@ class PagamentoConsultaServiceTest {
 
     @Test
     void deveAbrirConfirmacaoImediataNaPrimeiraConsultaDaSerie() {
+        Usuario profissional = new Usuario();
+        profissional.setId(10L);
+        profissional.setDonaClinica(false);
+
         when(pagamentoProperties.getPrazoConfirmacaoMinutos()).thenReturn(5);
         when(infinitePayService.gerarLinkPagamento(any())).thenReturn(
                 new com.clinica.sistema.dto.LinkPagamentoGerado("ag-1-test", "http://localhost/link", "slug")
         );
         when(infinitePayService.valorPagamento(any())).thenReturn(new BigDecimal("32.00"));
+        when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
 
-        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento));
+        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento), profissional);
 
         assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, agendamento.getStatusPagamento());
         assertEquals("http://localhost/link", agendamento.getPagamentoLink());
@@ -67,6 +73,10 @@ class PagamentoConsultaServiceTest {
 
     @Test
     void consultasFuturasDaSerieFicamComPagamentoFuturo() {
+        Usuario profissional = new Usuario();
+        profissional.setId(10L);
+        profissional.setDonaClinica(false);
+
         when(pagamentoProperties.getPrazoConfirmacaoMinutos()).thenReturn(5);
         Agendamento segunda = new Agendamento();
         segunda.setId(2L);
@@ -76,8 +86,9 @@ class PagamentoConsultaServiceTest {
                 new com.clinica.sistema.dto.LinkPagamentoGerado("ag-1-test", "http://localhost/link", "slug")
         );
         when(infinitePayService.valorPagamento(any())).thenReturn(new BigDecimal("32.00"));
+        when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
 
-        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento, segunda));
+        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento, segunda), profissional);
 
         assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, agendamento.getStatusPagamento());
         assertEquals(PagamentoStatus.PAGAMENTO_FUTURO, segunda.getStatusPagamento());
@@ -90,6 +101,19 @@ class PagamentoConsultaServiceTest {
 
         agendamento.setDataHoraInicio(LocalDate.now().plusDays(2).atTime(9, 0));
         assertFalse(pagamentoConsultaService.deveAbrirPagamentoAgora(agendamento));
+    }
+
+    @Test
+    void donaClinicaNaoPrecisaConfirmarPagamento() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+        agendamento.setProfissional(polyana);
+        when(authService.profissionalIgnoraValoresEPagamento(polyana)).thenReturn(true);
+
+        pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento), polyana);
+
+        assertEquals(PagamentoStatus.PAGO, agendamento.getStatusPagamento());
     }
 
     @Test

@@ -33,8 +33,14 @@ public class PagamentoConsultaService {
         this.pagamentoProperties = pagamentoProperties;
     }
 
-    public void configurarPagamentosAoSalvar(List<Agendamento> novosAgendamentos) {
+    public void configurarPagamentosAoSalvar(List<Agendamento> novosAgendamentos, Usuario profissional) {
         if (novosAgendamentos == null || novosAgendamentos.isEmpty()) {
+            return;
+        }
+        if (authService.profissionalIgnoraValoresEPagamento(profissional)) {
+            for (Agendamento agendamento : novosAgendamentos) {
+                agendamento.setStatusPagamento(PagamentoStatus.PAGO);
+            }
             return;
         }
         for (int i = 0; i < novosAgendamentos.size(); i++) {
@@ -49,6 +55,11 @@ public class PagamentoConsultaService {
 
     public void configurarPagamentoNovaOcorrenciaSerie(Agendamento agendamento) {
         if (agendamento.getStatusPagamento() != null) {
+            return;
+        }
+        if (agendamento.getProfissional() != null
+                && authService.profissionalIgnoraValoresEPagamento(agendamento.getProfissional())) {
+            agendamento.setStatusPagamento(PagamentoStatus.PAGO);
             return;
         }
         if (deveAbrirPagamentoAgora(agendamento)) {
@@ -160,6 +171,10 @@ public class PagamentoConsultaService {
 
     public boolean podePagarAgora(Agendamento agendamento) {
         if (agendamento == null || PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return false;
+        }
+        if (agendamento.getProfissional() != null
+                && authService.profissionalIgnoraValoresEPagamento(agendamento.getProfissional())) {
             return false;
         }
         if (agendamento.possuiQrPagamentoAtivo()) {

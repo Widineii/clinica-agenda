@@ -133,6 +133,10 @@ public class AgendamentoController {
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
         model.addAttribute("podeGerenciarEquipe", podeGerenciarEquipe);
         model.addAttribute("podeVerValoresDeTodos", podeGerenciarEquipe);
+        model.addAttribute(
+                "exibirPainelValoresConsulta",
+                !authService.profissionalIgnoraValoresEPagamento(usuarioLogado)
+        );
         model.addAttribute("agendamentos", agendamentos);
         model.addAttribute("agendamentosAvulsos", agendamentosAvulsos);
         model.addAttribute("agendamentosFixos", agendamentosFixos);
@@ -163,6 +167,13 @@ public class AgendamentoController {
         }
 
         List<Usuario> equipeProfissionais = usuarioService.listarProfissionaisDaEquipe();
+        model.addAttribute(
+                "idsProfissionaisSemValores",
+                equipeProfissionais.stream()
+                        .filter(p -> authService.profissionalIgnoraValoresEPagamento(p))
+                        .map(Usuario::getId)
+                        .toList()
+        );
         if (podeGerenciarEquipe) {
             model.addAttribute("resumosProfissionais", service.montarResumosProfissionais(equipeProfissionais));
         } else {

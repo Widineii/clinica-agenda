@@ -41,6 +41,10 @@ public class AuthService {
         return usuario != null && Boolean.TRUE.equals(usuario.getDonaClinica());
     }
 
+    public boolean profissionalIgnoraValoresEPagamento(Usuario profissional) {
+        return isDonaClinica(profissional);
+    }
+
     public boolean podeGerenciarEquipe(Usuario usuario) {
         return isAdmin(usuario) || isDonaClinica(usuario);
     }

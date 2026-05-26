@@ -1054,11 +1054,12 @@
                         <div class="col-12">
                             <label class="form-label">Profissional</label>
                             <div th:if="${isAdmin or isDonaClinica}">
-                                <select th:field="*{profissionalId}" class="form-select" required>
+                                <select th:field="*{profissionalId}" class="form-select" id="profissionalAgendamentoSelect" required>
                                     <option value="">Selecione</option>
                                     <option th:each="profissional : ${profissionais}"
                                             th:value="${profissional.id}"
-                                            th:text="${profissional.nome}">Profissional</option>
+                                            th:text="${profissional.nome}"
+                                            th:attr="data-sem-valores=${profissional.donaClinica == true}">Profissional</option>
                                 </select>
                                 <div class="form-text">A administracao pode escolher qual profissional sera vinculado ao agendamento.</div>
                             </div>
@@ -1109,10 +1110,12 @@
                                 <option value="QUINZENAL">Quinzenal</option>
                             </select>
                             <div class="form-text">Fixo semanal renova com 12 datas; quinzenal com 6. Ao passar ou cancelar um dia, entra o proximo.</div>
-                            <div class="form-text mt-1">Pagamento da taxa da clinica: 1 dia antes da consulta (1a data da serie paga na hora).</div>
+                            <div class="form-text mt-1" id="pagamentoRecorrenciaHint"
+                                 th:unless="${isDonaClinica}">Pagamento da taxa da clinica: 1 dia antes da consulta (1a data da serie paga na hora).</div>
                         </div>
 
-                        <div class="col-12 valores-consulta-panel">
+                        <div class="col-12 valores-consulta-panel" id="valoresConsultaPanel"
+                             th:if="${exibirPainelValoresConsulta}">
                             <h3 class="h6 mb-3">Valores desta consulta (por cliente)</h3>
 
                             <div class="form-check mb-3">
@@ -1172,13 +1175,16 @@
                         Profissionais so podem cancelar consultas com mais de 24 horas de antecedencia.
                     </div>
                     <div th:if="${isDonaClinica == true}" class="alert alert-info mt-4 mb-0">
+                        Como dona da clinica, seus agendamentos nao exigem valores nem pagamento de taxa de sala.
                         Voce pode cancelar seus agendamentos a qualquer momento, sem a regra das 24 horas.
                     </div>
                 </div>
             </div>
 
-            <div th:replace="~{fragments/pagamento-consulta :: painel-pendentes(pagamentos=${pagamentosAguardandoQr})}"></div>
-            <div th:replace="~{fragments/pagamento-consulta :: painel-pagar-agora(consultas=${consultasParaPagarAntecipado})}"></div>
+            <th:block th:unless="${isDonaClinica}">
+                <div th:replace="~{fragments/pagamento-consulta :: painel-pendentes(pagamentos=${pagamentosAguardandoQr})}"></div>
+                <div th:replace="~{fragments/pagamento-consulta :: painel-pagar-agora(consultas=${consultasParaPagarAntecipado})}"></div>
+            </th:block>
 
             <div th:if="${!isAdmin}" class="card shell-card mt-4" id="meus-agendamentos">
                 <div class="card-body p-4">
@@ -1305,7 +1311,7 @@
                                         </div>
                                         <div class="slot-card__cliente" th:text="${item.nomeCliente}">Cliente</div>
                                         <div class="slot-card__valores"
-                                             th:if="${item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id))}">
+                                             th:if="${item.possuiValoresConsulta() and (item.profissional == null or item.profissional.donaClinica != true) and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id))}">
                                             <div class="slot-card__valor-linha">
                                                 <span class="slot-card__valor-label">Prof.</span>
                                                 <span class="slot-card__valor-num" th:text="${item.valorProfissionalRecebeFormatado}">R$ 150,00</span>
@@ -1529,7 +1535,51 @@
     var contextoErroAgendamento = /*[[${erroContexto}]]*/ null;
     var erroSenhaModal = /*[[${erroSenha != null ? erroSenha : (erro != null and erroContexto == 'senha' ? erro : null)}]]*/ null;
 
+    var idsProfissionaisSemValores = /*[[${idsProfissionaisSemValores}]]*/ [];
+
     document.addEventListener('DOMContentLoaded', function () {
+        (function initPainelValoresPorProfissional() {
+            var painel = document.getElementById('valoresConsultaPanel');
+            var hintPagamento = document.getElementById('pagamentoRecorrenciaHint');
+            var selectProf = document.getElementById('profissionalAgendamentoSelect');
+            if (!painel && !selectProf) {
+                return;
+            }
+
+            function profissionalSemValores(profissionalId) {
+                if (!profissionalId) {
+                    return false;
+                }
+                return idsProfissionaisSemValores.some(function (id) {
+                    return String(id) === String(profissionalId);
+                });
+            }
+
+            function alternarPainelValores() {
+                var semValores = false;
+                if (selectProf) {
+                    semValores = profissionalSemValores(selectProf.value);
+                }
+                if (painel) {
+                    painel.classList.toggle('d-none', semValores);
+                    painel.querySelectorAll('input').forEach(function (input) {
+                        input.required = !semValores;
+                        if (semValores) {
+                            input.value = '';
+                        }
+                    });
+                }
+                if (hintPagamento) {
+                    hintPagamento.classList.toggle('d-none', semValores);
+                }
+            }
+
+            if (selectProf) {
+                selectProf.addEventListener('change', alternarPainelValores);
+            }
+            alternarPainelValores();
+        })();
+
         (function initValoresConsultaPanel() {
             var salaSelect = document.querySelector('select[name="salaId"]');
             var recorrenciaSelect = document.querySelector('select[name="recorrencia"]');

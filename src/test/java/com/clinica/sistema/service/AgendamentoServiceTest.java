@@ -838,8 +838,25 @@ class AgendamentoServiceTest {
 
         when(authService.isAdmin(polyana)).thenReturn(false);
         when(authService.isDonaClinica(polyana)).thenReturn(true);
+        when(authService.profissionalIgnoraValoresEPagamento(julia)).thenReturn(false);
 
         assertTrue(agendamentoService.podeVerValoresConsulta(agendamento, polyana));
+    }
+
+    @Test
+    void polyanaNaoVeValoresDosPropriosAgendamentos() {
+        Usuario polyana = new Usuario();
+        polyana.setId(99L);
+        polyana.setDonaClinica(true);
+
+        Agendamento agendamento = new Agendamento();
+        agendamento.setProfissional(polyana);
+        agendamento.setValorProfissionalRecebe(new BigDecimal("150.00"));
+        agendamento.setValorClinicaCobra(new BigDecimal("35.00"));
+
+        when(authService.profissionalIgnoraValoresEPagamento(polyana)).thenReturn(true);
+
+        assertFalse(agendamentoService.podeVerValoresConsulta(agendamento, polyana));
     }
 
     @Test
