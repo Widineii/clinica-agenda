@@ -88,10 +88,12 @@
                         <td th:text="${pendencia.nomeCliente}">Cliente</td>
                         <td th:text="${pagamentoService.formatarValorTaxaPix(pendencia)}">R$ 35,00</td>
                         <td>
-                            <span th:if="${pagamentoService.deveAbrirPagamentoAgora(pendencia)}"
+                            <span th:if="${pagamentoService.bloqueadoPorPagamento(pendencia)}"
+                                  class="badge text-bg-danger">Bloqueado</span>
+                            <span th:if="${!pagamentoService.bloqueadoPorPagamento(pendencia) and pendencia.possuiQrPagamentoAtivo()}"
+                                  class="badge text-bg-info">Aguardando confirmacao</span>
+                            <span th:if="${!pagamentoService.bloqueadoPorPagamento(pendencia) and !pendencia.possuiQrPagamentoAtivo() and pagamentoService.deveAbrirPagamentoAgora(pendencia)}"
                                   class="badge text-bg-warning">Pagar hoje</span>
-                            <span th:unless="${pagamentoService.deveAbrirPagamentoAgora(pendencia)}"
-                                  class="badge text-bg-secondary">Proximo</span>
                         </td>
                         <td>
                             <a th:href="@{/pagamentos/{id}/pagar-agora(id=${pendencia.id})}"

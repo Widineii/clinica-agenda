@@ -214,10 +214,7 @@ public class AgendamentoController {
                 "pagamentoBloqueioAgendamentoId",
                 pendenciasBloqueioPagamento.isEmpty() ? null : pendenciasBloqueioPagamento.get(0).getId()
         );
-        List<com.clinica.sistema.model.Agendamento> meusPagamentosPendentes =
-                pagamentoConsultaService.listarDisponiveisParaPagarAntecipado(usuarioLogado, false);
-        model.addAttribute("meusPagamentosPendentes", meusPagamentosPendentes);
-        model.addAttribute("totalMeusPagamentosPendentes", meusPagamentosPendentes.size());
+        model.addAttribute("totalMeusPagamentosPendentes", pendenciasBloqueioPagamento.size());
         model.addAttribute(
                 "pagamentosAguardandoQr",
                 pagamentoConsultaService.listarAguardandoConfirmacao(usuarioLogado, podeGerenciarEquipe)

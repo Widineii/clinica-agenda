@@ -174,17 +174,15 @@ public class PagamentoConsultaService {
     public List<Agendamento> listarPendenciasObrigatoriasParaBloqueio(Usuario usuarioLogado) {
         if (usuarioLogado == null
                 || authService.isAdmin(usuarioLogado)
-                || authService.isDonaClinica(usuarioLogado)) {
+                || authService.isDonaClinica(usuarioLogado)
+                || authService.profissionalIgnoraValoresEPagamento(usuarioLogado)) {
             return Collections.emptyList();
         }
 
-        LocalDate hoje = LocalDate.now();
         return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId()).stream()
                 .filter(agendamento -> agendamento.getDataHoraInicio() != null)
-                .filter(agendamento -> !agendamento.getDataHoraInicio().toLocalDate().isBefore(hoje))
                 .filter(agendamento -> !PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento()))
-                .filter(agendamento -> agendamento.possuiQrPagamentoAtivo() || podePagarAgora(agendamento))
-                .limit(8)
+                .filter(this::ePendenciaObrigatoriaParaDesbloqueio)
                 .toList();
     }
 
@@ -253,6 +251,23 @@ public class PagamentoConsultaService {
                     : "Aguardando pagamento";
             case PAGAMENTO_FUTURO -> "Pagamento em " + formatarDiaPagamento(agendamento);
         };
+    }
+
+    private boolean ePendenciaObrigatoriaParaDesbloqueio(Agendamento agendamento) {
+        if (agendamento.possuiQrPagamentoAtivo()) {
+            return true;
+        }
+        if (bloqueadoPorPagamento(agendamento)) {
+            return true;
+        }
+        return deveAbrirPagamentoAgora(agendamento) && statusPendenteDePagamento(agendamento);
+    }
+
+    private boolean statusPendenteDePagamento(Agendamento agendamento) {
+        PagamentoStatus status = agendamento.getStatusPagamento();
+        return status == null
+                || status == PagamentoStatus.PAGAMENTO_FUTURO
+                || status == PagamentoStatus.AGUARDANDO_PAGAMENTO;
     }
 
     public boolean bloqueadoPorPagamento(Agendamento agendamento) {

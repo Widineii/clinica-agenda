@@ -129,4 +129,41 @@ class PagamentoConsultaServiceTest {
         agendamento.setStatusPagamento(PagamentoStatus.PAGO);
         assertFalse(pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
     }
+
+    @Test
+    void listarPendenciasObrigatoriasIncluiSomenteBloqueioOuPagamentoDoDia() {
+        Usuario profissional = new Usuario();
+        profissional.setId(10L);
+        profissional.setDonaClinica(false);
+
+        Agendamento bloqueadoHoje = new Agendamento();
+        bloqueadoHoje.setId(1L);
+        bloqueadoHoje.setProfissional(profissional);
+        bloqueadoHoje.setDataHoraInicio(LocalDate.now().atTime(9, 0));
+        bloqueadoHoje.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+
+        Agendamento pagamentoAbertoAmanha = new Agendamento();
+        pagamentoAbertoAmanha.setId(2L);
+        pagamentoAbertoAmanha.setProfissional(profissional);
+        pagamentoAbertoAmanha.setDataHoraInicio(LocalDate.now().plusDays(1).atTime(9, 0));
+        pagamentoAbertoAmanha.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+
+        Agendamento pagamentoFuturo = new Agendamento();
+        pagamentoFuturo.setId(3L);
+        pagamentoFuturo.setProfissional(profissional);
+        pagamentoFuturo.setDataHoraInicio(LocalDate.now().plusDays(5).atTime(9, 0));
+        pagamentoFuturo.setStatusPagamento(PagamentoStatus.PAGAMENTO_FUTURO);
+
+        when(authService.isAdmin(profissional)).thenReturn(false);
+        when(authService.isDonaClinica(profissional)).thenReturn(false);
+        when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
+        when(repository.findByProfissionalIdOrderByDataHoraInicioAsc(10L))
+                .thenReturn(java.util.List.of(bloqueadoHoje, pagamentoAbertoAmanha, pagamentoFuturo));
+
+        var pendencias = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(profissional);
+
+        assertEquals(2, pendencias.size());
+        assertEquals(1L, pendencias.get(0).getId());
+        assertEquals(2L, pendencias.get(1).getId());
+    }
 }
