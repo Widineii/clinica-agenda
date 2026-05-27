@@ -253,6 +253,24 @@ public class AgendamentoController {
         return "central-profissionais";
     }
 
+    @GetMapping("/meus-pagamentos")
+    public String abrirMeusPagamentos(Model model) {
+        Usuario usuarioLogado = authService.buscarUsuarioLogadoObrigatorio();
+        if (authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado)) {
+            return "redirect:/agendamentos/dashboard";
+        }
+
+        List<com.clinica.sistema.model.Agendamento> meusPagamentosPendentes =
+                pagamentoConsultaService.listarDisponiveisParaPagarAntecipado(usuarioLogado, false);
+        model.addAttribute("usuarioLogado", usuarioLogado);
+        model.addAttribute("isAdmin", false);
+        model.addAttribute("isDonaClinica", false);
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
+        model.addAttribute("meusPagamentosPendentes", meusPagamentosPendentes);
+        model.addAttribute("totalMeusPagamentosPendentes", meusPagamentosPendentes.size());
+        return "meus-pagamentos";
+    }
+
     @PostMapping("/central-profissionais/cadastrar")
     public String cadastrarProfissionalCentral(
             @ModelAttribute CadastroProfissionalForm cadastroProfissionalForm,
