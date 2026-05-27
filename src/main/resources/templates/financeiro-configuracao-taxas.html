@@ -14,8 +14,17 @@
         subtitulo='Valores por consulta e taxas por sala (piloto local).'
     )}"></div>
 
+    <div th:replace="~{fragments/financeiro-filtro-mes-profissional :: filtro(
+        filtro=${filtro},
+        actionUrl=@{/agendamentos/financeiro/configuracao-taxas}
+    )}"></div>
+
     <div class="financeiro-card">
         <div class="card-body">
+            <p class="mb-2">
+                Profissional selecionado:
+                <strong th:text="${filtro.profissionalNome != null ? filtro.profissionalNome : 'Nenhum'}">Carol</strong>
+            </p>
             <p class="mb-2">Esta area sera usada para configurar taxas da clinica.</p>
             <p class="financeiro-hint mb-0">
                 Por enquanto, use a agenda para valores por consulta. Volte para

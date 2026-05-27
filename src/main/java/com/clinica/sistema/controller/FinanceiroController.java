@@ -2,12 +2,14 @@ package com.clinica.sistema.controller;
 
 import com.clinica.sistema.dto.DespesaForm;
 import com.clinica.sistema.dto.DespesaResumoMesView;
+import com.clinica.sistema.dto.FinanceiroFiltroMesProfissionalView;
 import com.clinica.sistema.model.TipoDespesa;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.DespesaService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.RelatorioMensalService;
+import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,17 +31,20 @@ public class FinanceiroController {
     private final FinanceiroPolyanaAcessoService acessoService;
     private final AuthService authService;
     private final RelatorioMensalService relatorioMensalService;
+    private final UsuarioService usuarioService;
 
     public FinanceiroController(
             DespesaService despesaService,
             FinanceiroPolyanaAcessoService acessoService,
             AuthService authService,
-            RelatorioMensalService relatorioMensalService
+            RelatorioMensalService relatorioMensalService,
+            UsuarioService usuarioService
     ) {
         this.despesaService = despesaService;
         this.acessoService = acessoService;
         this.authService = authService;
         this.relatorioMensalService = relatorioMensalService;
+        this.usuarioService = usuarioService;
     }
 
     @GetMapping
@@ -75,13 +80,27 @@ public class FinanceiroController {
     public String configuracaoTaxas(
             Model model,
             HttpSession session,
-            RedirectAttributes redirectAttributes
+            RedirectAttributes redirectAttributes,
+            @RequestParam(required = false) String mesAno,
+            @RequestParam(required = false) Integer mes,
+            @RequestParam(required = false) Integer ano,
+            @RequestParam(required = false) Long profissionalId
     ) {
         String bloqueio = verificarAcesso(model, session, redirectAttributes);
         if (bloqueio != null) {
             return bloqueio;
         }
 
+        YearMonth mesSelecionado = resolverMes(mesAno, mes, ano);
+        var profissionais = usuarioService.listarProfissionaisDaEquipe().stream()
+                .filter(profissional -> !authService.profissionalIgnoraValoresEPagamento(profissional))
+                .toList();
+        Usuario profissionalSelecionado = resolverProfissional(profissionalId, profissionais);
+
+        model.addAttribute(
+                "filtro",
+                new FinanceiroFiltroMesProfissionalView(mesSelecionado, profissionalSelecionado, profissionais)
+        );
         model.addAttribute("mostrarConfiguracaoTaxas", false);
         model.addAttribute("mostrarGestaoFinanceira", true);
         return "financeiro-configuracao-taxas";
@@ -198,6 +217,19 @@ public class FinanceiroController {
             return YearMonth.of(ano, mes);
         }
         return YearMonth.now();
+    }
+
+    private Usuario resolverProfissional(Long profissionalId, java.util.List<Usuario> profissionais) {
+        if (profissionais == null || profissionais.isEmpty()) {
+            return null;
+        }
+        if (profissionalId != null) {
+            return profissionais.stream()
+                    .filter(profissional -> profissionalId.equals(profissional.getId()))
+                    .findFirst()
+                    .orElse(profissionais.get(0));
+        }
+        return profissionais.get(0);
     }
 
     private String redirectMes(Integer mes, Integer ano) {
