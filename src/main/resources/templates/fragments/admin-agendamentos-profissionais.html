@@ -26,7 +26,7 @@
                 </summary>
                 <div class="accordion-profissionais__panel">
                     <div class="accordion-profissionais__filhos">
-                        <details class="accordion-profissionais__filho" th:open="${resumo.totalAvulsos > 0}">
+                        <details class="accordion-profissionais__filho">
                             <summary class="accordion-profissionais__filho-trigger">
                                 <span>Avulso</span>
                                 <span class="agenda-count" th:text="${resumo.totalAvulsos}">0</span>
@@ -35,7 +35,7 @@
                                  th:replace="~{fragments/caderno-agendamentos :: avulso-lista(agendamentos=${resumo.agendamentosAvulsos})}"></div>
                         </details>
 
-                        <details class="accordion-profissionais__filho" th:open="${resumo.totalFixos > 0}">
+                        <details class="accordion-profissionais__filho">
                             <summary class="accordion-profissionais__filho-trigger">
                                 <span>Fixo</span>
                                 <span class="agenda-count" th:text="${resumo.totalFixos}">0</span>
@@ -44,7 +44,7 @@
                                  th:replace="~{fragments/caderno-agendamentos :: series-lista(series=${resumo.seriesFixas}, radioPrefix=|admin-${resumo.profissionalId}-fixo-|)}"></div>
                         </details>
 
-                        <details class="accordion-profissionais__filho" th:open="${resumo.totalQuinzenais > 0}">
+                        <details class="accordion-profissionais__filho">
                             <summary class="accordion-profissionais__filho-trigger">
                                 <span>Quinzenal</span>
                                 <span class="agenda-count" th:text="${resumo.totalQuinzenais}">0</span>

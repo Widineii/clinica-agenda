@@ -1189,7 +1189,7 @@
                     </h2>
                     <p class="small text-muted mb-3">Somente os agendamentos do usuario logado. Fixo mostra 12 datas; quinzenal mostra 6.</p>
 
-                        <details class="agenda-section" th:open="${totalAgendamentosAvulsos > 0}">
+                        <details class="agenda-section">
                             <summary class="agenda-toggle">
                                 <span>Avulso</span>
                                 <span class="agenda-count" th:text="${totalAgendamentosAvulsos}">0</span>
@@ -1197,7 +1197,7 @@
                             <div th:replace="~{fragments/caderno-agendamentos :: avulso-lista(agendamentos=${agendamentosAvulsos})}"></div>
                         </details>
 
-                        <details class="agenda-section" th:open="${totalFixosResumo > 0}">
+                        <details class="agenda-section">
                             <summary class="agenda-toggle">
                                 <span>Fixo</span>
                                 <span class="agenda-count" th:text="${totalFixosResumo}">0</span>
@@ -1205,7 +1205,7 @@
                             <div th:replace="~{fragments/caderno-agendamentos :: series-lista(series=${seriesFixasResumo}, radioPrefix='data-serie-')}"></div>
                         </details>
 
-                        <details class="agenda-section" th:open="${totalQuinzenaisResumo > 0}">
+                        <details class="agenda-section">
                             <summary class="agenda-toggle">
                                 <span>Quinzenal</span>
                                 <span class="agenda-count" th:text="${totalQuinzenaisResumo}">0</span>
