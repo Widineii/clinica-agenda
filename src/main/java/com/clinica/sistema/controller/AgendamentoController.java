@@ -261,7 +261,7 @@ public class AgendamentoController {
         }
 
         List<com.clinica.sistema.model.Agendamento> meusPagamentosPendentes =
-                pagamentoConsultaService.listarDisponiveisParaPagarAntecipado(usuarioLogado, false);
+                pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", false);
         model.addAttribute("isDonaClinica", false);

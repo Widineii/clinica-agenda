@@ -60,7 +60,7 @@
                       th:text="${totalMeusPagamentosPendentes + ' pendencia(s)'}">0 pendencia(s)</span>
             </div>
             <p class="small text-muted mb-3">
-                Se nao pagar, voce nao consegue usar sala nem criar novo agendamento.
+                Aqui aparecem somente os pagamentos que precisam ser feitos agora para desbloquear uso da sala e novo agendamento.
             </p>
 
             <div th:if="${#lists.isEmpty(meusPagamentosPendentes)}" class="alert alert-success mb-0">
