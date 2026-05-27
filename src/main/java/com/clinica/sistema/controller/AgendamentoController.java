@@ -208,6 +208,12 @@ public class AgendamentoController {
         model.addAttribute("totalAgendamentosDoDia", agendamentosDoDia.size());
         model.addAttribute("gradeAcoesPorId", gradeAcoesPorId != null ? gradeAcoesPorId : Collections.emptyMap());
         model.addAttribute("pagamentoService", pagamentoConsultaService);
+        var pendenciasBloqueioPagamento = pagamentoConsultaService.listarPendenciasObrigatoriasParaBloqueio(usuarioLogado);
+        model.addAttribute("pagamentoBloqueioAtivo", !pendenciasBloqueioPagamento.isEmpty());
+        model.addAttribute(
+                "pagamentoBloqueioAgendamentoId",
+                pendenciasBloqueioPagamento.isEmpty() ? null : pendenciasBloqueioPagamento.get(0).getId()
+        );
         model.addAttribute(
                 "pagamentosAguardandoQr",
                 pagamentoConsultaService.listarAguardandoConfirmacao(usuarioLogado, podeGerenciarEquipe)

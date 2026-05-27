@@ -1025,6 +1025,13 @@
 
     <div th:if="${sucesso}" class="alert alert-success shell-card" th:text="${sucesso}"></div>
     <div th:if="${erro != null and erroContexto == 'uso-banco'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
+    <div th:if="${pagamentoBloqueioAtivo}" class="alert alert-warning shell-card">
+        <strong>Voce tem pagamento pendente.</strong>
+        Sem quitar, nao pode usar sala nem fazer novo agendamento.
+        <a th:if="${pagamentoBloqueioAgendamentoId != null}"
+           th:href="@{/pagamentos/{id}/pagar-agora(id=${pagamentoBloqueioAgendamentoId})}"
+           class="alert-link ms-1">Pagar agora</a>
+    </div>
 
     <nav class="agenda-quick-nav mb-4" aria-label="Atalhos da agenda">
         <a href="#grade-semanal" class="btn btn-sm btn-primary">Grade semanal</a>
@@ -1164,7 +1171,11 @@
                         </div>
 
                         <div class="col-12 d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Salvar agendamento</button>
+                            <button type="submit"
+                                    class="btn btn-primary btn-lg"
+                                    th:disabled="${pagamentoBloqueioAtivo}">
+                                Salvar agendamento
+                            </button>
                         </div>
                     </form>
 

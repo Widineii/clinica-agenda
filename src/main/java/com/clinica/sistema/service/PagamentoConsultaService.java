@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -168,6 +169,27 @@ public class PagamentoConsultaService {
                 .filter(this::podePagarAgora)
                 .limit(16)
                 .toList();
+    }
+
+    public List<Agendamento> listarPendenciasObrigatoriasParaBloqueio(Usuario usuarioLogado) {
+        if (usuarioLogado == null
+                || authService.isAdmin(usuarioLogado)
+                || authService.isDonaClinica(usuarioLogado)) {
+            return Collections.emptyList();
+        }
+
+        LocalDate hoje = LocalDate.now();
+        return repository.findByProfissionalIdOrderByDataHoraInicioAsc(usuarioLogado.getId()).stream()
+                .filter(agendamento -> agendamento.getDataHoraInicio() != null)
+                .filter(agendamento -> !agendamento.getDataHoraInicio().toLocalDate().isBefore(hoje))
+                .filter(agendamento -> !PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento()))
+                .filter(agendamento -> agendamento.possuiQrPagamentoAtivo() || podePagarAgora(agendamento))
+                .limit(8)
+                .toList();
+    }
+
+    public boolean profissionalBloqueadoPorPendenciaPagamento(Usuario usuarioLogado) {
+        return !listarPendenciasObrigatoriasParaBloqueio(usuarioLogado).isEmpty();
     }
 
     public boolean podePagarAgora(Agendamento agendamento) {

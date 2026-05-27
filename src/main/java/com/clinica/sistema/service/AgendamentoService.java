@@ -567,6 +567,13 @@ public class AgendamentoService {
     @Transactional
     public Agendamento salvar(AgendamentoForm form, Usuario usuarioLogado) {
         validarFormulario(form);
+        if (!authService.isAdmin(usuarioLogado)
+                && !authService.isDonaClinica(usuarioLogado)
+                && pagamentoConsultaService.profissionalBloqueadoPorPendenciaPagamento(usuarioLogado)) {
+            throw new RuntimeException(
+                    "Voce tem pagamento pendente. Quite o pagamento para voltar a usar a sala e marcar novos agendamentos."
+            );
+        }
 
         Usuario profissional = carregarProfissional(form.getProfissionalId(), usuarioLogado);
         Sala sala = salaRepository.findById(form.getSalaId())
