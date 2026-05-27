@@ -1012,9 +1012,6 @@
                 <a th:if="${podeAcessarGestaoFinanceira}"
                    th:href="@{/agendamentos/financeiro}"
                    class="btn btn-light">Gestao financeira</a>
-                <a th:if="${isAdmin or isDonaClinica}"
-                   th:href="@{/agendamentos/relatorio}"
-                   class="btn btn-light">Relatorio</a>
                 <button th:unless="${isAdmin or isDonaClinica}" type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#trocarSenhaModal">
                     Trocar senha
                 </button>
