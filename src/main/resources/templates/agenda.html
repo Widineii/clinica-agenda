@@ -1015,6 +1015,10 @@
                 <button th:unless="${isAdmin or isDonaClinica}" type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#trocarSenhaModal">
                     Trocar senha
                 </button>
+                <a th:if="${!isAdmin and !isDonaClinica}"
+                   th:href="@{/agendamentos/dashboard#meus-pagamentos}"
+                   class="btn btn-warning"
+                   th:text="${'Meus pagamentos (' + totalMeusPagamentosPendentes + ')'}">Meus pagamentos (0)</a>
                 <form th:action="@{/logout}" method="post">
                     <th:block th:replace="~{fragments/csrf :: token}"></th:block>
                     <button type="submit" class="btn btn-light">Sair</button>
@@ -1188,6 +1192,50 @@
             <th:block th:unless="${isDonaClinica}">
                 <div th:replace="~{fragments/pagamento-consulta :: painel-pendentes(pagamentos=${pagamentosAguardandoQr})}"></div>
             </th:block>
+
+            <div th:if="${!isAdmin and !isDonaClinica}" class="card shell-card mt-4" id="meus-pagamentos">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-2">Meus pagamentos</h2>
+                    <p class="small text-muted mb-3">Aqui voce confere o que precisa pagar para continuar usando a sala e criando novos agendamentos.</p>
+                    <div th:if="${#lists.isEmpty(meusPagamentosPendentes)}" class="alert alert-success mb-0">
+                        Nenhum pagamento pendente no momento.
+                    </div>
+                    <div th:if="${!#lists.isEmpty(meusPagamentosPendentes)}" class="table-responsive history-panel">
+                        <table class="table history-table align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Horario</th>
+                                <th>Sala</th>
+                                <th>Cliente</th>
+                                <th>Taxa</th>
+                                <th>Status</th>
+                                <th>Acao</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="pendencia : ${meusPagamentosPendentes}">
+                                <td th:text="${#temporals.format(pendencia.dataHoraInicio, 'dd/MM/yyyy')}">20/05/2026</td>
+                                <td th:text="${#temporals.format(pendencia.dataHoraInicio, 'HH:mm')}">08:00</td>
+                                <td th:text="${pendencia.sala != null ? pendencia.sala.nome : '-'}">Sala 2</td>
+                                <td th:text="${pendencia.nomeCliente}">Cliente</td>
+                                <td th:text="${pagamentoService.formatarValorTaxaPix(pendencia)}">R$ 35,00</td>
+                                <td>
+                                    <span th:if="${pagamentoService.deveAbrirPagamentoAgora(pendencia)}"
+                                          class="badge text-bg-warning">Pagar hoje</span>
+                                    <span th:unless="${pagamentoService.deveAbrirPagamentoAgora(pendencia)}"
+                                          class="badge text-bg-secondary">Proximo</span>
+                                </td>
+                                <td>
+                                    <a th:href="@{/pagamentos/{id}/pagar-agora(id=${pendencia.id})}"
+                                       class="btn btn-sm btn-warning">Pagar agora</a>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
             <div th:if="${!isAdmin}" class="card shell-card mt-4" id="meus-agendamentos">
                 <div class="card-body p-4">
