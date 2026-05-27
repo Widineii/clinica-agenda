@@ -88,6 +88,32 @@
     </div>
 </div>
 
+<div th:fragment="painel-pagar-agora (consultas)">
+    <div class="card shell-card mt-4" id="pagar-agora"
+         th:if="${consultas != null and !#lists.isEmpty(consultas)}">
+        <div class="card-body p-4">
+            <h2 class="h5 mb-2">Pagar agora</h2>
+            <p class="small text-muted mb-3">
+                Gere o QR Code e pague antes do prazo de 1 dia, se quiser adiantar.
+            </p>
+            <div th:each="consulta : ${consultas}" class="pagamento-pendente-card mb-2 p-3 rounded border">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <strong th:text="${consulta.nomeCliente}">Cliente</strong>
+                        <span class="small text-muted d-block"
+                              th:text="${consulta.dataHoraInicio != null ? #temporals.format(consulta.dataHoraInicio, 'dd/MM/yyyy HH:mm') + ' · ' + (consulta.sala != null ? consulta.sala.nome : '-') : '-'}">04/06 10:00</span>
+                        <span class="small text-muted"
+                              th:if="${consulta.valorPagamento != null or consulta.valorClinicaCobra != null}"
+                              th:text="${'Taxa clinica: ' + (consulta.valorPagamento != null ? consulta.valorPagamentoFormatado : consulta.valorClinicaCobraFormatado)}">Taxa: R$ 32,00</span>
+                    </div>
+                    <a th:href="@{/pagamentos/{id}/pagar-agora(id=${consulta.id})}"
+                       class="btn btn-sm btn-warning text-nowrap">Pagar agora</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div th:fragment="modal-pos-agendamento (agendamento)">
     <div th:if="${agendamento != null and agendamento.possuiQrPagamentoAtivo()}"
          class="modal fade admin-modal"

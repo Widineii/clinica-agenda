@@ -667,6 +667,22 @@
             background: rgba(245, 176, 0, 0.08);
         }
 
+        .slot-pagar-agora-link {
+            display: inline-block;
+            margin-top: 0.25rem;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #b45309;
+            text-decoration: none;
+        }
+
+        .slot-pagar-agora-link:hover {
+            color: #92400e;
+            text-decoration: underline;
+        }
+
         .valores-consulta-panel {
             border: 1px solid rgba(16, 59, 76, 0.12);
             border-radius: 16px;
@@ -1019,6 +1035,9 @@
         <a th:if="${pagamentosAguardandoQr != null and !#lists.isEmpty(pagamentosAguardandoQr)}"
            href="#pagamentos-pendentes"
            class="btn btn-sm btn-warning">Pagamentos pendentes</a>
+        <a th:if="${consultasParaPagarAntecipado != null and !#lists.isEmpty(consultasParaPagarAntecipado)}"
+           href="#pagar-agora"
+           class="btn btn-sm btn-outline-warning">Pagar agora</a>
     </nav>
 
     <div class="row g-4 align-items-start agenda-main">
@@ -1160,6 +1179,7 @@
 
             <th:block th:unless="${isDonaClinica}">
                 <div th:replace="~{fragments/pagamento-consulta :: painel-pendentes(pagamentos=${pagamentosAguardandoQr})}"></div>
+                <div th:replace="~{fragments/pagamento-consulta :: painel-pagar-agora(consultas=${consultasParaPagarAntecipado})}"></div>
             </th:block>
 
             <div th:if="${!isAdmin}" class="card shell-card mt-4" id="meus-agendamentos">
@@ -1276,7 +1296,8 @@
                                     th:data-cliente="${podeAgir ? item.nomeCliente : null}"
                                     th:data-inicio="${podeAgir ? #temporals.format(item.dataHoraInicio, 'dd/MM/yyyy HH:mm') : null}"
                                     th:data-sala="${podeAgir and item.sala != null ? item.sala.nome : null}"
-                                    th:data-valores="${podeAgir and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id)) ? 'Prof. ' + item.valorProfissionalRecebeFormatado + ' | Clin. ' + item.valorClinicaCobraFormatado + ' | Liq. ' + item.valorLiquidoProfissionalFormatado : null}">
+                                    th:data-valores="${podeAgir and item.possuiValoresConsulta() and (podeVerValoresDeTodos or (item.profissional != null and item.profissional.id == usuarioLogado.id)) ? 'Prof. ' + item.valorProfissionalRecebeFormatado + ' | Clin. ' + item.valorClinicaCobraFormatado + ' | Liq. ' + item.valorLiquidoProfissionalFormatado : null}"
+                                    th:data-pode-pagar="${item != null and pagamentoService.podePagarAgora(item) and pagamentoService.podeVerPagamento(item, usuarioLogado)}">
                                     <div th:if="${item != null}" class="slot-card" th:classappend="${item.esperandoConfirmacaoPagamento ? ' slot-card--aguardando-pagamento' : ''}">
                                         <div class="slot-card__head">
                                             <span class="slot-card__prof"
@@ -1310,6 +1331,10 @@
                                                   class="badge rounded-pill text-bg-danger">Nao pago</span>
                                             <span th:if="${item.pagamentoPago}"
                                                   class="badge rounded-pill text-bg-success">Pago</span>
+                                            <a th:if="${pagamentoService.podePagarAgora(item) and pagamentoService.podeVerPagamento(item, usuarioLogado)}"
+                                               th:href="@{/pagamentos/{id}/pagar-agora(id=${item.id})}"
+                                               class="slot-pagar-agora-link"
+                                               onclick="event.stopPropagation();">Pagar agora</a>
                                         </div>
                                     </div>
                                     <div th:if="${item == null}" class="slot-empty-label">Disponivel</div>
@@ -1377,6 +1402,9 @@
                                 </td>
                                 <td class="small">
                                     <div th:replace="~{fragments/pagamento-consulta :: status-badge(agendamento=${registro})}"></div>
+                                    <a th:if="${pagamentoService.podePagarAgora(registro) and pagamentoService.podeVerPagamento(registro, usuarioLogado)}"
+                                       th:href="@{/pagamentos/{id}/pagar-agora(id=${registro.id})}"
+                                       class="btn btn-sm btn-warning ms-1">Pagar agora</a>
                                     <a th:if="${registro.possuiQrPagamentoAtivo() and registro.id != null}"
                                        th:href="@{/pagamentos/{id}(id=${registro.id})}"
                                        class="btn btn-sm btn-outline-primary ms-1">Ver QR</a>
@@ -1439,6 +1467,9 @@
                             Cancelar somente este
                         </button>
                     </form>
+                    <a id="gradeLinkPagarAgora"
+                       class="btn btn-warning d-none"
+                       href="#">Pagar agora (gerar QR)</a>
                 </div>
             </div>
         </div>
@@ -1897,6 +1928,7 @@
         var modalElement = document.getElementById('gradeAgendamentoModal');
         var formEncerrar = document.getElementById('gradeFormEncerrar');
         var formCancelar = document.getElementById('gradeFormCancelar');
+        var linkPagarAgora = document.getElementById('gradeLinkPagarAgora');
         var btnEncerrar = document.getElementById('gradeBtnEncerrar');
         var resumo = document.getElementById('gradeModalResumo');
         var csrfSource = document.querySelector('input[name="_csrf"]');
@@ -1939,6 +1971,16 @@
 
             formCancelar.action = basePath + 'agendamentos/' + id + '/cancelar';
             formCancelar.classList.remove('d-none');
+
+            if (linkPagarAgora) {
+                if (celula.dataset.podePagar === 'true') {
+                    linkPagarAgora.href = basePath + 'pagamentos/' + id + '/pagar-agora';
+                    linkPagarAgora.classList.remove('d-none');
+                } else {
+                    linkPagarAgora.classList.add('d-none');
+                    linkPagarAgora.removeAttribute('href');
+                }
+            }
 
             if (tipo === 'SEMANAL' || tipo === 'QUINZENAL') {
                 formEncerrar.action = basePath + 'agendamentos/' + id + '/encerrar-fixo';

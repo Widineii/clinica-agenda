@@ -204,6 +204,10 @@ public class AgendamentoController {
                 "pagamentosAguardandoQr",
                 pagamentoConsultaService.listarAguardandoConfirmacao(usuarioLogado, podeGerenciarEquipe)
         );
+        model.addAttribute(
+                "consultasParaPagarAntecipado",
+                pagamentoConsultaService.listarDisponiveisParaPagarAntecipado(usuarioLogado, podeGerenciarEquipe)
+        );
         Object pagamentoFlashId = model.containsAttribute("pagamentoAgendamentoId")
                 ? model.getAttribute("pagamentoAgendamentoId")
                 : null;
