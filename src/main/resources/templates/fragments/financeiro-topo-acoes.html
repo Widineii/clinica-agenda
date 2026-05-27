@@ -17,18 +17,13 @@
             Gestao financeira
         </a>
 
-        <a th:href="@{/agendamentos/dashboard}" class="btn btn-light btn-sm">
-            Voltar para agenda
-        </a>
-
         <a th:href="@{/agendamentos/relatorio/mensal}" class="btn btn-light btn-sm">
             Relatorio
         </a>
 
-        <form th:action="@{/logout}" method="post" class="d-inline">
-            <th:block th:replace="~{fragments/csrf :: token}"></th:block>
-            <button type="submit" class="btn btn-warning btn-sm">Sair</button>
-        </form>
+        <a th:href="@{/agendamentos/dashboard}" class="btn btn-warning btn-sm">
+            Sair
+        </a>
     </div>
 </div>
 </body>
