@@ -1035,9 +1035,6 @@
         <a th:if="${pagamentosAguardandoQr != null and !#lists.isEmpty(pagamentosAguardandoQr)}"
            href="#pagamentos-pendentes"
            class="btn btn-sm btn-warning">Pagamentos pendentes</a>
-        <a th:if="${consultasParaPagarAntecipado != null and !#lists.isEmpty(consultasParaPagarAntecipado)}"
-           href="#pagar-agora"
-           class="btn btn-sm btn-outline-warning">Pagar agora</a>
     </nav>
 
     <div class="row g-4 align-items-start agenda-main">
@@ -1179,7 +1176,6 @@
 
             <th:block th:unless="${isDonaClinica}">
                 <div th:replace="~{fragments/pagamento-consulta :: painel-pendentes(pagamentos=${pagamentosAguardandoQr})}"></div>
-                <div th:replace="~{fragments/pagamento-consulta :: painel-pagar-agora(consultas=${consultasParaPagarAntecipado})}"></div>
             </th:block>
 
             <div th:if="${!isAdmin}" class="card shell-card mt-4" id="meus-agendamentos">
