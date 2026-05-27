@@ -16,7 +16,7 @@
             <p class="mb-1"><strong th:text="${agendamento.nomeCliente}">Cliente</strong></p>
             <p class="small text-muted"
                th:text="${agendamento.dataHoraInicio != null ? #temporals.format(agendamento.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''}">28/05/2026</p>
-            <p class="mb-2">Taxa: <strong th:text="${agendamento.valorPagamentoFormatado}">R$ 32,00</strong></p>
+            <p class="mb-2">Taxa da clinica (PIX): <strong th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</strong></p>
             <p class="small mb-4">
                 Status:
                 <span class="badge text-bg-secondary" th:text="${rotuloStatus}">Aguardando pagamento</span>

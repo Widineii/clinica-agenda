@@ -57,15 +57,16 @@ class PagamentoConsultaServiceTest {
         profissional.setDonaClinica(false);
 
         when(pagamentoProperties.getPrazoConfirmacaoMinutos()).thenReturn(5);
+        when(infinitePayService.resolverValorTaxaClinica(any())).thenReturn(new BigDecimal("32.00"));
         when(infinitePayService.gerarLinkPagamento(any())).thenReturn(
                 new com.clinica.sistema.dto.LinkPagamentoGerado("ag-1-test", "http://localhost/link", "slug")
         );
-        when(infinitePayService.valorPagamento(any())).thenReturn(new BigDecimal("32.00"));
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
 
         pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento), profissional);
 
         assertEquals(PagamentoStatus.ESPERANDO_CONFIRMACAO, agendamento.getStatusPagamento());
+        assertEquals(new BigDecimal("32.00"), agendamento.getValorPagamento());
         assertEquals("http://localhost/link", agendamento.getPagamentoLink());
         assertNotNull(agendamento.getPagamentoExpiraEm());
         assertTrue(agendamento.getPagamentoExpiraEm().isAfter(LocalDateTime.now()));
@@ -82,10 +83,10 @@ class PagamentoConsultaServiceTest {
         segunda.setId(2L);
         segunda.setDataHoraInicio(LocalDate.now().plusDays(10).atTime(10, 0));
 
+        when(infinitePayService.resolverValorTaxaClinica(any())).thenReturn(new BigDecimal("32.00"));
         when(infinitePayService.gerarLinkPagamento(any())).thenReturn(
                 new com.clinica.sistema.dto.LinkPagamentoGerado("ag-1-test", "http://localhost/link", "slug")
         );
-        when(infinitePayService.valorPagamento(any())).thenReturn(new BigDecimal("32.00"));
         when(authService.profissionalIgnoraValoresEPagamento(profissional)).thenReturn(false);
 
         pagamentoConsultaService.configurarPagamentosAoSalvar(java.util.List.of(agendamento, segunda), profissional);

@@ -22,10 +22,12 @@ public class InfinitePayService {
     private static final String API_LINKS = "https://api.checkout.infinitepay.io/links";
 
     private final InfinitePayProperties properties;
+    private final ValorConsultaService valorConsultaService;
     private final RestTemplate restTemplate;
 
-    public InfinitePayService(InfinitePayProperties properties) {
+    public InfinitePayService(InfinitePayProperties properties, ValorConsultaService valorConsultaService) {
         this.properties = properties;
+        this.valorConsultaService = valorConsultaService;
         this.restTemplate = new RestTemplate();
     }
 
@@ -87,10 +89,42 @@ public class InfinitePayService {
     }
 
     public BigDecimal valorPagamento(Agendamento agendamento) {
-        if (agendamento.getValorClinicaCobra() != null) {
-            return agendamento.getValorClinicaCobra();
+        return resolverValorTaxaClinica(agendamento);
+    }
+
+    /**
+     * Valor cobrado no PIX: taxa da clinica salva no agendamento ou tarifa padrao
+     * (Sala 4 = 25, fixo = 32, avulso/quinzenal = 35, indicacao = 30%).
+     */
+    public BigDecimal resolverValorTaxaClinica(Agendamento agendamento) {
+        if (agendamento == null) {
+            return BigDecimal.ZERO;
         }
-        return BigDecimal.ZERO;
+        if (agendamento.getValorPagamento() != null && agendamento.getValorPagamento().signum() > 0) {
+            return agendamento.getValorPagamento().setScale(2, RoundingMode.HALF_UP);
+        }
+        if (agendamento.getValorClinicaCobra() != null && agendamento.getValorClinicaCobra().signum() > 0) {
+            return agendamento.getValorClinicaCobra().setScale(2, RoundingMode.HALF_UP);
+        }
+        if (Boolean.TRUE.equals(agendamento.getIndicacaoDona())
+                && agendamento.getValorProfissionalRecebe() != null
+                && agendamento.getValorProfissionalRecebe().signum() > 0) {
+            return valorConsultaService.calcularTarifaClinicaIndicacao(agendamento.getValorProfissionalRecebe());
+        }
+        return valorConsultaService.calcularTarifaClinicaPadrao(
+                agendamento.getSala(),
+                recorrenciaDoAgendamento(agendamento)
+        );
+    }
+
+    private String recorrenciaDoAgendamento(Agendamento agendamento) {
+        if (agendamento.getTipoRecorrencia() != null && !agendamento.getTipoRecorrencia().isBlank()) {
+            return agendamento.getTipoRecorrencia();
+        }
+        if (Boolean.TRUE.equals(agendamento.getFixo())) {
+            return "SEMANAL";
+        }
+        return "AVULSO";
     }
 
     private String descricaoItem(Agendamento agendamento) {

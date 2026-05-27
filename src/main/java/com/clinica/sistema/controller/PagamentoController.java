@@ -53,6 +53,7 @@ public class PagamentoController {
         validarAcesso(agendamento, usuarioLogado);
 
         model.addAttribute("agendamento", agendamento);
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("rotuloStatus", pagamentoConsultaService.rotuloStatusPagamento(agendamento));
         model.addAttribute("bloqueado", pagamentoConsultaService.bloqueadoPorPagamento(agendamento));
         return "pagamento-consulta";
@@ -88,6 +89,7 @@ public class PagamentoController {
             throw new RuntimeException("Pedido de pagamento invalido.");
         }
         model.addAttribute("agendamento", registro);
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("orderNsu", order);
         return "pagamento-checkout-teste";
     }

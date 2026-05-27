@@ -17,7 +17,7 @@
             <p class="mb-1"><strong th:text="${agendamento.nomeCliente}">Cliente</strong></p>
             <p class="small text-muted mb-3"
                th:text="${agendamento.dataHoraInicio != null ? #temporals.format(agendamento.dataHoraInicio, 'dd/MM/yyyy HH:mm') : ''}">28/05/2026</p>
-            <p class="h5 mb-4" th:text="${agendamento.valorPagamentoFormatado}">R$ 32,00</p>
+            <p class="h5 mb-4" th:text="${pagamentoService.formatarValorTaxaPix(agendamento)}">R$ 32,00</p>
 
             <form th:action="@{/pagamentos/checkout-teste/confirmar}" method="post" class="d-grid">
                 <th:block th:replace="~{fragments/csrf :: token}"></th:block>

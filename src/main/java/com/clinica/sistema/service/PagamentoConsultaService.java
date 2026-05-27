@@ -9,6 +9,7 @@ import com.clinica.sistema.repository.AgendamentoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -207,6 +208,14 @@ public class PagamentoConsultaService {
         return podePagarAgora(agendamento);
     }
 
+    public String formatarValorTaxaPix(Agendamento agendamento) {
+        BigDecimal valor = infinitePayService.resolverValorTaxaClinica(agendamento);
+        if (valor == null || valor.signum() <= 0) {
+            return "—";
+        }
+        return com.clinica.sistema.util.MoedaBrasilUtil.formatar(valor);
+    }
+
     public String rotuloStatusPagamento(Agendamento agendamento) {
         PagamentoStatus status = agendamento.getStatusPagamento();
         if (status == null) {
@@ -267,13 +276,26 @@ public class PagamentoConsultaService {
         if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
             return;
         }
+        BigDecimal taxaPix = infinitePayService.resolverValorTaxaClinica(agendamento);
+        if (taxaPix == null || taxaPix.signum() <= 0) {
+            throw new RuntimeException("Valor da taxa da clinica invalido para pagamento.");
+        }
+        if (agendamento.getValorClinicaCobra() == null || agendamento.getValorClinicaCobra().signum() <= 0) {
+            agendamento.setValorClinicaCobra(taxaPix);
+            if (agendamento.getValorProfissionalRecebe() != null) {
+                agendamento.setValorLiquidoProfissional(
+                        agendamento.getValorProfissionalRecebe().subtract(taxaPix).max(BigDecimal.ZERO)
+                                .setScale(2, java.math.RoundingMode.HALF_UP)
+                );
+            }
+        }
+        agendamento.setValorPagamento(taxaPix);
         LinkPagamentoGerado link = infinitePayService.gerarLinkPagamento(agendamento);
         LocalDateTime agora = LocalDateTime.now();
         agendamento.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
         agendamento.setPagamentoOrderNsu(link.getOrderNsu());
         agendamento.setPagamentoLink(link.getLinkPagamento());
         agendamento.setPagamentoSlug(link.getSlug());
-        agendamento.setValorPagamento(infinitePayService.valorPagamento(agendamento));
         agendamento.setPagamentoIniciadoEm(agora);
         agendamento.setPagamentoExpiraEm(agora.plusMinutes(pagamentoProperties.getPrazoConfirmacaoMinutos()));
     }
