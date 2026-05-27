@@ -8,6 +8,7 @@ import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
+import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.RelatorioMensalService;
 import com.clinica.sistema.service.RelatorioSemanalService;
@@ -40,6 +41,7 @@ public class AgendamentoController {
     private final RelatorioSemanalService relatorioSemanalService;
     private final RelatorioMensalService relatorioMensalService;
     private final PagamentoConsultaService pagamentoConsultaService;
+    private final FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -48,7 +50,8 @@ public class AgendamentoController {
             UsuarioService usuarioService,
             RelatorioSemanalService relatorioSemanalService,
             RelatorioMensalService relatorioMensalService,
-            PagamentoConsultaService pagamentoConsultaService
+            PagamentoConsultaService pagamentoConsultaService,
+            FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService
     ) {
         this.service = service;
         this.authService = authService;
@@ -57,6 +60,7 @@ public class AgendamentoController {
         this.relatorioSemanalService = relatorioSemanalService;
         this.relatorioMensalService = relatorioMensalService;
         this.pagamentoConsultaService = pagamentoConsultaService;
+        this.financeiroPolyanaAcessoService = financeiroPolyanaAcessoService;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -131,6 +135,10 @@ public class AgendamentoController {
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("isDonaClinica", authService.isDonaClinica(usuarioLogado));
+        model.addAttribute(
+                "podeAcessarGestaoFinanceira",
+                financeiroPolyanaAcessoService.podeAcessarGestaoFinanceira(usuarioLogado)
+        );
         model.addAttribute("podeGerenciarEquipe", podeGerenciarEquipe);
         model.addAttribute("podeVerValoresDeTodos", podeGerenciarEquipe);
         model.addAttribute(

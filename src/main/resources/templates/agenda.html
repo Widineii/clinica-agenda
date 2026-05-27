@@ -1009,6 +1009,9 @@
                 <a th:if="${isAdmin or isDonaClinica}"
                    th:href="@{/agendamentos/central-profissionais}"
                    class="btn btn-warning">Central dos profissionais</a>
+                <a th:if="${podeAcessarGestaoFinanceira}"
+                   th:href="@{/agendamentos/financeiro}"
+                   class="btn btn-light">Gestao financeira</a>
                 <a th:if="${isAdmin or isDonaClinica}"
                    th:href="@{/agendamentos/relatorio}"
                    class="btn btn-light">Relatorio</a>
