@@ -5,11 +5,11 @@ import com.clinica.sistema.dto.DespesaResumoMesView;
 import com.clinica.sistema.dto.FinanceiroFiltroMesProfissionalView;
 import com.clinica.sistema.model.TipoDespesa;
 import com.clinica.sistema.model.Usuario;
+import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.DespesaService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
 import com.clinica.sistema.service.RelatorioMensalService;
-import com.clinica.sistema.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,20 +31,20 @@ public class FinanceiroController {
     private final FinanceiroPolyanaAcessoService acessoService;
     private final AuthService authService;
     private final RelatorioMensalService relatorioMensalService;
-    private final UsuarioService usuarioService;
+    private final AgendamentoService agendamentoService;
 
     public FinanceiroController(
             DespesaService despesaService,
             FinanceiroPolyanaAcessoService acessoService,
             AuthService authService,
             RelatorioMensalService relatorioMensalService,
-            UsuarioService usuarioService
+            AgendamentoService agendamentoService
     ) {
         this.despesaService = despesaService;
         this.acessoService = acessoService;
         this.authService = authService;
         this.relatorioMensalService = relatorioMensalService;
-        this.usuarioService = usuarioService;
+        this.agendamentoService = agendamentoService;
     }
 
     @GetMapping
@@ -92,9 +92,7 @@ public class FinanceiroController {
         }
 
         YearMonth mesSelecionado = resolverMes(mesAno, mes, ano);
-        var profissionais = usuarioService.listarProfissionaisDaEquipe().stream()
-                .filter(profissional -> !authService.profissionalIgnoraValoresEPagamento(profissional))
-                .toList();
+        var profissionais = agendamentoService.listarProfissionaisComAgendamentoNoMes(mesSelecionado);
         Usuario profissionalSelecionado = resolverProfissional(profissionalId, profissionais);
 
         model.addAttribute(

@@ -2,6 +2,7 @@ package com.clinica.sistema.repository;
 
 import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
+import com.clinica.sistema.model.Usuario;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -162,6 +163,20 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
               AND a.dataHoraInicio < :fim
             """)
     long countNoPeriodo(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim
+    );
+
+    @Query("""
+            SELECT DISTINCT a.profissional
+            FROM Agendamento a
+            WHERE a.profissional IS NOT NULL
+              AND a.profissional.cargo = 'ROLE_PROFISSIONAL'
+              AND a.dataHoraInicio >= :inicio
+              AND a.dataHoraInicio < :fim
+            ORDER BY a.profissional.nome ASC
+            """)
+    List<Usuario> findProfissionaisComAgendamentoNoPeriodo(
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
     );

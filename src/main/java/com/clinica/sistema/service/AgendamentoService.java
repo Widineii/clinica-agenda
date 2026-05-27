@@ -226,6 +226,14 @@ public class AgendamentoService {
                 .toList();
     }
 
+    public List<Usuario> listarProfissionaisComAgendamentoNoMes(YearMonth mesReferencia) {
+        LocalDateTime inicio = mesReferencia.atDay(1).atStartOfDay();
+        LocalDateTime fim = mesReferencia.plusMonths(1).atDay(1).atStartOfDay();
+        return repository.findProfissionaisComAgendamentoNoPeriodo(inicio, fim).stream()
+                .filter(profissional -> !authService.profissionalIgnoraValoresEPagamento(profissional))
+                .toList();
+    }
+
     public List<LocalTime> listarHorariosDisponiveis() {
         List<LocalTime> horarios = new ArrayList<>();
         for (LocalTime horario = HORA_ABERTURA; !horario.equals(HORA_FECHAMENTO); horario = horario.plusHours(1)) {
