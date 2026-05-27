@@ -9,6 +9,7 @@ import com.clinica.sistema.service.AgendamentoService;
 import com.clinica.sistema.service.AuthService;
 import com.clinica.sistema.service.DespesaService;
 import com.clinica.sistema.service.FinanceiroPolyanaAcessoService;
+import com.clinica.sistema.service.PagamentoConsultaService;
 import com.clinica.sistema.service.RelatorioMensalService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
@@ -32,19 +33,22 @@ public class FinanceiroController {
     private final AuthService authService;
     private final RelatorioMensalService relatorioMensalService;
     private final AgendamentoService agendamentoService;
+    private final PagamentoConsultaService pagamentoConsultaService;
 
     public FinanceiroController(
             DespesaService despesaService,
             FinanceiroPolyanaAcessoService acessoService,
             AuthService authService,
             RelatorioMensalService relatorioMensalService,
-            AgendamentoService agendamentoService
+            AgendamentoService agendamentoService,
+            PagamentoConsultaService pagamentoConsultaService
     ) {
         this.despesaService = despesaService;
         this.acessoService = acessoService;
         this.authService = authService;
         this.relatorioMensalService = relatorioMensalService;
         this.agendamentoService = agendamentoService;
+        this.pagamentoConsultaService = pagamentoConsultaService;
     }
 
     @GetMapping
@@ -99,6 +103,16 @@ public class FinanceiroController {
                 "filtro",
                 new FinanceiroFiltroMesProfissionalView(mesSelecionado, profissionalSelecionado, profissionais)
         );
+        model.addAttribute(
+                "atendimentos",
+                profissionalSelecionado != null
+                        ? agendamentoService.listarAtendimentosProfissionalNoMes(
+                                profissionalSelecionado.getId(),
+                                mesSelecionado
+                        )
+                        : java.util.Collections.emptyList()
+        );
+        model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("mostrarConfiguracaoTaxas", false);
         model.addAttribute("mostrarGestaoFinanceira", true);
         return "financeiro-configuracao-taxas";

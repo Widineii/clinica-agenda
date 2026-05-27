@@ -21,16 +21,68 @@
 
     <div class="financeiro-card">
         <div class="card-body">
-            <p class="mb-2">
-                Profissional selecionado:
-                <strong th:text="${filtro.profissionalNome != null ? filtro.profissionalNome : 'Nenhum'}">Carol</strong>
-            </p>
-            <p class="mb-2">Esta area sera usada para configurar taxas da clinica.</p>
-            <p class="financeiro-hint mb-0">
-                Por enquanto, use a agenda para valores por consulta. Volte para
-                <a th:href="@{/agendamentos/financeiro}">Gestao financeira</a>
-                para despesas mensais e unicas.
-            </p>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                <div>
+                    <h2 class="h5 mb-1">Atendimentos do mes</h2>
+                    <p class="financeiro-hint mb-0">
+                        Profissional:
+                        <strong th:text="${filtro.profissionalNome != null ? filtro.profissionalNome : 'Nenhum'}">Julia</strong>
+                    </p>
+                </div>
+                <span class="badge rounded-pill text-bg-light border"
+                      th:text="${#lists.size(atendimentos) + ' atendimento(s)'}">0 atendimento(s)</span>
+            </div>
+
+            <div th:if="${filtro.profissionalId == null}" class="financeiro-empty">
+                Selecione um profissional com agendamento neste mes.
+            </div>
+
+            <div th:if="${filtro.profissionalId != null and #lists.isEmpty(atendimentos)}" class="financeiro-empty">
+                Nenhum atendimento encontrado para este profissional em
+                <span th:text="${filtro.mesAnoLabelCurto}">maio 2026</span>.
+            </div>
+
+            <div th:if="${!#lists.isEmpty(atendimentos)}" class="table-responsive">
+                <table class="table financeiro-table align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Horario</th>
+                        <th>Sala</th>
+                        <th>Cliente</th>
+                        <th>Tipo</th>
+                        <th>Prof.</th>
+                        <th>Taxa clinica</th>
+                        <th>Liq.</th>
+                        <th>Taxa PIX</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="atendimento : ${atendimentos}">
+                        <td th:text="${#temporals.format(atendimento.dataHoraInicio, 'dd/MM/yyyy')}">20/05/2026</td>
+                        <td th:text="${#temporals.format(atendimento.dataHoraInicio, 'HH:mm') + ' - ' + #temporals.format(atendimento.dataHoraFim, 'HH:mm')}">
+                            08:00 - 09:00
+                        </td>
+                        <td th:text="${atendimento.sala != null ? atendimento.sala.nome : '-'}">Sala 2</td>
+                        <td>
+                            <span th:text="${atendimento.nomeCliente}">Cliente</span>
+                            <span th:if="${atendimento.indicacaoDona == true}" class="text-muted small"> (30%)</span>
+                        </td>
+                        <td th:text="${atendimento.recorrenciaLabel}">Avulso</td>
+                        <td th:text="${atendimento.possuiValoresConsulta() ? atendimento.valorProfissionalRecebeFormatado : '—'}">
+                            R$ 150,00
+                        </td>
+                        <td th:text="${atendimento.possuiValoresConsulta() ? atendimento.valorClinicaCobraFormatado : '—'}">
+                            R$ 35,00
+                        </td>
+                        <td th:text="${atendimento.possuiValoresConsulta() ? atendimento.valorLiquidoProfissionalFormatado : '—'}">
+                            R$ 115,00
+                        </td>
+                        <td th:text="${pagamentoService.formatarValorTaxaPix(atendimento)}">R$ 35,00</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

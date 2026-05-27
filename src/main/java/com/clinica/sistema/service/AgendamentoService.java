@@ -234,6 +234,19 @@ public class AgendamentoService {
                 .toList();
     }
 
+    public List<Agendamento> listarAtendimentosProfissionalNoMes(Long profissionalId, YearMonth mesReferencia) {
+        if (profissionalId == null) {
+            return List.of();
+        }
+        LocalDateTime inicio = mesReferencia.atDay(1).atStartOfDay();
+        LocalDateTime fim = mesReferencia.plusMonths(1).atDay(1).atStartOfDay();
+        return repository.findByProfissionalIdAndDataHoraInicioGreaterThanEqualAndDataHoraInicioLessThanOrderByDataHoraInicioAsc(
+                profissionalId,
+                inicio,
+                fim
+        );
+    }
+
     public List<LocalTime> listarHorariosDisponiveis() {
         List<LocalTime> horarios = new ArrayList<>();
         for (LocalTime horario = HORA_ABERTURA; !horario.equals(HORA_FECHAMENTO); horario = horario.plusHours(1)) {
