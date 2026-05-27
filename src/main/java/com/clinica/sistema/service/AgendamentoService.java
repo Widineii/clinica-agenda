@@ -3,6 +3,7 @@ package com.clinica.sistema.service;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.AgendaSalaLinha;
 import com.clinica.sistema.dto.AgendaSalaView;
+import com.clinica.sistema.dto.ConfiguracaoTaxasAtendimentosView;
 import com.clinica.sistema.dto.ProfissionalAgendamentosResumo;
 import com.clinica.sistema.dto.SerieAgendamentoLinha;
 import com.clinica.sistema.dto.SerieAgendamentoOcorrencia;
@@ -245,6 +246,63 @@ public class AgendamentoService {
                 inicio,
                 fim
         );
+    }
+
+    public ConfiguracaoTaxasAtendimentosView montarAtendimentosConfiguracaoTaxas(
+            Long profissionalId,
+            YearMonth mesReferencia
+    ) {
+        if (profissionalId == null) {
+            return ConfiguracaoTaxasAtendimentosView.vazio();
+        }
+
+        List<Agendamento> todos = repository.findByProfissionalIdOrderByDataHoraInicioAsc(profissionalId);
+        LocalDateTime inicioMes = mesReferencia.atDay(1).atStartOfDay();
+        LocalDateTime fimMes = mesReferencia.plusMonths(1).atDay(1).atStartOfDay();
+
+        List<Agendamento> avulsos = todos.stream()
+                .filter(Agendamento::isAvulso)
+                .filter(agendamento -> estaNoPeriodo(agendamento, inicioMes, fimMes))
+                .sorted(Comparator.comparing(Agendamento::getDataHoraInicio))
+                .toList();
+
+        List<SerieAgendamentoLinha> seriesFixas = agruparSeriesAtivas(todos, Agendamento::isFixoSemanal).stream()
+                .filter(serie -> serieTemOcorrenciaNoMes(serie.getAgendamentoReferenciaId(), todos, inicioMes, fimMes))
+                .toList();
+
+        List<SerieAgendamentoLinha> seriesQuinzenais = agruparSeriesAtivas(todos, Agendamento::isQuinzenal).stream()
+                .filter(serie -> serieTemOcorrenciaNoMes(serie.getAgendamentoReferenciaId(), todos, inicioMes, fimMes))
+                .toList();
+
+        int totalNoMes = listarAtendimentosProfissionalNoMes(profissionalId, mesReferencia).size();
+        return new ConfiguracaoTaxasAtendimentosView(avulsos, seriesFixas, seriesQuinzenais, totalNoMes);
+    }
+
+    private boolean estaNoPeriodo(Agendamento agendamento, LocalDateTime inicio, LocalDateTime fim) {
+        if (agendamento.getDataHoraInicio() == null) {
+            return false;
+        }
+        return !agendamento.getDataHoraInicio().isBefore(inicio)
+                && agendamento.getDataHoraInicio().isBefore(fim);
+    }
+
+    private boolean serieTemOcorrenciaNoMes(
+            Long agendamentoReferenciaId,
+            List<Agendamento> agendamentos,
+            LocalDateTime inicioMes,
+            LocalDateTime fimMes
+    ) {
+        Agendamento referencia = agendamentos.stream()
+                .filter(agendamento -> agendamentoReferenciaId.equals(agendamento.getId()))
+                .findFirst()
+                .orElse(null);
+        if (referencia == null) {
+            return false;
+        }
+        String chaveSerie = chaveSerie(referencia);
+        return agendamentos.stream()
+                .filter(agendamento -> chaveSerie(agendamento).equals(chaveSerie))
+                .anyMatch(agendamento -> estaNoPeriodo(agendamento, inicioMes, fimMes));
     }
 
     public List<LocalTime> listarHorariosDisponiveis() {

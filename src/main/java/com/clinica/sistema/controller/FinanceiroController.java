@@ -1,5 +1,6 @@
 package com.clinica.sistema.controller;
 
+import com.clinica.sistema.dto.ConfiguracaoTaxasAtendimentosView;
 import com.clinica.sistema.dto.DespesaForm;
 import com.clinica.sistema.dto.DespesaResumoMesView;
 import com.clinica.sistema.dto.FinanceiroFiltroMesProfissionalView;
@@ -104,13 +105,13 @@ public class FinanceiroController {
                 new FinanceiroFiltroMesProfissionalView(mesSelecionado, profissionalSelecionado, profissionais)
         );
         model.addAttribute(
-                "atendimentos",
+                "atendimentosView",
                 profissionalSelecionado != null
-                        ? agendamentoService.listarAtendimentosProfissionalNoMes(
+                        ? agendamentoService.montarAtendimentosConfiguracaoTaxas(
                                 profissionalSelecionado.getId(),
                                 mesSelecionado
                         )
-                        : java.util.Collections.emptyList()
+                        : ConfiguracaoTaxasAtendimentosView.vazio()
         );
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("mostrarConfiguracaoTaxas", false);

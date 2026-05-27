@@ -129,6 +129,45 @@
                 color: var(--fin-text);
             }
 
+            .taxas-caderno-serie-linha,
+            .taxas-caderno-avulso-linha {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                padding: 12px 14px;
+                margin-top: 8px;
+                border-radius: 10px;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                color: #0f172a;
+            }
+
+            .taxas-caderno-serie-linha__titulo,
+            .taxas-caderno-avulso-linha__texto {
+                font-weight: 600;
+                font-size: 0.9rem;
+            }
+
+            .taxas-caderno-serie-linha__datas {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .taxas-caderno-data-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 3rem;
+                padding: 4px 10px;
+                border-radius: 999px;
+                border: 1px solid #94a3b8;
+                background: #ffffff;
+                font-size: 0.78rem;
+                font-weight: 600;
+                color: #334155;
+            }
+
             .financeiro-empty {
                 color: var(--fin-muted);
                 font-size: 0.95rem;
