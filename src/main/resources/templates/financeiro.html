@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestao financeira - Clinica Afetto</title>
+    <th:block th:replace="~{fragments/financeiro-estilos-base :: css}"></th:block>
+</head>
+<body class="financeiro-page">
+<div class="financeiro-wrap">
+
+    <div th:replace="~{fragments/financeiro-hero :: hero(
+        titulo='Gestao financeira',
+        subtitulo='Despesas mensais (todo mes) e despesas unicas (pagamento uma vez).'
+    )}"></div>
+
+    <div th:if="${sucesso}" class="alert alert-success financeiro-card mb-3" th:text="${sucesso}"></div>
+    <div th:if="${erro}" class="alert alert-danger financeiro-card mb-3" th:text="${erro}"></div>
+
+    <div class="financeiro-card mb-4">
+        <div class="card-body">
+            <form th:action="@{/agendamentos/financeiro}" method="get" id="filtroMesForm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold" for="mesAno">Mes de referencia</label>
+                        <input type="month"
+                               class="form-control"
+                               id="mesAno"
+                               name="mesAno"
+                               th:value="${resumo.mesAnoInput}"
+                               onchange="this.form.submit()">
+                    </div>
+                    <div class="col-md-7">
+                        <p class="mb-1 fw-semibold" th:text="'Visualizando ' + ${resumo.mesAnoLabel}">Visualizando Maio de 2026</p>
+                        <p class="financeiro-hint mb-0">
+                            Despesas mensais ativas entram em todos os meses a partir da data de inicio.
+                        </p>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="financeiro-resumo-grid mb-4">
+        <div class="financeiro-resumo-card">
+            <div class="financeiro-resumo-label">Total mensais no mes</div>
+            <div class="financeiro-resumo-valor" th:text="${resumo.totalMensaisFormatado}">R$ 0,00</div>
+        </div>
+        <div class="financeiro-resumo-card">
+            <div class="financeiro-resumo-label">Total unicas no mes</div>
+            <div class="financeiro-resumo-valor" th:text="${resumo.totalUnicasFormatado}">R$ 0,00</div>
+        </div>
+        <div class="financeiro-resumo-card financeiro-resumo-card--destaque">
+            <div class="financeiro-resumo-label">Total geral do mes</div>
+            <div class="financeiro-resumo-valor" th:text="${resumo.totalGeralFormatado}">R$ 0,00</div>
+        </div>
+    </div>
+
+    <div class="financeiro-grid-principal">
+        <div class="financeiro-card">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Nova despesa</h2>
+                <form th:action="@{/agendamentos/financeiro}" th:object="${despesaForm}" method="post">
+                    <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                    <input type="hidden" th:field="*{mes}">
+                    <input type="hidden" th:field="*{ano}">
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select th:field="*{tipo}" class="form-select" id="tipoDespesa">
+                            <option value="MENSAL">MENSAL (todo mes)</option>
+                            <option value="UNICA">UNICA (paga uma vez)</option>
+                        </select>
+                        <div class="form-text" id="hintMensal">
+                            Repete todo mes a partir da data de inicio, ate encerrar.
+                        </div>
+                        <div class="form-text d-none" id="hintUnica">
+                            Entra somente no mes da data informada.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="descricaoDespesa">Descricao</label>
+                        <input th:field="*{descricao}"
+                               type="text"
+                               class="form-control"
+                               id="descricaoDespesa"
+                               maxlength="200"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="valorDespesa">Valor R$</label>
+                        <input th:field="*{valor}"
+                               type="text"
+                               class="form-control"
+                               id="valorDespesa"
+                               inputmode="decimal"
+                               placeholder="1500,00"
+                               autocomplete="off"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="dataDespesa" id="labelDataDespesa">Data de inicio</label>
+                        <input th:field="*{data}"
+                               type="date"
+                               class="form-control"
+                               id="dataDespesa"
+                               required>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">Salvar despesa</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="d-grid gap-4">
+            <div class="financeiro-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+                        <h2 class="h5 mb-0">Despesas mensais</h2>
+                        <span class="financeiro-badge-tipo financeiro-badge-tipo--mensal">Mensal</span>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(resumo.despesasMensais)}" class="financeiro-empty">
+                        Nenhuma despesa mensal ativa neste mes.
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(resumo.despesasMensais)}" class="table-responsive">
+                        <table class="table financeiro-table align-middle">
+                            <thead>
+                            <tr>
+                                <th>Descricao</th>
+                                <th>Valor</th>
+                                <th>Desde</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="item : ${resumo.despesasMensais}">
+                                <td th:text="${item.descricao}">Aluguel</td>
+                                <td th:text="${item.valorFormatado}">R$ 1.500,00</td>
+                                <td th:text="${item.dataRotulo}">01/03/2026</td>
+                                <td class="text-end">
+                                    <form th:action="@{/agendamentos/financeiro/{id}/encerrar-mensal(id=${item.id})}"
+                                          method="post"
+                                          class="d-inline">
+                                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                        <input type="hidden" name="mes" th:value="${resumo.mes}">
+                                        <input type="hidden" name="ano" th:value="${resumo.ano}">
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                onclick="return confirm('Encerrar esta despesa mensal a partir deste mes?');">
+                                            Encerrar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="financeiro-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+                        <h2 class="h5 mb-0">Despesas unicas neste mes</h2>
+                        <span class="financeiro-badge-tipo financeiro-badge-tipo--unica">Unica</span>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(resumo.despesasUnicas)}" class="financeiro-empty">
+                        Nenhuma despesa unica neste mes.
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(resumo.despesasUnicas)}" class="table-responsive">
+                        <table class="table financeiro-table align-middle">
+                            <thead>
+                            <tr>
+                                <th>Descricao</th>
+                                <th>Valor</th>
+                                <th>Data pagamento</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="item : ${resumo.despesasUnicas}">
+                                <td th:text="${item.descricao}">Material</td>
+                                <td th:text="${item.valorFormatado}">R$ 350,00</td>
+                                <td th:text="${item.dataRotulo}">15/05/2026</td>
+                                <td class="text-end">
+                                    <form th:action="@{/agendamentos/financeiro/{id}/excluir-unica(id=${item.id})}"
+                                          method="post"
+                                          class="d-inline">
+                                        <th:block th:replace="~{fragments/csrf :: token}"></th:block>
+                                        <input type="hidden" name="mes" th:value="${resumo.mes}">
+                                        <input type="hidden" name="ano" th:value="${resumo.ano}">
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Excluir esta despesa unica?');">
+                                            Excluir
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function initFinanceiroForm() {
+        var tipoSelect = document.getElementById('tipoDespesa');
+        var hintMensal = document.getElementById('hintMensal');
+        var hintUnica = document.getElementById('hintUnica');
+        var labelData = document.getElementById('labelDataDespesa');
+        var valorInput = document.getElementById('valorDespesa');
+
+        function alternarHints() {
+            var unica = tipoSelect && tipoSelect.value === 'UNICA';
+            if (hintMensal) {
+                hintMensal.classList.toggle('d-none', unica);
+            }
+            if (hintUnica) {
+                hintUnica.classList.toggle('d-none', !unica);
+            }
+            if (labelData) {
+                labelData.textContent = unica ? 'Data do pagamento' : 'Data de inicio';
+            }
+        }
+
+        if (tipoSelect) {
+            tipoSelect.addEventListener('change', alternarHints);
+            alternarHints();
+        }
+
+        if (valorInput) {
+            valorInput.addEventListener('input', function () {
+                var digitos = valorInput.value.replace(/\D/g, '');
+                if (!digitos) {
+                    valorInput.value = '';
+                    return;
+                }
+                var numero = parseInt(digitos, 10) / 100;
+                valorInput.value = numero.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            });
+        }
+    })();
+</script>
+</body>
+</html>

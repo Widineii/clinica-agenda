@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuracao de taxas - Clinica Afetto</title>
+    <th:block th:replace="~{fragments/financeiro-estilos-base :: css}"></th:block>
+</head>
+<body class="financeiro-page">
+<div class="financeiro-wrap">
+
+    <div th:replace="~{fragments/financeiro-hero :: hero(
+        titulo='Configuracao de taxas',
+        subtitulo='Valores por consulta e taxas por sala (piloto local).'
+    )}"></div>
+
+    <div class="financeiro-card">
+        <div class="card-body">
+            <p class="mb-2">Esta area sera usada para configurar taxas da clinica.</p>
+            <p class="financeiro-hint mb-0">
+                Por enquanto, use a agenda para valores por consulta. Volte para
+                <a th:href="@{/agendamentos/financeiro}">Gestao financeira</a>
+                para despesas mensais e unicas.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
