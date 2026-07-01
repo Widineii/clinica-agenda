@@ -19,9 +19,17 @@ public class PagamentoExpiracaoScheduler {
 
     @Scheduled(fixedDelayString = "${app.pagamento.cron-expiracao-ms:30000}")
     public void expirarPagamentosVencidos() {
-        int removidos = pagamentoConsultaService.expirarPagamentosVencidos();
-        if (removidos > 0) {
-            log.info("Removidos {} agendamento(s) com pagamento expirado.", removidos);
+        int revertidos = pagamentoConsultaService.expirarPagamentosVencidos();
+        if (revertidos > 0) {
+            log.info("Revertidos {} agendamento(s) com confirmacao PIX expirada (reserva mantida).", revertidos);
+        }
+    }
+
+    @Scheduled(fixedDelayString = "${app.pagamento.cron-sincronizacao-ms:60000}")
+    public void sincronizarPagamentosPendentes() {
+        int confirmados = pagamentoConsultaService.sincronizarPagamentosPendentesNaInfinitePay();
+        if (confirmados > 0) {
+            log.info("Confirmados {} pagamento(s) via consulta InfinitePay.", confirmados);
         }
     }
 }

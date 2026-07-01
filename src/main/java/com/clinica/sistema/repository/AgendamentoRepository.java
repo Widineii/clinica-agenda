@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -209,6 +210,12 @@ public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> 
     );
 
     Optional<Agendamento> findByPagamentoOrderNsu(String pagamentoOrderNsu);
+
+    Optional<Agendamento> findByPagamentoSlug(String pagamentoSlug);
+
+    List<Agendamento> findByStatusPagamentoInAndPagamentoOrderNsuIsNotNull(
+            Collection<PagamentoStatus> statusPagamentos
+    );
 
     List<Agendamento> findByStatusPagamentoAndPagamentoExpiraEmBefore(
             PagamentoStatus statusPagamento,

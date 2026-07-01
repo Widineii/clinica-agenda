@@ -22,7 +22,7 @@ public class SecurityConfig {
                 .authenticationProvider(clinicaAuthenticationProvider)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login", "/error", "/actuator/health", "/css/**", "/js/**", "/images/**").permitAll()
-                        .requestMatchers("/api/webhooks/**", "/pagamentos/checkout-teste", "/pagamentos/checkout-teste/**").permitAll()
+                        .requestMatchers("/api/webhooks/**", "/pagamentos/checkout-teste", "/pagamentos/checkout-teste/**", "/pagamentos/retorno-infinitepay").permitAll()
                         .requestMatchers("/agendamentos/**", "/conta/**", "/pagamentos/**").authenticated()
                         .anyRequest().authenticated()
                 )

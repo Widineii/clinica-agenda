@@ -6,6 +6,8 @@ import com.clinica.sistema.model.Agendamento;
 import com.clinica.sistema.model.PagamentoStatus;
 import com.clinica.sistema.model.Usuario;
 import com.clinica.sistema.repository.AgendamentoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,9 +16,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class PagamentoConsultaService {
+
+    private static final Logger log = LoggerFactory.getLogger(PagamentoConsultaService.class);
 
     private final AgendamentoRepository repository;
     private final InfinitePayService infinitePayService;
@@ -83,11 +89,29 @@ public class PagamentoConsultaService {
                 PagamentoStatus.ESPERANDO_CONFIRMACAO,
                 agora
         );
-        int removidos = 0;
+        int revertidos = 0;
         for (Agendamento agendamento : expirados) {
-            removidos += removerAgendamentoExpirado(agendamento);
+            if (tentarConfirmarPagamentoRemoto(agendamento)) {
+                continue;
+            }
+            reverterExpiracaoConfirmacao(agendamento);
+            revertidos++;
         }
-        return removidos;
+        return revertidos;
+    }
+
+    @Transactional
+    public int sincronizarPagamentosPendentesNaInfinitePay() {
+        List<Agendamento> candidatos = repository.findByStatusPagamentoInAndPagamentoOrderNsuIsNotNull(
+                List.of(PagamentoStatus.ESPERANDO_CONFIRMACAO, PagamentoStatus.AGUARDANDO_PAGAMENTO)
+        );
+        int confirmados = 0;
+        for (Agendamento agendamento : candidatos) {
+            if (tentarConfirmarPagamentoRemoto(agendamento)) {
+                confirmados++;
+            }
+        }
+        return confirmados;
     }
 
     @Transactional
@@ -107,15 +131,121 @@ public class PagamentoConsultaService {
         if (agendamento.possuiQrPagamentoAtivo()) {
             return agendamento;
         }
+        if (temLinkPagamentoGerado(agendamento)) {
+            reativarConfirmacaoPagamento(agendamento);
+            return repository.save(agendamento);
+        }
         iniciarConfirmacaoPagamento(agendamento);
         return repository.save(agendamento);
     }
 
     @Transactional
     public Agendamento confirmarPagamentoPorOrderNsu(String orderNsu) {
-        Agendamento agendamento = repository.findByPagamentoOrderNsu(orderNsu)
-                .orElseThrow(() -> new RuntimeException("Pedido de pagamento nao encontrado."));
+        return confirmarPagamento(orderNsu, null, null, false);
+    }
+
+    @Transactional
+    public Agendamento confirmarPagamentoPorRetornoInfinitePay(
+            String orderNsu,
+            String slug,
+            String transactionNsu,
+            Long agendamentoId
+    ) {
+        if (orderNsu != null && !orderNsu.isBlank()) {
+            return confirmarPagamento(orderNsu, slug, transactionNsu, true);
+        }
+        if (agendamentoId == null) {
+            throw new RuntimeException("Pedido de pagamento invalido.");
+        }
+        Agendamento agendamento = repository.findById(agendamentoId)
+                .orElseThrow(() -> new RuntimeException("Agendamento nao encontrado."));
+        if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return agendamento;
+        }
+        if (!infinitePayService.consultarSePago(
+                agendamento.getPagamentoOrderNsu(),
+                primeiroValorNaoVazio(slug, agendamento.getPagamentoSlug()),
+                transactionNsu
+        )) {
+            throw new RuntimeException("Pagamento ainda nao confirmado na InfinitePay.");
+        }
         return marcarComoPago(agendamento);
+    }
+
+    @Transactional
+    public void processarWebhookInfinitePay(Map<String, Object> payload) {
+        String orderNsu = extrairCampoTexto(payload, "order_nsu", "orderNsu", "order");
+        String slug = extrairCampoTexto(payload, "invoice_slug", "slug");
+        String transactionNsu = extrairCampoTexto(payload, "transaction_nsu", "transactionNsu");
+
+        log.info(
+                "Webhook InfinitePay recebido. order_nsu={}, slug={}, transaction_nsu={}",
+                orderNsu,
+                slug,
+                transactionNsu
+        );
+
+        Optional<Agendamento> agendamento = localizarAgendamentoPorPagamento(orderNsu, slug);
+        if (agendamento.isEmpty()) {
+            log.warn("Webhook InfinitePay sem agendamento correspondente. order_nsu={}, slug={}", orderNsu, slug);
+            return;
+        }
+
+        if (PagamentoStatus.PAGO.equals(agendamento.get().getStatusPagamento())) {
+            return;
+        }
+
+        String orderNsuConfirmacao = primeiroValorNaoVazio(orderNsu, agendamento.get().getPagamentoOrderNsu());
+        if (infinitePayService.consultarSePago(
+                orderNsuConfirmacao,
+                primeiroValorNaoVazio(slug, agendamento.get().getPagamentoSlug()),
+                transactionNsu
+        )) {
+            confirmarPagamento(orderNsuConfirmacao, slug, transactionNsu, false);
+            return;
+        }
+
+        confirmarPagamento(orderNsuConfirmacao, slug, transactionNsu, false);
+    }
+
+    private Agendamento confirmarPagamento(
+            String orderNsu,
+            String slug,
+            String transactionNsu,
+            boolean exigirConfirmacaoNaApi
+    ) {
+        Agendamento agendamento = localizarAgendamentoPorPagamento(orderNsu, slug)
+                .orElseThrow(() -> new RuntimeException("Pedido de pagamento nao encontrado."));
+        if (PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return agendamento;
+        }
+        if (exigirConfirmacaoNaApi && !infinitePayService.consultarSePago(
+                primeiroValorNaoVazio(orderNsu, agendamento.getPagamentoOrderNsu()),
+                primeiroValorNaoVazio(slug, agendamento.getPagamentoSlug()),
+                transactionNsu
+        )) {
+            throw new RuntimeException("Pagamento ainda nao confirmado na InfinitePay.");
+        }
+        return marcarComoPago(agendamento);
+    }
+
+    private boolean tentarConfirmarPagamentoRemoto(Agendamento agendamento) {
+        if (agendamento == null || PagamentoStatus.PAGO.equals(agendamento.getStatusPagamento())) {
+            return false;
+        }
+        if (agendamento.getPagamentoOrderNsu() == null || agendamento.getPagamentoOrderNsu().isBlank()) {
+            return false;
+        }
+        if (!infinitePayService.consultarSePago(agendamento)) {
+            return false;
+        }
+        marcarComoPago(agendamento);
+        log.info(
+                "Pagamento confirmado via consulta InfinitePay. agendamentoId={}, order_nsu={}",
+                agendamento.getId(),
+                agendamento.getPagamentoOrderNsu()
+        );
+        return true;
     }
 
     @Transactional
@@ -337,15 +467,86 @@ public class PagamentoConsultaService {
         agendamento.setPagamentoExpiraEm(agora.plusMinutes(pagamentoProperties.getPrazoConfirmacaoMinutos()));
     }
 
-    private int removerAgendamentoExpirado(Agendamento agendamento) {
-        if (agendamento.getSerieFixaId() != null && !agendamento.getSerieFixaId().isBlank()) {
-            return repository.deleteBySerieFixaIdAndStatusPagamentoNot(
-                    agendamento.getSerieFixaId(),
-                    PagamentoStatus.PAGO
-            );
+    private void reativarConfirmacaoPagamento(Agendamento agendamento) {
+        LocalDateTime agora = LocalDateTime.now();
+        agendamento.setStatusPagamento(PagamentoStatus.ESPERANDO_CONFIRMACAO);
+        agendamento.setPagamentoIniciadoEm(agora);
+        agendamento.setPagamentoExpiraEm(agora.plusMinutes(pagamentoProperties.getPrazoConfirmacaoMinutos()));
+    }
+
+    private void reverterExpiracaoConfirmacao(Agendamento agendamento) {
+        agendamento.setPagamentoExpiraEm(null);
+        agendamento.setStatusPagamento(PagamentoStatus.AGUARDANDO_PAGAMENTO);
+        repository.save(agendamento);
+        log.info(
+                "Pagamento expirado sem confirmacao; agendamento mantido aguardando pagamento. agendamentoId={}, order_nsu={}",
+                agendamento.getId(),
+                agendamento.getPagamentoOrderNsu()
+        );
+    }
+
+    private boolean temLinkPagamentoGerado(Agendamento agendamento) {
+        return agendamento.getPagamentoOrderNsu() != null
+                && !agendamento.getPagamentoOrderNsu().isBlank()
+                && agendamento.getPagamentoLink() != null
+                && !agendamento.getPagamentoLink().isBlank();
+    }
+
+    private Optional<Agendamento> localizarAgendamentoPorPagamento(String orderNsu, String slug) {
+        if (orderNsu != null && !orderNsu.isBlank()) {
+            Optional<Agendamento> porOrderNsu = repository.findByPagamentoOrderNsu(orderNsu);
+            if (porOrderNsu.isPresent()) {
+                return porOrderNsu;
+            }
+            Optional<Agendamento> porId = extrairAgendamentoIdDoOrderNsu(orderNsu).flatMap(repository::findById);
+            if (porId.isPresent()) {
+                return porId;
+            }
         }
-        repository.delete(agendamento);
-        return 1;
+        if (slug != null && !slug.isBlank()) {
+            return repository.findByPagamentoSlug(slug);
+        }
+        return Optional.empty();
+    }
+
+    private Optional<Long> extrairAgendamentoIdDoOrderNsu(String orderNsu) {
+        if (orderNsu == null || !orderNsu.startsWith("ag-")) {
+            return Optional.empty();
+        }
+        String[] partes = orderNsu.split("-");
+        if (partes.length < 2) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Long.parseLong(partes[1]));
+        } catch (NumberFormatException ex) {
+            return Optional.empty();
+        }
+    }
+
+    private String extrairCampoTexto(Map<String, Object> payload, String... chaves) {
+        if (payload == null) {
+            return null;
+        }
+        for (String chave : chaves) {
+            Object valor = payload.get(chave);
+            if (valor != null && !valor.toString().isBlank()) {
+                return valor.toString();
+            }
+        }
+        return null;
+    }
+
+    private String primeiroValorNaoVazio(String... valores) {
+        if (valores == null) {
+            return null;
+        }
+        for (String valor : valores) {
+            if (valor != null && !valor.isBlank()) {
+                return valor;
+            }
+        }
+        return null;
     }
 
     private Agendamento buscarComPermissao(Long agendamentoId, Usuario usuarioLogado) {

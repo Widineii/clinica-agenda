@@ -20,6 +20,8 @@ import java.util.UUID;
 public class InfinitePayService {
 
     private static final String API_LINKS = "https://api.checkout.infinitepay.io/links";
+    private static final String API_PAYMENT_CHECK =
+            "https://api.infinitepay.io/invoices/public/checkout/payment_check";
 
     private final InfinitePayProperties properties;
     private final ValorConsultaService valorConsultaService;
@@ -54,9 +56,15 @@ public class InfinitePayService {
                 .intValueExact();
 
         Map<String, Object> body = new LinkedHashMap<>();
+        String baseUrl = properties.getBaseUrl().replaceAll("/$", "");
         body.put("handle", properties.getHandle());
         body.put("order_nsu", orderNsu);
-        body.put("webhook_url", properties.getBaseUrl().replaceAll("/$", "") + "/api/webhooks/infinitepay");
+        body.put("webhook_url", baseUrl + "/api/webhooks/infinitepay");
+        body.put(
+                "redirect_url",
+                baseUrl + "/pagamentos/retorno-infinitepay?agendamento=" + agendamento.getId()
+                        + "&order_nsu=" + orderNsu
+        );
         body.put("items", java.util.List.of(Map.of(
                 "quantity", 1,
                 "price", centavos,
@@ -133,5 +141,58 @@ public class InfinitePayService {
                 ? agendamento.getSala().getNome()
                 : "Sala";
         return "Taxa clinica - " + cliente + " - " + sala;
+    }
+
+    public boolean consultarSePago(String orderNsu, String slug, String transactionNsu) {
+        if (properties.isModoTeste()) {
+            return false;
+        }
+        if (orderNsu == null || orderNsu.isBlank()) {
+            return false;
+        }
+        if ((slug == null || slug.isBlank()) && (transactionNsu == null || transactionNsu.isBlank())) {
+            return false;
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("handle", properties.getHandle());
+        body.put("order_nsu", orderNsu);
+        if (slug != null && !slug.isBlank()) {
+            body.put("slug", slug);
+        }
+        if (transactionNsu != null && !transactionNsu.isBlank()) {
+            body.put("transaction_nsu", transactionNsu);
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> resposta = restTemplate.postForObject(API_PAYMENT_CHECK, request, Map.class);
+            if (resposta == null) {
+                return false;
+            }
+            Object paid = resposta.get("paid");
+            if (paid instanceof Boolean boolPaid) {
+                return boolPaid;
+            }
+            Object success = resposta.get("success");
+            return success instanceof Boolean boolSuccess && boolSuccess && Boolean.TRUE.equals(paid);
+        } catch (RestClientException ex) {
+            return false;
+        }
+    }
+
+    public boolean consultarSePago(Agendamento agendamento) {
+        if (agendamento == null) {
+            return false;
+        }
+        return consultarSePago(
+                agendamento.getPagamentoOrderNsu(),
+                agendamento.getPagamentoSlug(),
+                null
+        );
     }
 }

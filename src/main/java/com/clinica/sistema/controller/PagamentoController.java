@@ -166,6 +166,35 @@ public class PagamentoController {
         return "redirect:/agendamentos/dashboard";
     }
 
+    @GetMapping("/retorno-infinitepay")
+    public String retornoInfinitePay(
+            @RequestParam(required = false) String order_nsu,
+            @RequestParam(required = false) String order,
+            @RequestParam(required = false) String transaction_nsu,
+            @RequestParam(required = false) String slug,
+            @RequestParam(required = false) String invoice_slug,
+            @RequestParam(required = false) Long agendamento,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            String orderNsu = order_nsu != null && !order_nsu.isBlank() ? order_nsu : order;
+            String invoiceSlug = slug != null && !slug.isBlank() ? slug : invoice_slug;
+            pagamentoConsultaService.confirmarPagamentoPorRetornoInfinitePay(
+                    orderNsu,
+                    invoiceSlug,
+                    transaction_nsu,
+                    agendamento
+            );
+            redirectAttributes.addFlashAttribute("sucesso", "Pagamento confirmado com sucesso.");
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute(
+                    "erro",
+                    "Pagamento recebido pela InfinitePay, mas ainda nao apareceu aqui. Aguarde alguns segundos e atualize a agenda."
+            );
+        }
+        return "redirect:/agendamentos/dashboard";
+    }
+
     private void validarAcesso(Agendamento agendamento, Usuario usuarioLogado) {
         if (authService.isAdmin(usuarioLogado) || authService.isDonaClinica(usuarioLogado)) {
             return;
