@@ -22,6 +22,16 @@ class ProdProfileEnvironmentPostProcessorTest {
   }
 
   @Test
+  void deveAtivarMysqlQuandoMysqlHostRemotoExiste() {
+    MockEnvironment env = new MockEnvironment();
+    env.setProperty("MYSQL_HOST", "mysql.kinghost.net");
+
+    processor.postProcessEnvironment(env, new SpringApplication());
+
+    assertTrue(env.matchesProfiles("mysql"));
+  }
+
+  @Test
   void naoDeveSobrescreverPerfilJaDefinido() {
     MockEnvironment env = new MockEnvironment();
     env.setActiveProfiles("local");

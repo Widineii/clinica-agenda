@@ -5,13 +5,18 @@ import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 /**
- * Ativa o perfil {@code prod} quando o host injeta variaveis de PostgreSQL ou e Railway/Render.
+ * Ativa perfil de producao conforme variaveis do host (PostgreSQL, MySQL/KingHost, Railway, Render).
  */
 public class ProdProfileEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         if (environment.getActiveProfiles().length > 0) {
+            return;
+        }
+
+        if (temMysqlHostRemoto(environment)) {
+            environment.setActiveProfiles("mysql");
             return;
         }
 
@@ -32,5 +37,13 @@ public class ProdProfileEnvironmentPostProcessor implements EnvironmentPostProce
     private static boolean temPgHostRemoto(ConfigurableEnvironment environment) {
         String pgHost = environment.getProperty("PGHOST");
         return pgHost != null && !pgHost.isBlank() && !"localhost".equalsIgnoreCase(pgHost);
+    }
+
+    private static boolean temMysqlHostRemoto(ConfigurableEnvironment environment) {
+        String mysqlHost = environment.getProperty("MYSQL_HOST");
+        return mysqlHost != null
+                && !mysqlHost.isBlank()
+                && !"localhost".equalsIgnoreCase(mysqlHost)
+                && !"127.0.0.1".equals(mysqlHost);
     }
 }

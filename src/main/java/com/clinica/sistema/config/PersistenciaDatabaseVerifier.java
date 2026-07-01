@@ -47,6 +47,9 @@ public class PersistenciaDatabaseVerifier implements ApplicationRunner {
             if (url.contains("postgresql")) {
                 log.info("PostgreSQL ativo — agendamentos ficam salvos mesmo se o site reiniciar.");
             }
+            if (url.contains("mysql")) {
+                log.info("MySQL ativo — agendamentos ficam salvos mesmo se o site reiniciar.");
+            }
         }
     }
 }
