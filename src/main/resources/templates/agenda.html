@@ -1029,6 +1029,12 @@
 
     <div th:if="${sucesso}" class="alert alert-success shell-card" th:text="${sucesso}"></div>
     <div th:if="${erro != null and erroContexto == 'uso-banco'}" class="alert alert-danger shell-card" th:text="${erro}"></div>
+    <div th:if="${mostrarAvisoCorrecaoPagamento}" class="alert alert-info shell-card mb-3" role="status">
+        <strong th:text="${'Atualizacao ' + sistemaVersao}">Atualizacao 1.1.0</strong>
+        <span class="d-block mt-1" th:text="${avisoCorrecaoPagamentoMensagem}">
+            Correcao do pagamento PIX aplicada.
+        </span>
+    </div>
     <div th:if="${pagamentoBloqueioAtivo}" class="alert alert-warning shell-card">
         <strong>Voce tem pagamento pendente.</strong>
         Sem quitar, nao pode usar sala nem fazer novo agendamento.

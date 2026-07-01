@@ -1,5 +1,6 @@
 package com.clinica.sistema.controller;
 
+import com.clinica.sistema.config.SistemaProperties;
 import com.clinica.sistema.config.StartupDataInitializer;
 import com.clinica.sistema.dto.AgendamentoForm;
 import com.clinica.sistema.dto.CadastroProfissionalForm;
@@ -42,6 +43,7 @@ public class AgendamentoController {
     private final RelatorioMensalService relatorioMensalService;
     private final PagamentoConsultaService pagamentoConsultaService;
     private final FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService;
+    private final SistemaProperties sistemaProperties;
 
     public AgendamentoController(
             AgendamentoService service,
@@ -51,7 +53,8 @@ public class AgendamentoController {
             RelatorioSemanalService relatorioSemanalService,
             RelatorioMensalService relatorioMensalService,
             PagamentoConsultaService pagamentoConsultaService,
-            FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService
+            FinanceiroPolyanaAcessoService financeiroPolyanaAcessoService,
+            SistemaProperties sistemaProperties
     ) {
         this.service = service;
         this.authService = authService;
@@ -61,6 +64,7 @@ public class AgendamentoController {
         this.relatorioMensalService = relatorioMensalService;
         this.pagamentoConsultaService = pagamentoConsultaService;
         this.financeiroPolyanaAcessoService = financeiroPolyanaAcessoService;
+        this.sistemaProperties = sistemaProperties;
     }
 
     @ModelAttribute("gradeAcoesPorId")
@@ -225,6 +229,9 @@ public class AgendamentoController {
         if (pagamentoFlashId instanceof Long pagamentoId) {
             service.buscarPorId(pagamentoId).ifPresent(ag -> model.addAttribute("pagamentoAgendamento", ag));
         }
+        model.addAttribute("sistemaVersao", sistemaProperties.getVersao());
+        model.addAttribute("mostrarAvisoCorrecaoPagamento", sistemaProperties.isMostrarAvisoCorrecaoPagamento());
+        model.addAttribute("avisoCorrecaoPagamentoMensagem", sistemaProperties.getAvisoCorrecaoPagamentoMensagem());
         return "agenda";
     }
 
@@ -265,6 +272,9 @@ public class AgendamentoController {
         model.addAttribute("pagamentoService", pagamentoConsultaService);
         model.addAttribute("meusPagamentosPendentes", meusPagamentosPendentes);
         model.addAttribute("totalMeusPagamentosPendentes", meusPagamentosPendentes.size());
+        model.addAttribute("sistemaVersao", sistemaProperties.getVersao());
+        model.addAttribute("mostrarAvisoCorrecaoPagamento", sistemaProperties.isMostrarAvisoCorrecaoPagamento());
+        model.addAttribute("avisoCorrecaoPagamentoMensagem", sistemaProperties.getAvisoCorrecaoPagamentoMensagem());
         return "meus-pagamentos";
     }
 

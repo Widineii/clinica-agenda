@@ -54,6 +54,12 @@
 
     <div class="card shell-card">
         <div class="card-body p-4">
+            <div th:if="${mostrarAvisoCorrecaoPagamento}" class="alert alert-info mb-3" role="status">
+                <strong th:text="${'Atualizacao ' + sistemaVersao}">Atualizacao 1.1.0</strong>
+                <span class="d-block mt-1" th:text="${avisoCorrecaoPagamentoMensagem}">
+                    Correcao do pagamento PIX aplicada.
+                </span>
+            </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 class="h5 mb-0">Pagamentos pendentes</h2>
                 <span class="badge text-bg-warning"
